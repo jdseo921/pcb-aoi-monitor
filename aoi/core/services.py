@@ -22,6 +22,7 @@ import secrets
 import shutil
 import sqlite3
 import threading
+import time
 import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -34,7 +35,7 @@ import numpy as np
 
 from .. import defects as taxonomy
 from .. import logging_setup
-from ..config import Settings, resolve_device
+from ..config import APP_LABEL, Settings, resolve_device
 from ..data import atomic, credentials
 from ..data.db import NOT_REVIEWED as NOT_REVIEWED  # screens name it through here (REQ-LOG-009)
 from ..data.db import Database, DbError, is_busy, new_uuid
@@ -53,6 +54,7 @@ from . import (
     disk,
     drift,
     golden,
+    heartbeat,
     imaging,
     labels,
     lineage,
@@ -547,9 +549,12 @@ class AppContext:
             # the system's own start-up writes: on a drive too full for them they wait for the next start (REQ-LOG-006)
             self._unless_full("retention.not_archived", self._archive_old)
             self._unless_full("maps.not_swept", self._sweep_ok_maps)  # OK maps past their retention (REQ-INSP-012)
+            self._unless_full("app.not_marked", self._mark_running)  # the next start knows whether this one closed
             for board_model in self.db.board_models():  # before S25 a workspace's results named no stored revision
                 self._unless_full("recipe.not_stored", functools.partial(self._ensure_recipe, board_model))
         except BaseException as e:
+            with contextlib.suppress(OSError):
+                heartbeat.closed(self.settings.root)  # not opened, so not a run the next start should call unclosed
             self.db.close()  # a refused workspace holds no file open while another folder is chosen (REQ-SET-016)
             logging_setup.close(self.log)
             self._lock.release()
@@ -568,9 +573,12 @@ class AppContext:
         self._golden_alarmed: set[tuple[str, str | None, str]] = set()  # each (board model, file, code) alarmed (#195)
         self._golden_lock = threading.Lock()  # the Recipe Editor reads on the UI thread, Compare on the pool's
         self._closed = False
-        self._retention_stop = threading.Event()  # the timer: a thread of the context's own, not Qt's (REQ-LOG-010)
-        self._retention = threading.Thread(target=self._retain, name="retention", daemon=True)
+        self._stopping = threading.Event()  # the timers: threads of the context's own, not Qt's
+        self.pulse, self._started = heartbeat.Pulse(), time.monotonic()  # the boards the heartbeat counts (REQ-SET-024)
+        self._retention = threading.Thread(target=self._retain, name="retention", daemon=True)  # REQ-LOG-010
+        self._beating = threading.Thread(target=self._beat, name="heartbeat", daemon=True)
         self._retention.start()
+        self._beating.start()
 
     # --- dataset -------------------------------------------------------------
 
@@ -622,9 +630,13 @@ class AppContext:
         if self._closed:  # the window closes it, and main.py again after the event loop (#171)
             return
         self._closed = True
-        self._retention_stop.set()
+        self._stopping.set()
         self._retention.join()  # a sweep under way ends before the database closes
+        self._beating.join()
         self.jobs.shutdown()  # a running job may still read the database or write a file
+        self.log.info("app.close", extra={"uptime_s": round(time.monotonic() - self._started)})  # a clean exit
+        with contextlib.suppress(OSError):  # a drive gone: the next start says this run did not close cleanly
+            heartbeat.closed(self.settings.root)
         self.db.close()
         logging_setup.close(self.log)
         self._lock.release()  # last: another copy may open the workspace now (#204)
@@ -1805,6 +1817,9 @@ class AppContext:
         # The row has committed: its files are named now and stay, whatever the log lines below meet.
         if alarm is not None:
             self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
+            self._alert(alarm[0], alarm[2], alarm[1])
+        last = {"board_model": board_model, "ai_model": insp.model_version, "recipe_rev": insp.recipe_rev}
+        self.pulse.add(res.verdict, res.elapsed_ms, last)  # what the heartbeat counts (REQ-SET-024)
         self._watch_drift(board_model, res.view)
         self.log.info(
             "inspection.saved",
@@ -1831,6 +1846,7 @@ class AppContext:
         person (#195)."""
         self.db.alarm(level, message, code, wait_ms)
         self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": log_text or message})
+        self._alert(level, code, log_text or message)
 
     def _watch_drift(self, board_model: str, view: str | None) -> None:
         """After a board is saved: alarm (WARN, AOI-INSP-018) on each drift measure of its board model and view that
@@ -4111,6 +4127,38 @@ class AppContext:
         self.log.info("maps.swept", extra={"days": days, "swept": len(swept), "skipped": skipped})
         return len(swept)
 
+    def _mark_running(self) -> None:
+        if heartbeat.started(self.settings.root):  # the run before was killed, crashed, or lost its power (REQ-SET-024)
+            self.log.warning("app.not_closed_cleanly")
+
+    def _beat(self) -> None:
+        """The heartbeat timer: a beat at once, then every BEAT_EVERY_S till close; a failed one is logged."""
+        while True:
+            try:
+                self.heartbeat()
+            except Exception:
+                self.log.warning("heartbeat.failed", exc_info=True)
+            if self._stopping.wait(heartbeat.BEAT_EVERY_S):
+                return
+
+    def heartbeat(self) -> dict[str, Any]:
+        """Rewrite heartbeat.json with the fields docs/operations/metrics.md names, and return them (REQ-SET-024)."""
+        now, space, wal = time.time(), disk.measure(self.settings.root), Path(f"{self.settings.db_path}-wal")
+        since = datetime.fromtimestamp(now - heartbeat.HOUR_S, UTC).isoformat(timespec="seconds")
+        fields = {"time": now_utc(), "pid": os.getpid(), "app_version": APP_LABEL}
+        fields |= {"uptime_s": round(time.monotonic() - self._started), "last_inspection": self.pulse.last or None}
+        fields["last_hour"] = self.pulse.hour(now) | {"false_calls": self.db.false_calls_since(since)}
+        fields |= {"free_bytes": space.free if space else None, "wal_bytes": wal.stat().st_size if wal.exists() else 0}
+        heartbeat.write(self.settings.root, fields)
+        return fields
+
+    def _alert(self, level: str, code: str | None, text: object) -> None:
+        """Append an alarm to logs/alerts.jsonl (REQ-SET-024); a line the drive refuses is lost, the alarm stays."""
+        with contextlib.suppress(OSError):
+            heartbeat.alert(
+                self.settings.root / "logs", {"time": now_utc(), "level": level, "code": code, "text": text}
+            )
+
     def _retain(self) -> None:
         """The retention timer: a sweep at once, then every SWEEP_EVERY_S till close; a failed one is logged."""
         while True:  # the first at once: at start, off the UI thread, so no sweep error refuses the workspace
@@ -4118,7 +4166,7 @@ class AppContext:
                 self.sweep_retention()
             except Exception:
                 self.log.warning("retention.failed", exc_info=True)
-            if self._retention_stop.wait(retention.SWEEP_EVERY_S):
+            if self._stopping.wait(retention.SWEEP_EVERY_S):
                 return
 
     def retention_confirmed(self) -> dict[str, Any] | None:
@@ -4146,7 +4194,7 @@ class AppContext:
 
             def step(sweep: Callable[[], object]) -> None:  # a step refused as a whole waits for the next sweep
                 try:
-                    if not self._retention_stop.is_set():  # a closing context waits for no more steps
+                    if not self._stopping.is_set():  # a closing context waits for no more steps
                         sweep()
                 except (OSError, DbError) as e:
                     counts["skipped"] += 1

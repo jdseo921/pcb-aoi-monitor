@@ -141,7 +141,8 @@ def test_req_trn_004_draw_ok_labels_and_filter_unchecked(qtbot: QtBot, trained_c
     drawn = ctx.label_check_status(BOARD, "Top")["ok_drawn"]
     assert len(drawn) == need
     assert page.checks_line.text() == f"0 of {n_ng} NG labels checked · 0 of {need} OK labels checked (10 % of {n_ok})"
-    page.btn_draw.click()
+    qtbot.waitUntil(page.btn_draw.isEnabled, timeout=10000)  # the draw's job ends after its rows show: a click before
+    page.btn_draw.click()  # it would land on a turned-off button
     qtbot.waitUntil(lambda: "enough" in page.shell.statusBar().currentMessage(), timeout=10000)
     assert page.shell.statusBar().currentMessage() == f"The OK labels drawn are enough: {need} of the {need} needed"
     assert len(ctx.audit_entries(action="label.draw")) == 1

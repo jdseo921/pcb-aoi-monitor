@@ -843,6 +843,14 @@ class Database:
         rows = self.query("SELECT overlay_path, diff_map_path, ai_map_path FROM inspections")
         return {Path(self.workspace, v).resolve() for r in rows for v in r.values() if v}  # one outside is no orphan
 
+    def false_calls_since(self, cutoff: str) -> int:
+        """The boards reviewed as a False call at or after `cutoff` (UTC, ISO 8601), for the heartbeat."""
+        return int(
+            self.query(
+                "SELECT count(*) AS n FROM inspections WHERE review='FALSE_CALL' AND review_time >= ?", (cutoff,)
+            )[0]["n"]
+        )
+
     def test_runs_since(self, cutoff: str) -> set[str]:
         """The UUIDs of the validation runs stored at or after `cutoff` (UTC, ISO 8601)."""
         return {r["uuid"] for r in self.query("SELECT uuid FROM test_runs WHERE time >= ?", (cutoff,))}

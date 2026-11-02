@@ -33,7 +33,7 @@ from pytestqt.qtbot import QtBot  # noqa: E402
 
 from aoi import config  # noqa: E402
 from aoi.config import Settings  # noqa: E402
-from aoi.core import anomaly, crypto, disk, model_card  # noqa: E402
+from aoi.core import anomaly, crypto, disk, heartbeat, model_card  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
@@ -112,9 +112,12 @@ def engineer(ctx: AppContext) -> AppContext:
 
 
 @pytest.fixture
-def ctx(workspace: Settings) -> AppContext:
-    """An AppContext on the temporary workspace: the layer the screens call, with an empty database."""
-    return engineer(AppContext(workspace))
+def ctx(workspace: Settings) -> Iterator[AppContext]:
+    """An AppContext on the temporary workspace: the layer the screens call, with an empty database. Closed after the
+    test (again, if the test closed it), so its heartbeat and retention threads never outlive it (REQ-SET-024)."""
+    context = engineer(AppContext(workspace))
+    yield context
+    context.close()
 
 
 @pytest.fixture(scope="session")
@@ -226,8 +229,14 @@ def log_rows(folder: Path) -> list[dict[str, Any]]:
 def restored(tiny_model: TrainedModel, ws: Path, ignore: Callable[..., Any] | None = None) -> Path:
     """`ws`, a copy of the tiny model's workspace (`ignore` as shutil.copytree takes it), with the keys of its dataset
     stores in the test's key store (`keys`), as a station that restored the workspace from a backup holds them: TINY's
-    samples are in its customer's store (REQ-TRN-017)."""
-    shutil.copytree(tiny_model.ctx.settings.root, ws, ignore=ignore)
+    samples are in its customer's store (REQ-TRN-017). The tiny model's context is open and beats: its heartbeat.json
+    and the temporary file it is rewritten through can vanish mid-copy, so the copy leaves them out."""
+
+    def skipped(folder: str, names: list[str]) -> set[str]:
+        beat = {n for n in names if n == heartbeat.HEARTBEAT or n.startswith(f".{heartbeat.HEARTBEAT}.")}
+        return beat | set(ignore(folder, names) if ignore is not None else ())
+
+    shutil.copytree(tiny_model.ctx.settings.root, ws, ignore=skipped)
     for store in tiny_model.ctx.db.stores():
         name = credentials.STORE_PREFIX + store["uuid"]
         credentials.default().write(name, tiny_model.ctx.credentials.read(name) or b"")
@@ -235,11 +244,13 @@ def restored(tiny_model: TrainedModel, ws: Path, ignore: Callable[..., Any] | No
 
 
 @pytest.fixture
-def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> AppContext:
+def trained_ctx(tmp_path: Path, tiny_model: TrainedModel) -> Iterator[AppContext]:
     """A writable copy of the tiny model's workspace: samples, golden board and the active model are registered,
-    no inspection has run yet. Tests that inspect, save recipes or log results use this one."""
+    no inspection has run yet. Tests that inspect, save recipes or log results use this one. Closed after the test."""
     ws = restored(tiny_model, tmp_path / "trained_workspace")
-    return engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
+    context = engineer(AppContext(Settings(workspace=str(ws), device="cpu")))
+    yield context
+    context.close()
 
 
 @pytest.fixture(autouse=True)

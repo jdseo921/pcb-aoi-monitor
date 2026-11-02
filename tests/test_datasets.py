@@ -362,6 +362,10 @@ def test_req_trn_005_failed_commit_puts_the_workspace_back(
     free, refuse, replace = [], [False], os.replace
 
     def watched(src: Any, dst: Any) -> None:  # notes whether another thread could take the database lock as it moves
+        if threading.current_thread() is not threading.main_thread():  # the heartbeat's own rewrite (REQ-SET-024)
+            replace(src, dst)
+            return
+
         def take() -> None:
             if got := ctx.db._lock.acquire(blocking=False):
                 ctx.db._lock.release()

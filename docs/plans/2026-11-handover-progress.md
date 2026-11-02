@@ -39,7 +39,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | merged 2026-11-01: 1.1a #426 (engine), 1.1b #427 (status bar and CSV) |
 | 1.2 | Evidence policy (D1) | REQ-INSP-012 | merged 2026-11-01 (#428) |
 | 1.3 | Retention on a timer | REQ-LOG-010 | merged 2026-11-01 (#429); its deletions wait for an Admin's in-app confirmation, D20 and D21 still provisional in ADR 0024 |
-| 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | planned |
+| 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | in review: 1.4a heartbeat, alerts and clean exit (`feat/REQ-SET-024-heartbeat`); 1.4b the self-check |
 | 1.5 | Crash record (`faulthandler`, WER LocalDumps documented) | REQ-SET-026 | planned |
 | 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | planned |
 | 1.7 | Workspace guards: remote drive and OneDrive root refused | REQ-SET-025 | planned |

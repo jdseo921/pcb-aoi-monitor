@@ -29,6 +29,7 @@ from typing import BinaryIO
 import pytest
 
 from aoi.config import Settings
+from aoi.core import heartbeat
 from aoi.core.imaging import IMAGE_EXTS, load_image
 from aoi.core.services import AppContext
 from aoi.data import atomic
@@ -54,6 +55,7 @@ NOT_ATOMIC = {  # (file, call as the scan shows it): why it may write outside at
     ("aoi/errors.py", "DOC_PATH.write_text()"): "a developer tool writing docs/error-codes.md in the repository",
     ("aoi/logging_setup.py", "open(..., 'a')"): "the log appends line by line; a cut can shorten only its last line",
     ("aoi/data/migrate.py", "os.replace()"): "the schema backup: SQLite's backup API writes a temp copy, renamed whole",
+    ("aoi/core/heartbeat.py", "open(..., 'a')"): "alerts.jsonl appends line by line, as the log; a cut shortens one",
     ("aoi/core/retention.py", "os.replace()"): "moves a whole gzipped log into logs/archive/: a rename writes nothing",
     ("aoi/core/services.py", "model.save()"): "AnomalyModel.save writes the .pt through atomic.write_with",
     ("aoi/data/workspace_lock.py", "os.open(write)"): "an empty lock file, never written: the OS lock counts (#204)",
@@ -219,7 +221,8 @@ def test_req_insp_008_results_and_the_golden_board_go_through_atomic(
     trained_ctx.inspect_file("TINY", trained_ctx.db.samples("TINY")[0]["path"])
     trained_ctx.train(trainable(trained_ctx, "TINY"), epochs=1, image_size=64)
     changed = {p for p, s in stamps().items() if before.get(p) != s}
-    files = {p for p in changed if not p.name.startswith("aoi.sqlite") and p.parent != root / "logs"}
+    beat = {p for p in changed if heartbeat.HEARTBEAT in p.name}  # the context's timer, as fast as it is (REQ-SET-024)
+    files = {p for p in changed - beat if not p.name.startswith("aoi.sqlite") and p.parent != root / "logs"}
     results = [p for p in files if p.is_relative_to(root / "results")]  # an OK board's JPEG, preview and maps (D1)
     assert len(results) == 4, files
     models = {p.suffix for p in files if p.is_relative_to(root / "models")}
