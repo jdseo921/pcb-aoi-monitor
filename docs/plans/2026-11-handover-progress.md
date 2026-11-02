@@ -44,7 +44,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | in review: 1.6a the bundle and its command line (`feat/REQ-LOG-007-support-bundle`); 1.6b the Admin button, About and the station ID (`feat/REQ-SET-011-about`) |
 | 1.7 | Workspace guards: remote drive and OneDrive root refused | REQ-SET-025 | in review (`feat/REQ-SET-025-workspace-guards`) |
 | 1.8 | Signing hygiene and installer wording | REQ-SET-012 | in review (`feat/REQ-SET-012-signing-hygiene`) |
-| 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | planned |
+| 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | in review (`feat/REQ-SET-027-release-kit`) |
 | D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | planned |
 | D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | planned |
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | planned |
@@ -153,3 +153,4 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-02: PR 1.8 on `feat/REQ-SET-012-signing-hygiene`: the signing secrets in the two signing steps only; the
   installer check holds each variant to its name, label and signature; the monthly expiry workflow; the CA key has no
   backup by design (not exportable), and keeping an offline exportable copy is put to Jay.
+- 2026-11-02: PR 1.9 on `feat/REQ-SET-027-release-kit`; a run of its runbook on a clean VM waits for the release.

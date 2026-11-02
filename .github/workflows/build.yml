@@ -25,6 +25,8 @@ on:
       - aoi/core/demo.py
       - installer/aoi.iss  # the installer (S57) and its check on the runner
       - tools/check_installer.py
+      - tools/release_kit.py  # the release kit (REQ-SET-027), with its verify.ps1 and inventory.ps1
+      - tools/release/**
       - .github/workflows/build.yml
       - aoi/config.py  # the version, the build number and the label the .exe's VERSIONINFO carries (REQ-SET-023)
       - tools/version_info.py
@@ -222,9 +224,35 @@ jobs:
         # jdseo921/pcb-aoi-monitor`: no key to keep, no account to pay for (ADR 0011, decision 2). It is not an
         # Authenticode signature, so Windows still calls the publisher unknown.
         if: github.event_name != 'pull_request'
+        id: provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
             ${{ steps.installer.outputs.setup }}
             dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
             dist/AOI-PoC-Inspector/SHA256SUMS.txt
+      - name: Assemble the release kit and check it with its own verify.ps1 (REQ-SET-027; docs/release/runbook.md)
+        # The installer, pilot-ca.cer, the release note, verify.ps1, inventory.ps1, SHA256SUMS.txt and, on main and
+        # tags, the provenance bundle with Sigstore's trusted root for an offline check (tools/release_kit.py)
+        env:
+          SETUP: ${{ steps.installer.outputs.setup }}
+          BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $kit = @("--setup", $env:SETUP, "--out", "dist/kit")
+          if ($env:BUNDLE) {
+            gh attestation trusted-root | Set-Content -Encoding utf8NoBOM dist/trusted_root.jsonl
+            if ($LASTEXITCODE -ne 0) { throw "gh attestation trusted-root failed" }
+            $kit += "--provenance", $env:BUNDLE, "--trusted-root", "dist/trusted_root.jsonl"
+          }
+          python tools/release_kit.py @kit
+          if ($LASTEXITCODE -ne 0) { throw "The kit was not assembled" }
+          $unsigned = @{ AllowUnsigned = ($env:SIGNED -ne "true") }  # unsigned: PRs, no certificate yet; a switch splats by name
+          tools/release/verify.ps1 -Kit dist/kit @unsigned
+          if ($LASTEXITCODE -ne 0) { throw "The kit failed its own verify.ps1" }
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ steps.info.outputs.name }}-kit
+          path: dist/kit/
+          retention-days: 30
+          if-no-files-found: error
