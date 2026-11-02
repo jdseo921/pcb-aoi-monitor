@@ -134,10 +134,11 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-USR-001 | Not allowed for this role | {what} needs the {roles} role. | Sign in as a user with that role, or ask one to do it. |
 | AOI-USR-002 | Last Admin | {name} is the only user with the Admin role, so it cannot change to {role}: no one could then manage users or settings. | Give another user the Admin role first, then change this one. |
 | AOI-USR-003 | Unknown user | There is no user named {name} in this workspace, so no role to sign in with. | Pick a user from the list under Switch User; an Admin adds users on the Settings page. |
-| AOI-USR-004 | Password not accepted | {name} was not signed in: the password typed is not theirs. | Type the password again, checking Caps Lock and the input language; an Admin can reset it. |
+| AOI-USR-004 | Password not accepted | {name} was not signed in: the password or PIN typed is not theirs. | Type the password again, checking Caps Lock and the input language; an Admin can reset it. |
 | AOI-USR-005 | Password not allowed | The password chosen for {name} {reason}. | Choose a passphrase of 15 to 64 characters, such as a few words you remember; any language is fine. |
 | AOI-USR-006 | Account locked | {name} is locked for {minutes} more minutes after too many wrong passwords. | Wait, or ask an Admin to unlock it on Settings; the Operator view still works. |
 | AOI-USR-007 | Account locked until unlocked | {name} is locked after 100 wrong passwords, or its lock time cannot be read. | Ask an Admin to unlock it with Unlock User on Settings. |
+| AOI-USR-008 | PIN not allowed | The PIN chosen for {name} {reason}. | Choose 4 to 6 digits and type them twice. |
 
 ## The first-run guide's lines
 

@@ -721,8 +721,8 @@ class AppContext:
         chooses it here, at their first sign-in. An Operator needs none."""
         previous = self._actor
         row = next((u for u in self.db.users() if u["name"] == name), None)
-        if row is not None and row["role"] != "Operator":
-            self._check_password(row, password, start)
+        if row is not None and (row["role"] != "Operator" or (self.settings.operator_pin and not start)):
+            self._check_password(row, password, start)  # an Operator's PIN, where the station asks for one
         self.set_user(name)
         try:
             after = {"user": self.user, "role": self.role}
@@ -741,16 +741,17 @@ class AppContext:
         (no password yet) may start, as before, and chooses their password at a sign-in (`user.password_set`),
         refused with AOI-USR-005 when it breaks a rule (`passwords.refusal`). Neither secret nor hash is audited."""
         uuid, name = str(user["uuid"]), str(user["name"])
-        if user["status"] == "setup":
+        pin = user["role"] == "Operator"  # an Operator's secret is a PIN, chosen at their first sign-in (REQ-USR-003)
+        if user["status"] == "setup" or (pin and self.db.user_secret(uuid) is None):
             if start:
                 return
             names = [str(u["name"]) for u in self.db.users()] + [str(s["customer"]) for s in self.db.stores()]
-            refused = passwords.refusal(password or "", names)
+            refused = passwords.pin_refusal(password or "") if pin else passwords.refusal(password or "", names)
             if refused is not None:
-                raise AoiError("AOI-USR-005", name=name, reason=refused)
+                raise AoiError("AOI-USR-008" if pin else "AOI-USR-005", name=name, reason=refused)
             with self.db.transaction():
                 self.db.set_user_secret(uuid, passwords.hash_secret(password or ""))
-                self.audit("user.password_set", "user", uuid, None, {"user": name})
+                self.audit("user.pin_set" if pin else "user.password_set", "user", uuid, None, {"user": name})
             return
         if (minutes := passwords.locked_minutes(user.get("locked_until"))) and not start:
             self.audit("user.sign_in_failed", "user", uuid, None, {"user": name, "start": False, "locked": True})
@@ -775,6 +776,27 @@ class AppContext:
             self.db.set_user_secret(uuid, passwords.hash_secret(password))  # which clears the count too
         elif user.get("failed_attempts") or user.get("locked_until"):
             self.db.unlock_user(uuid)
+
+    def end_idle(self) -> str:
+        """End an Engineer's or Admin's session left idle (REQ-USR-004): sign in the shift's operator again, the
+        Operator signed in last on this station (else the user a start would sign in), with no PIN, as the Operator
+        view never asks its own operator again; audited `user.idle_end` with the user before. Returns who it is."""
+        uuid = self.db.last_operator()
+        users = self.db.users()
+        name = next((str(u["name"]) for u in users if u["uuid"] == uuid and u["role"] == "Operator"), None)
+        previous = self._actor
+        self.set_user(name or self.start_user())
+        try:
+            before = {"user": previous.name, "role": previous.role}
+            self.audit("user.idle_end", "user", self.user_uuid, before, {"user": self.user, "role": self.role})
+        except BaseException:
+            self._actor = previous
+            raise
+        return self.user
+
+    def users_with_pins(self) -> set[str]:
+        """The names of the Operators who have chosen a PIN, so Switch User asks for it, or for a new one twice."""
+        return {str(u["name"]) for u in self.db.users() if u["role"] == "Operator" and self.db.user_secret(u["uuid"])}
 
     @staticmethod
     def _locked(name: str, minutes: int) -> AoiError:

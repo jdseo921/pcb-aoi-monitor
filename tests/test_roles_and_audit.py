@@ -304,6 +304,8 @@ UNCHECKED = {
     "about",  # what About shows, read, for every role (REQ-SET-011)
     "heartbeat", "self_check",  # heartbeat.json and the start-up self-check, on its own thread (REQ-SET-024)
     "retention_confirmed",  # the Admin's confirmation the sweep deletes under, read (D20)
+    "end_idle",  # an idle Engineer's or Admin's session ends: a system action on the window's timer (REQ-USR-004)
+    "users_with_pins",  # which Operators have a PIN, read for Switch User (REQ-USR-003)
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
