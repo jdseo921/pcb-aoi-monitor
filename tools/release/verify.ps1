@@ -4,10 +4,7 @@ Checks a release kit before its installer runs on a station (REQ-SET-027; docs/r
 PowerShell 5.1 or PowerShell 7; no network needed.
 
 .DESCRIPTION
-Run it from the kit's folder, or pass -Kit:
-
-    powershell -ExecutionPolicy Bypass -File .\verify.ps1
-
+Run it from the kit's folder (`powershell -ExecutionPolicy Bypass -File .\verify.ps1`), or pass -Kit.
 1. Hashes: every file SHA256SUMS.txt names is there with that SHA-256, and no other file is in the kit.
 2. Signature: the installer's Authenticode status is Valid and its chain ends at the pilot CA whose thumbprint is
    written below (-CaThumbprint), as does the kit's pilot-ca.cer: a kit whose CA was swapped fails even when its

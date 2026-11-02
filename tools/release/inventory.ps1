@@ -1,11 +1,8 @@
 <#
 .SYNOPSIS
 Says which build of AOI PoC Inspector this station runs (REQ-SET-027; docs/release/runbook.md): for the station's
-record, before and after an upgrade. Windows PowerShell 5.1 or PowerShell 7; reads only.
-
+record, before and after an upgrade. Windows PowerShell 5.1 or 7; reads only. `inventory.ps1 [-Json]`.
 .DESCRIPTION
-    powershell -ExecutionPolicy Bypass -File .\inventory.ps1 [-Json]
-
 From the installer's uninstall entry: the name Installed apps shows (with "pilot, signed" or "internal, unsigned"),
 the version, the folder and the install date; from that folder: BUILD-INFO.txt's first line (version, build number,
 commit), the .exe's ProductVersion and its Authenticode status. Exit 0 when installed, 1 when not.

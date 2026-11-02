@@ -1,15 +1,11 @@
 #!/usr/bin/env python
-"""Assemble the release kit a station verifies offline (REQ-SET-027; docs/release/runbook.md). CI runs it after the
-installer passed its check (.github/workflows/build.yml), and keeps the folder as the run's `-kit` artifact:
+"""Assemble the release kit a station verifies offline (REQ-SET-027; docs/release/runbook.md); build.yml runs it and
+keeps the folder as the `-kit` artifact. The kit: the installer, `pilot-ca.cer`, the release note (`<version>.md` once
+named, else `unreleased.md`), `verify.ps1`, `inventory.ps1`, on main and tags the provenance bundle with Sigstore's
+trusted root (for an offline check), and `SHA256SUMS.txt` of every other file, last. Exit 0 when written, 2 when a
+file is missing:
 
-    python tools/release_kit.py --setup dist/installer/AOI-PoC-Inspector-0.4.0-setup-x64-pilot-signed.exe --out kit
-        [--provenance BUNDLE.jsonl --trusted-root trusted_root.jsonl]
-
-The kit holds the installer; `pilot-ca.cer`, which a pilot station trusts (docs/install/pilot-signing.md); the release
-note, `<version>.md` once it is named, else `unreleased.md`; `verify.ps1` and `inventory.ps1` (tools/release/); on
-main and tags the build's provenance (`provenance.sigstore.jsonl`) and Sigstore's trusted root, so `verify.ps1` checks
-it without a network; and `SHA256SUMS.txt`, the hash of every other file, last. Exit 0 when written, 2 when a file is
-missing.
+    python tools/release_kit.py --setup SETUP.exe --out kit [--provenance BUNDLE --trusted-root trusted_root.jsonl]
 """
 
 from __future__ import annotations

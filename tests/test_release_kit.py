@@ -41,10 +41,9 @@ def kit(tmp_path: Path, provenance: bool = False, exe: bytes = b"MZ an installer
 
 def test_req_set_027_the_kit_holds_the_installer_ca_note_scripts_and_the_hash_of_each(tmp_path: Path) -> None:
     out = kit(tmp_path, provenance=True)
-    names = sorted(p.name for p in out.iterdir())
-    note = f"release-note-{release_kit.note().stem}.md"
-    assert names == sorted([SETUP, "pilot-ca.cer", note, "verify.ps1", "inventory.ps1", "SHA256SUMS.txt"] +
-                           [release_kit.PROVENANCE, release_kit.TRUSTED_ROOT])  # fmt: skip
+    names, note = sorted(p.name for p in out.iterdir()), f"release-note-{release_kit.note().stem}.md"
+    kept = {SETUP, "pilot-ca.cer", note, *release_kit.SCRIPTS, "SHA256SUMS.txt", "provenance.sigstore.jsonl"}
+    assert set(names) == kept | {"trusted_root.jsonl"}
     sums = dict(reversed(line.split("  ")) for line in (out / "SHA256SUMS.txt").read_text("utf-8").splitlines())
     assert set(sums) == set(names) - {"SHA256SUMS.txt"}
     assert all(hashlib.sha256((out / n).read_bytes()).hexdigest() == h for n, h in sums.items())
