@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+390"/>
+        <location line="+401"/>
         <source>Unlocking a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1250,14 +1250,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3182"/>
-        <location line="+3196"/>
+        <location line="-3193"/>
+        <location line="+3207"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3285"/>
+        <location line="-3296"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1357,7 +1357,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1371"/>
+        <location line="+1382"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1584,7 +1584,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3947"/>
+        <location line="-3958"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1295"/>
+        <location line="+1306"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1726,7 +1726,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4371"/>
+        <location line="-4382"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3392,6 +3392,21 @@
     </message>
     <message>
         <location line="+7"/>
+        <source>Account locked until unlocked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} is locked after 100 wrong passwords, or its lock time cannot be read.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Ask an Admin to unlock it with Unlock User on Settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Workspace from version 0.1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3891,7 +3906,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1410"/>
+        <location line="-1417"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4076,7 +4091,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+184"/>
+        <location line="+191"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4362,7 +4377,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3438"/>
+        <location filename="../core/services.py" line="+3449"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -8839,7 +8854,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+133"/>
+        <location line="+134"/>
+        <source>Locked until unlocked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Locked, {minutes} min</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8859,7 +8879,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-145"/>
+        <location line="-147"/>
         <location line="+10"/>
         <source>Status</source>
         <translation>상태</translation>
@@ -9349,7 +9369,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3522"/>
+        <location filename="../core/services.py" line="-3533"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

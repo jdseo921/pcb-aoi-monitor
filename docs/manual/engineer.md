@@ -67,6 +67,13 @@ signed in last on this station with Switch User (`operator` until anyone has; th
 role you change holds after a restart. Each sign-in is an audit entry: `user.sign_in` for Switch User, with the user
 before, and `user.start` for the user a start signs in. The demo workspace always starts with its first Admin.
 
+**Passwords and locked accounts.** An Engineer or Admin signs in with Switch User and their password; at their first
+sign-in they choose one of 15 to 64 characters and type it twice. Five wrong passwords in a row lock the account for 5
+minutes (AOI-USR-006), and while it is locked even the right password is not checked; the 100th wrong one since the last
+right one locks it until an Admin unlocks it (AOI-USR-007). An Admin sees each user's status under Users & roles and
+ends a lock with **Unlock User**. Operators are never locked out. `lock_after` and `lock_minutes` in `settings.json` set
+the two numbers (3 to 20, and 1 to 60 minutes).
+
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
 pt in the same colours and shapes, and black text on the green, red and blue fills. 3D Profile leaves the sidebar for

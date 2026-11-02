@@ -296,6 +296,8 @@ class SettingsPage(Page):
 
     def status_text(self, user: dict[str, Any]) -> str:
         if minutes := user["locked_minutes"]:
+            if minutes > 60 * 24 * 365:  # passwords.FOR_GOOD: until an Admin unlocks it
+                return self.tr("Locked until unlocked")
             return self.tr("Locked, {minutes} min").format(minutes=minutes)
         statuses = {"setup": self.tr("No password yet"), "disabled": self.tr("Disabled")}
         return statuses.get(str(user["status"]), self.tr("Active"))

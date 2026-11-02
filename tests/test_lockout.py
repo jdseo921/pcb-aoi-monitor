@@ -40,11 +40,28 @@ def test_req_usr_004_five_wrong_passwords_lock_the_account_for_five_minutes(ctx:
     (lock,) = ctx.audit_entries(action="user.lock")
     assert lock["after"]["user"] == "engineer" and lock["object_uuid"] == ctx.db.user_uuid("engineer")
     row = next(u for u in ctx.users() if u["name"] == "engineer")
-    assert row["locked_minutes"] == 5 and row["failed_attempts"] == 0
-    assert _refused(ctx, PASSPHRASE) == "AOI-USR-006" and ctx.user == "operator"
+    assert row["locked_minutes"] == 5 and row["failed_attempts"] == 5
+    assert _refused(ctx, PASSPHRASE) == "AOI-USR-006" and ctx.user == "operator"  # on record, no guess counted
+    assert ctx.audit_entries(action="user.sign_in_failed")[0]["after"]["locked"] is True
+    assert next(u for u in ctx.users() if u["name"] == "engineer")["failed_attempts"] == 5
+    ctx.sign_in("operator")  # a lock never stops the Operator view
     ctx.db.execute("UPDATE users SET locked_until='2026-01-01T00:00:00+00:00' WHERE name='engineer'")  # it ended
     ctx.sign_in("engineer", password=PASSPHRASE)
     assert ctx.user == "engineer" and next(u for u in ctx.users() if u["name"] == "engineer")["locked_until"] is None
+
+
+def test_req_usr_004_the_100th_wrong_password_or_an_unreadable_lock_waits_for_an_admin(ctx: AppContext) -> None:
+    """A timed lock does not reset the count, so a guesser gets no endless rounds: the 100th wrong password since the
+    last right one locks until an Admin unlocks (AOI-USR-007), and so does a lock time that cannot be read."""
+    ctx.sign_in("engineer", password=PASSPHRASE)
+    ctx.set_user("operator")
+    ctx.db.execute("UPDATE users SET failed_attempts=98 WHERE name='engineer'")
+    assert [_refused(ctx), _refused(ctx), _refused(ctx, PASSPHRASE)] == ["AOI-USR-004", "AOI-USR-007", "AOI-USR-007"]
+    ctx.db.execute("UPDATE users SET locked_until='not a time' WHERE name='engineer'")
+    assert _refused(ctx, PASSPHRASE) == "AOI-USR-007"
+    ctx.db.execute("UPDATE users SET locked_until='2026-01-01T00:00:00' WHERE name='engineer'")  # no offset: UTC
+    ctx.sign_in("engineer", password=PASSPHRASE)
+    assert next(u for u in ctx.users() if u["name"] == "engineer")["failed_attempts"] == 0
 
 
 def test_req_usr_004_an_admin_unlocks_and_only_an_admin(ctx: AppContext) -> None:

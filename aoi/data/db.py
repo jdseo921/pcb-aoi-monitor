@@ -1087,18 +1087,17 @@ class Database:
             (secret_hash, secret_hash, uuid),
         )
 
-    def count_failure(self, uuid: str, lock_after: int, until: str) -> bool:
-        """Count a wrong password; the `lock_after`th in a row locks the account until `until` (UTC ISO 8601) and starts
-        the count again. Returns whether this one locked it (REQ-USR-004)."""
+    def count_failure(self, uuid: str, lock_after: int, until: str, limit: int, for_good: str) -> str | None:
+        """Count a wrong password: every `lock_after`th since the last right one locks the account until `until`, and
+        the `limit`th until `for_good`; a timed lock does not reset the count (REQ-USR-004). Returns the lock's end when
+        this one locked it, else None."""
         with self.transaction():
             r = self.query("SELECT failed_attempts FROM users WHERE uuid=?", (uuid,))
             count = (int(r[0]["failed_attempts"]) if r else 0) + 1
-            locks = count >= lock_after
-            self.execute(
-                "UPDATE users SET failed_attempts=?, locked_until=COALESCE(?, locked_until) WHERE uuid=?",
-                (0 if locks else count, until if locks else None, uuid),
-            )
-        return locks
+            end = for_good if count >= limit else until if count % lock_after == 0 else None
+            sql = "UPDATE users SET failed_attempts=?, locked_until=COALESCE(?, locked_until) WHERE uuid=?"
+            self.execute(sql, (count, end, uuid))
+        return end
 
     def unlock_user(self, uuid: str) -> None:
         """Clear a user's failed attempts and lock: a right password, or an Admin's Unlock."""
