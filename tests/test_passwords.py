@@ -160,7 +160,9 @@ def test_req_usr_002_a_stale_hash_is_made_again_and_no_start_signs_them_in(ctx: 
     stored = ctx.db.user_secret(uuid)
     assert stored is not None and not passwords.stale(stored) and passwords.verify(stored, PASSPHRASE)
     assert ctx.start_user(setting_up=True) == "operator"  # not the first Admin: they have a password
-    ctx.add_user("operator", "Engineer")  # no Operator left: a start takes one in set-up, never a password's
+    with pytest.raises(AoiError, match="AOI-USR-014"):
+        ctx.add_user("operator", "Engineer")  # the station keeps an Operator to start with (REQ-USR-006)
+    ctx.db.add_user("operator", "Engineer")  # a table edited outside the app: a start takes one in set-up
     ctx.sign_in("operator", password=PASSPHRASE)
     assert ctx.start_user() == "engineer"
     with pytest.raises(AoiError, match="AOI-USR-004"):

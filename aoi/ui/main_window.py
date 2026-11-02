@@ -653,8 +653,8 @@ class MainWindow(QMainWindow):
         started = None if carried is not None or self.in_demo else ctx.guide_starter()
         start = ctx.start_user(setting_up=not ctx.board_models())
         if carried is not None:
-            free = [u for u in ctx.users() if u["role"] == "Operator" or u["status"] == "setup"]  # as start_user's
-            start = next((str(u["name"]) for u in free if u["role"] == carried), start)
+            free = ctx.startable()  # as start_user's: never one who must prove who they are, nor a disabled one
+            start = next((str(u["name"]) for u in ctx.users() if u["name"] in free and u["role"] == carried), start)
         guided = started if started is not None and start == started.user else None
         self._reload_board_models(guided.board_model if guided else None)
         ctx.sign_in(start, start=True)

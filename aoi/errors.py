@@ -1414,6 +1414,57 @@ CODES: dict[str, ErrorCode] = {
             personal=("name",),
         ),
         ErrorCode(
+            "AOI-USR-009",
+            QT_TRANSLATE_NOOP("Errors", "An Admin hands the account over"),
+            QT_TRANSLATE_NOOP("Errors", "{name} has no password yet, and one is chosen only with an Admin signed in."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Admin to sign in, then choose {name} under Switch User and type the new password twice.",
+            ),
+            personal=("name",),
+        ),
+        ErrorCode(
+            "AOI-USR-010",
+            QT_TRANSLATE_NOOP("Errors", "User disabled"),
+            QT_TRANSLATE_NOOP("Errors", "{name} is disabled, so cannot sign in; their name stays on past records."),
+            QT_TRANSLATE_NOOP("Errors", "Ask an Admin to enable the user again on Settings, under Users & roles."),
+            personal=("name",),
+        ),
+        ErrorCode(
+            "AOI-USR-011",
+            QT_TRANSLATE_NOOP("Errors", "Signed-in Admin"),
+            QT_TRANSLATE_NOOP("Errors", "{name} is signed in now, so cannot disable or reset their own account."),
+            QT_TRANSLATE_NOOP("Errors", "Another Admin does it, from their own sign-in."),
+            personal=("name",),
+        ),
+        ErrorCode(
+            "AOI-USR-012",
+            QT_TRANSLATE_NOOP("Errors", "Admin without a password"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "{name} signed in without a password, so cannot manage users while another Admin has one."
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Ask an Admin with a password to sign in under Switch User and do it."),
+            personal=("name",),
+        ),
+        ErrorCode(
+            "AOI-USR-013",
+            QT_TRANSLATE_NOOP("Errors", "Last Admin who can sign in"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{name} is the last Admin who can sign in with a password, so no one could then manage users or "
+                "settings.",
+            ),
+            QT_TRANSLATE_NOOP("Errors", "Add another Admin and hand the account over to them first."),
+            personal=("name",),
+        ),
+        ErrorCode(
+            "AOI-USR-014",
+            QT_TRANSLATE_NOOP("Errors", "Last Operator"),
+            QT_TRANSLATE_NOOP("Errors", "{name} is the last enabled Operator, whom the app signs in when it starts."),
+            QT_TRANSLATE_NOOP("Errors", "Add another Operator first."),
+            personal=("name",),
+        ),
+        ErrorCode(
             "AOI-SET-001",
             QT_TRANSLATE_NOOP("Errors", "Workspace from version 0.1"),
             QT_TRANSLATE_NOOP("Errors", "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded."),

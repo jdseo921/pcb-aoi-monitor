@@ -963,12 +963,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+426"/>
+        <location line="+417"/>
+        <source>Disabling a user</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+19"/>
+        <source>Resetting a password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+82"/>
         <source>Unlocking a user</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+40"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1250,14 +1260,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3218"/>
-        <location line="+3232"/>
+        <location line="-3308"/>
+        <location line="+3322"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3321"/>
+        <location line="-3411"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1357,7 +1367,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1407"/>
+        <location line="+1497"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1569,7 +1579,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+442"/>
+        <location line="+445"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1579,12 +1589,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-502"/>
+        <location line="-505"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3983"/>
+        <location line="-4073"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1619,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1331"/>
+        <location line="+1421"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1679,7 +1689,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+129"/>
+        <location line="+132"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1726,7 +1736,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4407"/>
+        <location line="-4500"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3417,6 +3427,41 @@
     </message>
     <message>
         <location line="+5"/>
+        <source>An Admin hands the account over</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} has no password yet, and one is chosen only with an Admin signed in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Ask an Admin to sign in, then choose {name} under Switch User and type the new password twice.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>User disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} is disabled, so cannot sign in; their name stays on past records.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Ask an Admin to enable the user again on Settings, under Users &amp; roles.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Signed-in Admin</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+34"/>
         <source>Workspace from version 0.1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3916,7 +3961,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1424"/>
+        <location line="-1475"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4106,7 +4151,62 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+159"/>
+        <location line="+59"/>
+        <source>{name} is signed in now, so cannot disable or reset their own account.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Another Admin does it, from their own sign-in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Admin without a password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} signed in without a password, so cannot manage users while another Admin has one.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Ask an Admin with a password to sign in under Switch User and do it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Last Admin who can sign in</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} is the last Admin who can sign in with a password, so no one could then manage users or settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Add another Admin and hand the account over to them first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Last Operator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} is the last enabled Operator, whom the app signs in when it starts.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Add another Operator first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+123"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4392,7 +4492,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3474"/>
+        <location filename="../core/services.py" line="+3564"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -8806,12 +8906,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+119"/>
+        <location line="+123"/>
         <source>Confirm Retention Policy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-118"/>
+        <location line="-122"/>
         <source>Support Bundle…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8843,23 +8943,35 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+118"/>
+        <location line="+122"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-115"/>
+        <location line="-119"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+129"/>
+        <location line="+133"/>
         <source>Unlock User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-125"/>
+        <location line="-129"/>
+        <location line="+154"/>
+        <source>Disable / Enable User</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-153"/>
+        <location line="+164"/>
+        <source>Reset Password or PIN</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-161"/>
         <source>Hardware interfaces</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8875,6 +8987,26 @@
     </message>
     <message>
         <location line="+134"/>
+        <source>{user} ({status})</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Disable {user}, or enable them again if they are disabled?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>Drop {user}&apos;s password or PIN? They choose a new one at their next sign-in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>{user} chooses a new password or PIN at their next sign-in.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Locked until unlocked</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8899,8 +9031,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-147"/>
-        <location line="+10"/>
+        <location line="-190"/>
+        <location line="+14"/>
         <source>Status</source>
         <translation>상태</translation>
     </message>
@@ -8967,11 +9099,12 @@
     <message>
         <location line="+12"/>
         <location line="+20"/>
+        <location line="+12"/>
         <source>User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-20"/>
+        <location line="-32"/>
         <source>User name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9414,7 +9547,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3558"/>
+        <location filename="../core/services.py" line="-3648"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
