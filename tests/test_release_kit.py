@@ -78,13 +78,14 @@ def powershell(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 @windows
 def test_req_set_027_verify_ps1_passes_a_whole_kit_and_fails_a_changed_or_unsigned_one(tmp_path: Path) -> None:
     out = kit(tmp_path, exe=unsigned_exe())
-    passed = powershell("verify.ps1", "-Kit", str(out), "-AllowUnsigned", "-InstalledExe", str(tmp_path / "none.exe"))
+    passed = powershell("verify.ps1", "-Kit", str(out), "-AllowUnsigned")
     assert passed.returncode == 0 and "All checks passed." in passed.stdout, passed.stdout + passed.stderr
-    refused = powershell("verify.ps1", "-Kit", str(out), "-InstalledExe", str(tmp_path / "none.exe"))
+    refused = powershell("verify.ps1", "-Kit", str(out))
     assert refused.returncode == 1 and "FAIL  Authenticode status of" in refused.stdout, refused.stdout
+    assert "PASS  pilot-ca.cer is the pilot CA 3C45CCCB725E4611954743024C16E30F6E8483EF" in passed.stdout
     (out / SETUP).write_bytes(b"MZ another installer")
     (out / "extra.txt").write_text("x", encoding="utf-8")
-    changed = powershell("verify.ps1", "-Kit", str(out), "-AllowUnsigned", "-InstalledExe", str(tmp_path / "none.exe"))
+    changed = powershell("verify.ps1", "-Kit", str(out), "-AllowUnsigned")
     assert changed.returncode == 1 and f"FAIL  SHA-256 of {SETUP}" in changed.stdout, changed.stdout
     assert "FAIL  extra.txt is in the kit but not in SHA256SUMS.txt" in changed.stdout
 

@@ -247,7 +247,7 @@ jobs:
           }
           python tools/release_kit.py @kit
           if ($LASTEXITCODE -ne 0) { throw "The kit was not assembled" }
-          $unsigned = if ($env:SIGNED -eq "true") { @() } else { @("-AllowUnsigned") }  # a pull request's build
+          $unsigned = if ($env:SIGNED -eq "true") { @() } else { @("-AllowUnsigned") }  # unsigned: PRs, no certificate yet
           tools/release/verify.ps1 -Kit dist/kit @unsigned
           if ($LASTEXITCODE -ne 0) { throw "The kit failed its own verify.ps1" }
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

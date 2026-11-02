@@ -9,20 +9,24 @@ Run it from the kit's folder, or pass -Kit:
     powershell -ExecutionPolicy Bypass -File .\verify.ps1
 
 1. Hashes: every file SHA256SUMS.txt names is there with that SHA-256, and no other file is in the kit.
-2. Signature: the installer's Authenticode status is Valid (a -pilot-signed installer, on a station that trusts
-   pilot-ca.cer: docs/install/pilot-signing.md). An -unsigned installer is an internal test build and fails, unless
-   -AllowUnsigned (CI's pull-request builds). The installed .exe, when there is one, is held to the same.
-3. Provenance, when the kit holds provenance.sigstore.json: `gh attestation verify` with the kit's bundle and trusted
-   root shows GitHub built the installer from this repository's build.yml. Without the GitHub CLI it says it was not
-   checked and goes on.
+2. Signature: the installer's Authenticode status is Valid and its chain ends at the pilot CA whose thumbprint is
+   written below (-CaThumbprint), as does the kit's pilot-ca.cer: a kit whose CA was swapped fails even when its
+   hashes agree. Check the thumbprint this prints against the one we send by a second channel. An -unsigned installer
+   is an internal test build and fails, unless -AllowUnsigned (CI's builds before the certificate exists).
+   -InstalledExe, after the install, holds the installed .exe to the same.
+3. Provenance: a -pilot-signed kit must hold provenance.sigstore.jsonl, and `gh attestation verify` with the kit's
+   bundle and trusted root must show the installer was built by this repository's build.yml. Where the GitHub CLI is
+   not installed, as on a station, pass -SkipProvenance after checking the same kit on a PC that has it.
 
 Each check prints PASS or FAIL; exit 0 when none failed, 1 otherwise.
 #>
 param(
     [string]$Kit = $PSScriptRoot,
     [string]$Repository = "jdseo921/pcb-aoi-monitor",
-    [string]$InstalledExe = (Join-Path $env:ProgramFiles "AOI PoC Inspector\AOI-PoC-Inspector.exe"),
-    [switch]$AllowUnsigned
+    [string]$InstalledExe = "",
+    [string]$CaThumbprint = "3C45CCCB725E4611954743024C16E30F6E8483EF",  # installer\pilot-ca.cer, to 2031-10-11
+    [switch]$AllowUnsigned,
+    [switch]$SkipProvenance
 )
 $ErrorActionPreference = "Stop"
 $failed = 0
@@ -47,23 +51,37 @@ foreach ($extra in Get-ChildItem $Kit -File | Where-Object { $_.Name -ne "SHA256
 $setup = @(Get-ChildItem $Kit -File -Filter "*-setup-x64-*.exe")
 if ($setup.Count -ne 1) { Report $false "one installer in the kit ($($setup.Count) found)"; exit 1 }
 $setup = $setup[0].FullName
-$want = if ($setup -like "*-pilot-signed.exe") { "Valid" } elseif ($AllowUnsigned) { "NotSigned" } else { "Valid" }
+$pilot = $setup -like "*-pilot-signed.exe"
+$want = if ($pilot -or -not $AllowUnsigned) { "Valid" } else { "NotSigned" }
+$ca = Join-Path $Kit "pilot-ca.cer"
+$kitCa = if (Test-Path $ca) { (New-Object Security.Cryptography.X509Certificates.X509Certificate2 $ca).Thumbprint }
+Report ($kitCa -eq $CaThumbprint) "pilot-ca.cer is the pilot CA $CaThumbprint (found $kitCa)"
 foreach ($file in @($setup, $InstalledExe)) {
-    if ($file -eq $InstalledExe -and -not (Test-Path $file)) { continue }
-    $status = (Get-AuthenticodeSignature -LiteralPath $file).Status.ToString()
+    if (-not $file) { continue }
+    $sig = Get-AuthenticodeSignature -LiteralPath $file
+    $status = $sig.Status.ToString()
     Report ($status -eq $want) "Authenticode status of $(Split-Path $file -Leaf): $status (wanted $want)"
+    if ($status -eq "Valid") {
+        $chain = New-Object Security.Cryptography.X509Certificates.X509Chain
+        [void]$chain.Build($sig.SignerCertificate)
+        $root = $chain.ChainElements[$chain.ChainElements.Count - 1].Certificate.Thumbprint
+        Report ($root -eq $CaThumbprint) "$(Split-Path $file -Leaf) is signed under the pilot CA (root $root)"
+    }
 }
 
-$bundle = Join-Path $Kit "provenance.sigstore.json"
-if (Test-Path $bundle) {
-    if (Get-Command gh -ErrorAction SilentlyContinue) {
-        $root = Join-Path $Kit "trusted_root.jsonl"
-        $extra = if (Test-Path $root) { @("--custom-trusted-root", $root) } else { @() }
-        & gh attestation verify $setup -R $Repository --bundle $bundle @extra | Out-Host
-        Report ($LASTEXITCODE -eq 0) "provenance: built by $Repository's build.yml"
-    } else {
-        "NOT CHECKED  provenance: the GitHub CLI (gh) is not installed here; check it on a PC that has it"
-    }
+$bundle = Join-Path $Kit "provenance.sigstore.jsonl"
+$workflow = "$Repository/.github/workflows/build.yml"
+if ($SkipProvenance) {
+    "NOT CHECKED  provenance (-SkipProvenance): check this kit with verify.ps1 on a PC with the GitHub CLI"
+} elseif (-not (Test-Path $bundle)) {
+    Report (-not $pilot) "provenance: a pilot-signed kit holds provenance.sigstore.jsonl"
+} elseif (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    Report $false "provenance: the GitHub CLI (gh) is not installed here; use a PC that has it, or -SkipProvenance"
+} else {
+    $root = Join-Path $Kit "trusted_root.jsonl"
+    $extra = if (Test-Path $root) { @("--custom-trusted-root", $root) } else { @() }
+    & gh attestation verify $setup -R $Repository --signer-workflow $workflow --bundle $bundle @extra | Out-Host
+    Report ($LASTEXITCODE -eq 0) "provenance: built by $workflow"
 }
 if ($failed) { "$failed check(s) failed: do not install this kit."; exit 1 }
 "All checks passed."

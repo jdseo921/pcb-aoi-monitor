@@ -97,8 +97,8 @@ The reminders, three of them so that one failing to arrive is not the end of it:
 
 1. On the release engineer's new machine, run `tools/new_pilot_signing.ps1 -NewCa`: a new CA, a new signing
    certificate, both secrets replaced, and a new `installer/pilot-ca.cer`.
-2. Commit the new `pilot-ca.cer` in a pull request that also updates the table above; the next build of `main` is
-   signed by the new CA.
+2. Commit the new `pilot-ca.cer` in a pull request that also updates the table above and `-CaThumbprint` in
+   `tools/release/verify.ps1`; the next build of `main` is signed by the new CA.
 3. Send the customer's IT the new `pilot-ca.cer` with the next release kit, to trust as in step 2 of this page, beside
    the old one. Once every station runs a build signed by the new CA, they remove the old CA as in step 3.
 

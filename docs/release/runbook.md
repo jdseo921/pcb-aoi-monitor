@@ -28,7 +28,7 @@ skipped because it passed last time.
        a "Renew now" warning means `docs/install/pilot-signing.md`, "Renewal", before the kit leaves), the installer
        installed, self-tested and uninstalled, and the provenance signed.
 8. [ ] **Download the kit**: the run's `…-kit` artifact. It holds the installer (`…-pilot-signed.exe`, never
-       `…-unsigned.exe`), `SHA256SUMS.txt`, `provenance.sigstore.json`, `trusted_root.jsonl`, `pilot-ca.cer`, the
+       `…-unsigned.exe`), `SHA256SUMS.txt`, `provenance.sigstore.jsonl`, `trusted_root.jsonl`, `pilot-ca.cer`, the
        release note, `verify.ps1` and `inventory.ps1`.
 9. [ ] **Verify the kit on our own PC**: `powershell -ExecutionPolicy Bypass -File .\verify.ps1` in the kit's folder
        prints PASS for every hash, the signature and the provenance, and "All checks passed." CI ran the same script on
@@ -39,9 +39,12 @@ skipped because it passed last time.
 10. [ ] **Before the upgrade**: `inventory.ps1` on the station, its output kept with the release record; a support
         bundle (Settings › Support Bundle…); a copy of the workspace with the app closed (install guide, "Backup and
         restore").
-11. [ ] **Verify the kit on the station**: `verify.ps1` again, on the station, after the customer's IT trusts
-        `pilot-ca.cer` (`docs/install/pilot-signing.md`).
-12. [ ] **Install**, then `inventory.ps1`: the new version and build number, "(pilot, signed)", signature Valid.
+11. [ ] **Verify the kit on the station**: `verify.ps1 -SkipProvenance` (a station has no GitHub CLI; step 9 checked
+        the provenance), after the customer's IT trusts `pilot-ca.cer` (`docs/install/pilot-signing.md`). IT compares
+        the CA thumbprint it prints with the one we send by a second channel, not from the kit.
+12. [ ] **Install**, then `verify.ps1 -SkipProvenance -InstalledExe` with the installed .exe
+        (`"C:\Program Files\AOI PoC Inspector\AOI-PoC-Inspector.exe"`) and `inventory.ps1`: the new version and
+        build number, "(pilot, signed)", signature Valid under the pilot CA.
 13. [ ] **Station checks**: `docs/tests/station-checks.md` on this station, its results recorded in the gate file, and
         the app's `--self-test` exit 0. The next hour's `heartbeat.json` shows the new `app_version` and no alarm in
         `logs/alerts.jsonl` but those the station had before.

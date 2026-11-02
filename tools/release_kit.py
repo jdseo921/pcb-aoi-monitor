@@ -7,7 +7,7 @@ installer passed its check (.github/workflows/build.yml), and keeps the folder a
 
 The kit holds the installer; `pilot-ca.cer`, which a pilot station trusts (docs/install/pilot-signing.md); the release
 note, `<version>.md` once it is named, else `unreleased.md`; `verify.ps1` and `inventory.ps1` (tools/release/); on
-main and tags the build's provenance (`provenance.sigstore.json`) and Sigstore's trusted root, so `verify.ps1` checks
+main and tags the build's provenance (`provenance.sigstore.jsonl`) and Sigstore's trusted root, so `verify.ps1` checks
 it without a network; and `SHA256SUMS.txt`, the hash of every other file, last. Exit 0 when written, 2 when a file is
 missing.
 """
@@ -27,7 +27,7 @@ if str(ROOT) not in sys.path:  # run as a script: the repository root holds the 
 from aoi.config import APP_VERSION  # noqa: E402
 
 SCRIPTS = ("verify.ps1", "inventory.ps1")
-PROVENANCE, TRUSTED_ROOT, SUMS = "provenance.sigstore.json", "trusted_root.jsonl", "SHA256SUMS.txt"
+PROVENANCE, TRUSTED_ROOT, SUMS = "provenance.sigstore.jsonl", "trusted_root.jsonl", "SHA256SUMS.txt"
 
 
 def note(version: str = APP_VERSION, notes: Path = ROOT / "docs" / "release-notes") -> Path:
