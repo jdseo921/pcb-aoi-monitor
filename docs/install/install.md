@@ -73,6 +73,21 @@ The optional desktop shortcut opens the station's workspace, like the first one.
 
 The app opens no port and makes no network connection ([ports.md](ports.md)).
 
+### Where the workspace goes
+
+Put the workspace on a drive of the station itself, in a folder OneDrive does not copy, such as `C:\AOI_Workspace`.
+The app refuses two places with AOI-SET-024, when the folder is picked in Settings and at every start (REQ-SET-025):
+
+- **A network drive**: a `\\server\share` path or a drive letter mapped to one. The workspace holds a live SQLite
+  database, whose locks and write order a network share does not keep, so two writers or a dropped connection can damage
+  records without a sign.
+- **A folder OneDrive copies to the cloud**: `%OneDrive%`, `%OneDriveCommercial%` and the folders under them, often
+  Documents and Desktop. The sync client holds files open and can put back an older copy of the database without its
+  log, or evidence files that no longer match their records.
+
+At start the refusal is followed by a folder picker; choose a local folder there. To back up a workspace, copy it while
+the app is closed (see "Backup and restore").
+
 ## Antivirus, AppLocker and App Control
 
 The app is built to run beside Microsoft Defender with real-time scanning on, with no exclusion: it opens no port
