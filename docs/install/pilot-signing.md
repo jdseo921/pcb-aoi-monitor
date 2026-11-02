@@ -72,7 +72,7 @@ stolen backup would let anyone sign builds the pilot stations trust. What is bac
    (Windows binds a non-exportable key to the account and machine), and is tried first.
 
 Keeping an exportable copy on offline media instead (an encrypted PFX on two USB drives kept apart, its password in the
-company's password manager) is a decision for Jay; it is not taken (see the 1.8 pull request).
+company's password manager) was considered and declined: Jay chose no backup, as built, on 2026-11-02 (1.8 pull request).
 
 ### Renewal
 
