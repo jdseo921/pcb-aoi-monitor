@@ -71,8 +71,8 @@ before, and `user.start` for the user a start signs in. The demo workspace alway
 sign-in they choose one of 15 to 64 characters and type it twice. Five wrong passwords in a row lock the account for 5
 minutes (AOI-USR-006), and while it is locked even the right password is not checked; the 100th wrong one since the last
 right one locks it until an Admin unlocks it (AOI-USR-007). An Admin sees each user's status under Users & roles and
-ends a lock with **Unlock User**, a forgotten password or PIN with **Reset Password or PIN** (the user chooses a new one
-at their next sign-in), and turns a user off or on again with **Disable / Enable User**: a disabled user cannot sign in
+ends a lock with **Unlock User**, a forgotten password or PIN with **Reset Password** (for a PIN too; the user chooses a new one
+at their next sign-in), and turns a user off or on again with **Disable / Enable**: a disabled user cannot sign in
 (AOI-USR-010) and keeps their name on past records. An Engineer's or Admin's first password is chosen only while an
 Admin is signed in to hand the account over (AOI-USR-009): the Admin signs in, then picks the user under Switch User,
 who types the new password twice. No Admin disables or resets their own account (AOI-USR-011), and the station always

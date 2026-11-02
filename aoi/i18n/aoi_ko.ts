@@ -9038,13 +9038,21 @@
     </message>
     <message>
         <location line="-129"/>
-        <location line="+154"/>
+        <source>Disable / Enable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Reset Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+153"/>
         <source>Disable / Enable User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-153"/>
-        <location line="+164"/>
+        <location line="+11"/>
         <source>Reset Password or PIN</source>
         <translation type="unfinished"></translation>
     </message>
