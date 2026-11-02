@@ -963,7 +963,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+417"/>
+        <location line="+434"/>
+        <source>Saving a recovery code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Printing a recovery code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>Disabling a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1260,14 +1270,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3308"/>
-        <location line="+3322"/>
+        <location line="+1310"/>
+        <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-4661"/>
+        <location line="+3365"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3411"/>
+        <location line="-3454"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1367,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1497"/>
+        <location line="+1540"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1594,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4073"/>
+        <location line="-4116"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1619,7 +1634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1421"/>
+        <location line="+1464"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1736,14 +1751,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4500"/>
+        <location line="-4543"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1246"/>
+        <location filename="../ui/main_window.py" line="+1264"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4492,7 +4507,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3564"/>
+        <location filename="../core/services.py" line="+3607"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4527,7 +4542,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/passwords.py" line="+29"/>
+        <location filename="../core/passwords.py" line="+30"/>
         <source>is shorter than {length} characters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4718,7 +4733,17 @@
         <translation type="unfinished">모든 단계 보기 ›</translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+26"/>
+        <source>First, choose the Admin&apos;s password: until an Admin has one, whoever starts this station is its Admin. A recovery code shows once after it, to save or print.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Choose the Admin&apos;s Password…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+25"/>
         <source>as on the board or its drawing, such as TBOX-A1</source>
         <translation type="unfinished">보드나 도면에 적힌 그대로, 예: TBOX-A1</translation>
     </message>
@@ -4768,7 +4793,7 @@
         <translation type="unfinished">키를 저장했습니다  Enter</translation>
     </message>
     <message>
-        <location line="+29"/>
+        <location line="+47"/>
         <source>Set up your first board model</source>
         <translation type="unfinished">첫 보드 모델 설정</translation>
     </message>
@@ -5337,7 +5362,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1102"/>
+        <location filename="../ui/main_window.py" line="-1119"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6667,12 +6692,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+159"/>
+        <location line="+172"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+124"/>
+        <location line="+122"/>
         <source>Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User.</source>
         <translation type="unfinished">{board_model} 설정을 시작한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
     </message>
@@ -6742,7 +6767,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+47"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7627,7 +7652,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1059"/>
+        <location filename="../ui/main_window.py" line="-1076"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8334,6 +8359,59 @@
         <location line="+36"/>
         <source>Revision {latest} of {board_model} was saved after revision {revision}, which you are editing. Load revision {latest} and discard your unsaved changes? With No, they stay on screen, but Save Recipe refuses them until revision {latest} is loaded.</source>
         <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>RecoveryCodeDialog</name>
+    <message>
+        <location filename="../ui/recovery_code_dialog.py" line="+30"/>
+        <source>Recovery code for {user}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, {user} signs in and chooses a new password after losing theirs. It works once, then a new one shows.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Save to File…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Print…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Keep this sheet locked away, apart from the station. At Switch User, {user} presses Use Recovery Code…, types it and chooses a new password. It works once.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Save Recovery Code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Text (*.txt)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>✓ Saved to {file}</source>
+        <translation type="unfinished">✓ {file}에 저장됨</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>✓ Sent to {printer}</source>
+        <translation type="unfinished">✓ {printer}(으)로 보냄</translation>
     </message>
 </context>
 <context>
@@ -9127,7 +9205,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+14"/>
         <source>Cancel</source>
         <translation type="unfinished">취소</translation>
     </message>
@@ -9547,7 +9625,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3648"/>
+        <location filename="../core/services.py" line="-3691"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

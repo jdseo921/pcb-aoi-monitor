@@ -121,6 +121,19 @@ class FirstRunGuide(QFrame):
         self.form = QWidget()
         lay = QVBoxLayout(self.form)
         lay.setContentsMargins(0, 0, 0, 0)
+        # the first Admin (REQ-USR-005): until an Admin has a password, whoever starts the station is its Admin
+        self.admin_line = QLabel(
+            self.tr(
+                "First, choose the Admin's password: until an Admin has one, whoever starts this station is its Admin."
+                " A recovery code shows once after it, to save or print."
+            )
+        )
+        self.admin_line.setWordWrap(True)
+        self.btn_admin = size_class(button(self.tr("Choose the Admin's Password…"), slot=self._first_admin), "T")
+        admin_row = QHBoxLayout()
+        admin_row.addWidget(self.admin_line, 1)
+        admin_row.addWidget(self.btn_admin, 0, Qt.AlignmentFlag.AlignTop)
+        lay.addLayout(admin_row)
         grid = QGridLayout()
         grid.setColumnStretch(2, 1)
         self.name = QLineEdit()
@@ -228,11 +241,29 @@ class FirstRunGuide(QFrame):
         """The recovery key shows and I Have Saved the Key was not pressed: the frame holds still."""
         return self.recovery.holding()
 
+    def _admin_unset(self) -> str | None:
+        """The first Admin in set-up while no Admin has a password, outside the demo; else None."""
+        users = self.ctx.users()
+        if self.page.shell.in_demo or any(u["role"] == "Admin" and u["status"] == "active" for u in users):
+            return None
+        return next((str(u["name"]) for u in users if u["role"] == "Admin" and u["status"] == "setup"), None)
+
+    def _first_admin(self) -> None:
+        """Switch User with the first Admin picked: their password twice, then their recovery code once."""
+        self.page.shell.switch_user(self._admin_unset())
+        self._sync_admin()
+
+    def _sync_admin(self) -> None:
+        unset = self._admin_unset() is not None
+        self.admin_line.setVisible(unset)
+        self.btn_admin.setVisible(unset)
+
     def show_for(self, board_model: str | None) -> None:
         """Screen 1 for a workspace with no board model, or with the recovery key of the one just made; screen 2 for
         a board model in a customer's store whose images are not all in and boxed, then screen 3 until its first board
         is inspected (`AppContext.guide_step`)."""
         holding, before = self.holding(), self.shown
+        self._sync_admin()
         self.shown = 1 if board_model is None or holding else self.ctx.guide_step(board_model) or 1
         if board_model is None or holding:
             self.heading.setText(self.tr("Set up your first board model"))
