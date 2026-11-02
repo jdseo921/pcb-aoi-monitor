@@ -2,6 +2,94 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="ko_KR" sourcelanguage="en_US">
 <context>
+    <name>AboutDialog</name>
+    <message>
+        <location filename="../ui/about.py" line="+20"/>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>none</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>App</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Commit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>none (from source)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Board model</source>
+        <translation type="unfinished">보드 모델</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>none active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Recipe revision</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Database schema</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Station ID</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Licence</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>none yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Third-party notices</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>In THIRD_PARTY_NOTICES.txt beside the app, in an installed build.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Copy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Close</source>
+        <translation type="unfinished">닫기</translation>
+    </message>
+</context>
+<context>
     <name>AgreementPanel</name>
     <message>
         <location filename="../ui/pages/training_agreement.py" line="+47"/>
@@ -1476,7 +1564,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+387"/>
+        <location line="+406"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1486,7 +1574,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-447"/>
+        <location line="-466"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1601,7 +1689,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+142"/>
+        <location line="+161"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1633,14 +1721,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4259"/>
+        <location line="-4278"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+162"/>
-        <location filename="../ui/main_window.py" line="+1174"/>
+        <location filename="../ui/main_window.py" line="+1181"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5024,7 +5112,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1034"/>
+        <location filename="../ui/main_window.py" line="-1040"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6400,11 +6488,16 @@
     </message>
     <message>
         <location line="+5"/>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Switch User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+17"/>
         <source>Training {percent} % · {left}</source>
         <translation>학습 {percent} % · {left}</translation>
     </message>
@@ -7319,7 +7412,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-991"/>
+        <location filename="../ui/main_window.py" line="-997"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7490,7 +7583,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/settings.py" line="+52"/>
+        <location filename="../ui/pages/settings.py" line="+53"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8597,13 +8690,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
-        <location line="+109"/>
+        <location line="+8"/>
+        <location line="+115"/>
         <source>Confirm Retention Policy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-101"/>
+        <location line="-114"/>
+        <source>Support Bundle…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Support bundle with board images</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <location line="+2"/>
         <source>Presenter theme</source>
         <translation type="unfinished"></translation>
@@ -8625,12 +8728,12 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+103"/>
+        <location line="+114"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-101"/>
+        <location line="-112"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8700,7 +8803,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+28"/>
+        <source>Support Bundle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Zip (*.zip)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Support bundle written: {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
         <source>User</source>
         <translation type="unfinished"></translation>
     </message>

@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QLayout,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
@@ -47,6 +48,7 @@ from ..core.run_progress import RunProgress
 from ..core.services import REQUIRED_ROLE, ROLES_FROM, AppContext, Missing, Need, workspace_in_use
 from ..errors import AoiError
 from . import theme
+from .about import AboutDialog
 from .board_model_dialog import NewBoardModelDialog
 from .demo_workspace import boards
 from .errors import install_excepthook, open_workspace, phrase_text, show_already_open, show_error
@@ -54,6 +56,7 @@ from .pages.base import (
     QT_TRANSLATE_NOOP,
     Page,
     RoleGates,
+    _Button,
     button,
     page_text,
     restyle_table,
@@ -458,6 +461,23 @@ class _GivesWay(QLabel):
         return QSize(0, super().minimumSizeHint().height())
 
 
+class _GivesWayButton(_Button):
+    """A header button that never sets the window's minimum width either, given way after the labels (`_fit_header`):
+    About, which at 18 pt would otherwise hold a presenter window wider than 1366 px before its 16 pt sizes apply."""
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        return QSize(0, super().minimumSizeHint().height())
+
+
+class _Header(QFrame):
+    """The header, which never sets the window's minimum width: with About in it, its controls at the presenter
+    theme's 18 pt held a window laid out at 1920 px wider than 1366 px, so it never reached the 16 pt sizes that fit
+    there. `MainWindow._fit_header` hides the app's name, "Board model:" and About where the controls need the room."""
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        return QSize(0, super().minimumSizeHint().height())
+
+
 class _PageStack(QStackedWidget):
     """The pages in the scroll area round them (#104): as wide and as tall as the page shown needs. A QStackedWidget
     asks for its widest and tallest page's size, so every page would scroll as far down as the tallest one (Settings)
@@ -642,10 +662,11 @@ class MainWindow(QMainWindow):
 
     # --- header -------------------------------------------------------------------
     def _header(self) -> QWidget:
-        h = QFrame()
+        h = _Header()
         h.setObjectName("header")
         h.setFixedHeight(theme.HEADER_H)
         layout = QHBoxLayout(h)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetNoConstraint)  # `_Header`: its width never holds the window
         layout.setContentsMargins(18, 0, 18, 0)
         self.logo = _GivesWay(f"<b>{APP_NAME}</b>")  # gives way first where the header is too narrow (`_fit_header`)
         self.logo.setObjectName("logo")
@@ -673,11 +694,18 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.exit_presenter)
         self.user_label = QLabel("")
         layout.addWidget(self.user_label)
+        self.about = _GivesWayButton(self.tr("About"))  # for every role (REQ-SET-011)
+        self.about.clicked.connect(self.show_about)
+        layout.addWidget(self.about)
         switch = button(self.tr("Switch User"), slot=self.switch_user)
         layout.addWidget(switch)
-        for control in (self.bm_combo, self.btn_new, self.training_link, self.exit_presenter, switch):
+        for control in (self.bm_combo, self.btn_new, self.training_link, self.exit_presenter, self.about, switch):
             size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
         return h
+
+    def show_about(self) -> None:
+        """About for the board model the header selects (REQ-SET-011)."""
+        AboutDialog(self, self.ctx.about(self.bm_combo.currentText() or None)).exec()
 
     def show_training(self) -> None:
         """The header's training indicator and Home's line, read each second from the context's run, whichever page
@@ -808,12 +836,12 @@ class MainWindow(QMainWindow):
     def _fit_header(self) -> None:
         """The header's controls whole in a window as narrow as 1366 px in the presenter theme (A7): where they do not
         all fit, the app's name gives way first, which the title bar shows outside the presenter theme, then the words
-        "Board model:" before the list, whose tooltip still says it; at 1366 px only a training run's line in the
-        header needs that. Measured as if both were shown, and each shown or hidden only when that changes, so a
-        resize lays the window out once (review of A7)."""
+        "Board model:" before the list, whose tooltip still says it, then About; at 1366 px only a training run's
+        line in the header needs that. Measured as if all were shown, and each shown or hidden only when that changes,
+        so a resize lays the window out once (review of A7)."""
         layout = self.header.layout()
         assert layout is not None
-        gives_way = (self.logo, self.bm_label)
+        gives_way = (self.logo, self.bm_label, self.about)
         need = layout.sizeHint().width()  # a box layout leaves its hidden widgets out
         need += sum(label.sizeHint().width() + layout.spacing() for label in gives_way if label.isHidden())
         for label in gives_way:
