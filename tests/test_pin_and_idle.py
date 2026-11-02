@@ -100,6 +100,10 @@ def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator_never_mid
     assert ended["before"] == {"user": "engineer", "role": "Engineer"} and ended["after"]["user"] == "kim"
     assert "ended after 15 minutes without input" in win.statusBar().currentMessage()
     assert not win.check_idle()  # an Operator's view never ends
+    second = MainWindow(ctx)
+    qtbot.addWidget(second)
+    watches = QApplication.instance().findChildren(type(win.input))  # one filter for the app, never one per window
+    assert watches == [win.input] and second.input is win.input
     win.close()
 
 

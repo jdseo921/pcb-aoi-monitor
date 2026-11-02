@@ -455,18 +455,31 @@ class _HeldPress(QObject):
 
 
 class _InputWatch(QObject):
-    """A press, key, wheel or touch in the app: an Engineer's or Admin's idle time starts again (REQ-USR-004)."""
+    """A press, key, wheel or touch in the app: an Engineer's or Admin's idle time starts again (REQ-USR-004). One for
+    the application, whatever windows it opens (`watch_input`), so no event passes through a filter per window."""
 
     INPUT = {QEvent.Type.MouseButtonPress, QEvent.Type.KeyPress, QEvent.Type.Wheel, QEvent.Type.TouchBegin}
 
-    def __init__(self, win: MainWindow) -> None:
-        super().__init__(win)
+    def __init__(self, app: QObject | None) -> None:
+        super().__init__(app)
         self.last = time.monotonic()
 
     def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
         if e.type() in self.INPUT:
             self.last = time.monotonic()
         return False
+
+
+def watch_input() -> _InputWatch:
+    """The application's one `_InputWatch`, installed on it the first time a window asks; reset to now."""
+    app = QApplication.instance()
+    watch = app.findChild(_InputWatch) if app is not None else None
+    if watch is None:
+        watch = _InputWatch(app)
+        if app is not None:
+            app.installEventFilter(watch)
+    watch.last = time.monotonic()
+    return watch
 
 
 class _GivesWay(QLabel):
@@ -636,12 +649,10 @@ class MainWindow(QMainWindow):
         self._drive_timer.timeout.connect(self.show_drive)
         self._drive_timer.start(DRIVE_CHECK_MS)
         self.show_drive()
-        self.input = _InputWatch(self)
-        app = QApplication.instance()
-        if app is not None:
-            app.installEventFilter(self.input)
+        self.input = watch_input()
         self._idle_timer = QTimer(self)
-        self._idle_timer.timeout.connect(self.check_idle)
+        # only a window on screen: one closed, or never shown (a test's), never ends a session
+        self._idle_timer.timeout.connect(lambda: self.isVisible() and self.check_idle())
         self._idle_timer.start(IDLE_CHECK_MS)
         ctx.usb_drive()  # the USB drives there as the window opens: one plugged in after is the last (Q68)
         # the demo, and a station with no board model yet to set up, start with an Admin; while the first-run guide sets
