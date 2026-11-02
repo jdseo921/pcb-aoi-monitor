@@ -19,6 +19,12 @@ On Windows, with admin rights, for CI's runner:
    and a database file of its own, which the installer did not create, and removes them at the end; folders that
    exist are only read.
 
+4. The installer says what it is, on both variants (REQ-SET-012, REQ-SET-023): its file name ends in -unsigned or
+   -pilot-signed; the name Installed apps shows ends in "(internal, unsigned)" or "(pilot, signed)" to match; and the
+   installer's and the installed .exe's Authenticode status is NotSigned for the first and Valid for the second, so
+   an unsigned build never calls itself signed and a signed one never says "unsigned". The welcome page's wording for
+   each variant is checked from installer/aoi.iss by tests/test_installer.py.
+
 It refuses to run where the app is installed already, as a second install would take over that install's entry in
 Installed apps. The setup and uninstall logs are printed after a failure. Exit 0 on a pass, 1 on a failure, 2 off
 Windows, without an installer file or where the app is installed.
@@ -51,6 +57,8 @@ EXE = APP_NAME.replace(" ", "-") + ".exe"
 QUIET = ("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART")
 TIMEOUT = 900  # seconds an install or uninstall may take: about 660 MB of files, which antivirus reads on a runner
 SHORTCUTS = {f"{APP_NAME}.lnk": "", f"{APP_NAME} (Demo).lnk": "--demo"}  # in the Start menu: the .exe's arguments
+# Each variant's file name ending, the label Installed apps shows (aoi.iss's Kind), and its Authenticode status
+VARIANTS = {"unsigned": ("internal, unsigned", "NotSigned"), "pilot-signed": ("pilot, signed", "Valid")}
 
 
 def app_id(iss: Path = ISS) -> str:
@@ -81,6 +89,44 @@ def installed(guid: str) -> bool:
     except FileNotFoundError:
         return False
     return True
+
+
+def display_name(guid: str) -> str | None:
+    """The name Installed apps shows for this AppId (its uninstall entry's DisplayName); None when not installed."""
+    import winreg  # Windows only
+
+    key = rf"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{guid}_is1"
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key, 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as entry:
+            return str(winreg.QueryValueEx(entry, "DisplayName")[0])
+    except FileNotFoundError:
+        return None
+
+
+def signature(file: Path) -> str:
+    """The file's Authenticode status as Windows reads it: Valid, NotSigned, UnknownError (an untrusted root), …"""
+    script = "(Get-AuthenticodeSignature -LiteralPath $env:FILE).Status.ToString()"
+    args = ["powershell", "-NoProfile", "-NonInteractive", "-Command", script]
+    # Under a pwsh step, PSModulePath names PowerShell 7's modules, which Windows PowerShell cannot load
+    env = {k: v for k, v in os.environ.items() if k.upper() != "PSMODULEPATH"} | {"FILE": str(file)}
+    out = subprocess.run(args, env=env, capture_output=True, text=True, check=False)
+    return out.stdout.strip() if out.returncode == 0 else f"unreadable ({out.stderr.strip()[:300]})"
+
+
+def says_what_it_is(setup: Path, shown: str | None, setup_status: str, exe_status: str | None) -> list[str]:
+    """What is wrong with how the installer names itself: its file name, the name Installed apps shows, and the
+    Authenticode status of the installer and the installed .exe, which must all be one variant (VARIANTS)."""
+    found = re.search(r"-setup-x64-(unsigned|pilot-signed)\.exe$", setup.name)
+    if found is None:
+        return [f"the installer's name {setup.name} ends in neither -unsigned.exe nor -pilot-signed.exe"]
+    label, status = VARIANTS[found[1]]
+    problems = []
+    if shown is None or not shown.endswith(f"({label})"):
+        problems.append(f"Installed apps shows {shown!r}, not a name ending in ({label})")
+    for what, got in (("installer", setup_status), ("installed .exe", exe_status)):
+        if got != status:
+            problems.append(f"the {what}'s Authenticode status is {got}, not {status} as its name says")
+    return problems
 
 
 def shortcut(lnk: Path) -> tuple[str, str] | None:
@@ -142,6 +188,8 @@ def check(setup: Path, tmp: Path, guid: str, workspaces: list[Path]) -> list[str
         problems = [f"the installer exited with code {code}"]
     else:
         problems = after_install(app, guid)
+        exe_status = signature(app / EXE) if (app / EXE).is_file() else None
+        problems += says_what_it_is(setup, display_name(guid), signature(setup), exe_status)
         if (app / EXE).is_file():
             problem = self_test(app / EXE, tmp / "selftest")
             print("--- The installed app's log of its self-test ---")
