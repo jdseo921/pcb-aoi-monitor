@@ -56,9 +56,7 @@ jobs:
       contents: read
       id-token: write  # the build's own short-lived identity, for the provenance below (ADR 0011, decision 2)
       attestations: write
-    env:  # the Stage 1 pilot's signing certificate (tools/new_pilot_signing.ps1); empty until it is made
-      PILOT_SIGNING_PFX: ${{ secrets.PILOT_SIGNING_PFX }}
-      PILOT_SIGNING_PASSWORD: ${{ secrets.PILOT_SIGNING_PASSWORD }}
+    env:  # the pilot signing certificate (tools/new_pilot_signing.ps1) is given to the two signing steps only
       # Whether this build is signed: on main and v* tags, once the certificate exists (a manual run of another
       # branch is not). The steps that sign, name and label the build all read this one value (REQ-SET-023).
       SIGNED: >-
@@ -94,6 +92,9 @@ jobs:
           "VERSIONINFO ProductVersion: $found"
       - name: Sign the app's executable with the pilot certificate, on main and tags once it exists (ADR 0011)
         if: env.SIGNED == 'true'
+        env:  # the certificate and its password, in this step and the installer's only (REQ-SET-012)
+          PILOT_SIGNING_PFX: ${{ secrets.PILOT_SIGNING_PFX }}
+          PILOT_SIGNING_PASSWORD: ${{ secrets.PILOT_SIGNING_PASSWORD }}
         run: tools/pilot_sign.ps1 dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe
       - name: Start the built app on an empty workspace, check that it opens, and inspect a board with --self-test
         id: smoke
@@ -202,6 +203,8 @@ jobs:
         if: env.SIGNED == 'true'
         env:
           SETUP: ${{ steps.installer.outputs.setup }}
+          PILOT_SIGNING_PFX: ${{ secrets.PILOT_SIGNING_PFX }}
+          PILOT_SIGNING_PASSWORD: ${{ secrets.PILOT_SIGNING_PASSWORD }}
         run: tools/pilot_sign.ps1 $env:SETUP
       - name: Install it silently, run the installed app's --self-test, and uninstall it, which must keep the workspace
         id: check_installer

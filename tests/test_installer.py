@@ -275,3 +275,49 @@ def test_req_set_012_the_installer_check_sees_any_change_to_a_workspace(tmp_path
     assert check_installer.snapshot([workspace, demo]) != before
     if sys.platform != "win32":
         assert check_installer.main([str(tmp_path / "setup.exe")]) == 2
+
+
+SECRETS = ("${{ secrets.PILOT_SIGNING_PFX }}", "${{ secrets.PILOT_SIGNING_PASSWORD }}")
+
+
+def test_req_set_012_the_signing_secrets_reach_the_signing_steps_only() -> None:
+    """The pilot certificate and its password are given to the two steps of build.yml that sign and to the one step of
+    signing-expiry.yml that reads its expiry, through those steps' own env, never a job's or a workflow's (ADR 0011)."""
+    given: list[str] = []
+    for path in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        flow = yaml.safe_load(path.read_text(encoding="utf-8"))
+        assert not set(SECRETS) & {str(v) for v in (flow.get("env") or {}).values()}, path.name
+        for name, job in flow["jobs"].items():
+            assert not set(SECRETS) & {str(v) for v in (job.get("env") or {}).values()}, (path.name, name)
+            for step in job.get("steps", []):
+                env = {str(v) for v in (step.get("env") or {}).values()}
+                if set(SECRETS) & env:
+                    assert set(SECRETS) <= env and "tools/pilot_sign.ps1" in step["run"], (path.name, step["name"])
+                    given.append(f"{path.name}: {step['run'].splitlines()[-1]}")
+                text = yaml.safe_dump({k: v for k, v in step.items() if k != "env"})
+                assert "PILOT_SIGNING_PFX }}" not in text and "PILOT_SIGNING_PASSWORD" not in text, step["name"]
+    assert given == [
+        "build.yml: tools/pilot_sign.ps1 dist/AOI-PoC-Inspector/AOI-PoC-Inspector.exe",
+        "build.yml: tools/pilot_sign.ps1 $env:SETUP",
+        "signing-expiry.yml: tools/pilot_sign.ps1 -CheckOnly",
+    ]
+    expiry = yaml.safe_load((ROOT / ".github" / "workflows" / "signing-expiry.yml").read_text(encoding="utf-8"))
+    assert expiry[True]["schedule"] == [{"cron": "17 3 1 * *"}] and expiry["permissions"] == {"contents": "read"}
+    sign = (ROOT / "tools" / "pilot_sign.ps1").read_text(encoding="utf-8")
+    assert "$RenewDays = 60" in sign and "::warning::Renew now" in sign and "[switch]$CheckOnly" in sign
+
+
+def test_req_set_012_the_installer_check_holds_each_variant_to_its_name_label_and_signature() -> None:
+    """tools/check_installer.py, on the runner: an -unsigned installer is "(internal, unsigned)" and NotSigned, a
+    -pilot-signed one "(pilot, signed)" and Valid, the installed .exe too; any mix is reported."""
+    says = check_installer.says_what_it_is
+    unsigned = Path(f"AOI-PoC-Inspector-{APP_VERSION}-setup-x64-unsigned.exe")
+    signed = Path(f"AOI-PoC-Inspector-{APP_VERSION}-setup-x64-pilot-signed.exe")
+    assert says(unsigned, f"{APP_NAME} {APP_VERSION} (internal, unsigned)", "NotSigned", "NotSigned") == []
+    assert says(signed, f"{APP_NAME} {APP_VERSION} (pilot, signed)", "Valid", "Valid") == []
+    wrong = says(signed, f"{APP_NAME} {APP_VERSION} (internal, unsigned)", "NotSigned", "Valid")
+    assert [p.split(",")[0].split(" ")[0] for p in wrong] == ["Installed", "the"] and "installer's" in wrong[1]
+    assert says(unsigned, None, "NotSigned", None)[0].startswith("Installed apps shows None")
+    assert says(Path("setup.exe"), None, "NotSigned", None) == [
+        "the installer's name setup.exe ends in neither -unsigned.exe nor -pilot-signed.exe"
+    ]

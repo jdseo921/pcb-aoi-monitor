@@ -1,0 +1,28 @@
+# The pilot signing certificate's renewal reminder (REQ-SET-012, ADR 0011; docs/install/pilot-signing.md, "Renewal").
+# On the first of each month it reads the signing certificate's and the pilot CA's expiry and fails when either ends
+# within 60 days, or the signing certificate has expired; GitHub mails a failed scheduled run to the repository's
+# owner. It signs nothing. Before the certificate exists (no secret) it says so and passes.
+name: Pilot signing expiry
+
+on:
+  schedule:
+    - cron: "17 3 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  expiry:
+    name: Pilot signing certificate expiry
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Read the signing certificate's and the pilot CA's expiry; fail within 60 days of either
+        env:  # the certificate and its password, in this step only
+          PILOT_SIGNING_PFX: ${{ secrets.PILOT_SIGNING_PFX }}
+          PILOT_SIGNING_PASSWORD: ${{ secrets.PILOT_SIGNING_PASSWORD }}
+        run: |
+          if (-not $env:PILOT_SIGNING_PFX) { "No pilot signing certificate yet (tools/new_pilot_signing.ps1)."; exit 0 }
+          tools/pilot_sign.ps1 -CheckOnly
