@@ -783,7 +783,9 @@ class MainWindow(QMainWindow):
     def switch_user(self) -> None:
         """Pick a user; an Engineer or Admin signs in with their password (`SignInDialog`, REQ-USR-002)."""
         dialog = SignInDialog(self)
-        if dialog.exec() and dialog.signed_in is not None:
+        dialog.exec()
+        dialog.deleteLater()  # with its fields, cleared on closing
+        if dialog.signed_in is not None:
             self.set_user(dialog.signed_in)
 
     def set_user(self, user: str) -> None:

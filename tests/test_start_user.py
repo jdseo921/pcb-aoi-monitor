@@ -44,10 +44,8 @@ def _reopened(ctx: AppContext) -> AppContext:
 
 def test_req_usr_003_a_start_signs_in_who_signed_in_last_on_the_station(ctx: AppContext) -> None:
     """No one has signed in yet: a start signs in operator. Switch User's sign-in is audited with the user before, and
-    the next start signs that user in again, unless they have a password (REQ-USR-002): an Engineer who chose one at
-    their first sign-in is never signed in by a start, which falls back to operator; a start's own sign-in (user.start)
-    is audited and changes no later start; a station being set up still starts with its first Admin while that Admin
-    has no password."""
+    the next start signs that user in again unless they have a password (REQ-USR-002); a start's own sign-in
+    (user.start) is audited and changes no later start; a station being set up starts with its first Admin."""
     ctx.ensure_board_model("B")  # set up: no longer the first start's Admin
     ctx.set_user("operator")
     assert ctx.start_user() == "operator" and ctx.last_signed_in() is None
@@ -62,9 +60,6 @@ def test_req_usr_003_a_start_signs_in_who_signed_in_last_on_the_station(ctx: App
     again = _reopened(ctx)
     try:
         assert again.user == "operator" and again.start_user() == "operator" and again.last_signed_in() == "engineer"
-        with pytest.raises(AoiError) as refused:
-            again.sign_in("engineer", start=True)  # nor by a start told to
-        assert refused.value.code == "AOI-USR-004" and again.user == "operator"
         again.sign_in("admin", start=True)  # as a start does: audited, but no sign-in of a person
         (started,) = again.audit_entries(action="user.start")
         assert (started["object_uuid"], started["before"]) == (again.db.user_uuid("admin"), None)

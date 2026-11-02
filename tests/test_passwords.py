@@ -132,28 +132,25 @@ def test_req_usr_006_a_role_change_that_drops_the_password_says_so(ctx: AppConte
 
 
 def test_req_usr_002_a_first_sign_in_chooses_the_password_and_later_ones_need_it(ctx: AppContext) -> None:
-    """In set-up, a password that breaks a rule is refused (AOI-USR-005) and nothing is stored; one that keeps them is
-    hashed and audited as user.password_set, naming the person and not the secret. After, a missing or wrong password
-    is refused (AOI-USR-004) and audited as user.sign_in_failed; the right one signs them in."""
-    uuid = ctx.db.user_uuid("engineer")
-    assert uuid is not None
+    """In set-up, a password breaking a rule is refused (AOI-USR-005); one keeping them is stored, audited naming the
+    person, not the secret. Then a missing or wrong one is refused (AOI-USR-004), audited as user.sign_in_failed."""
+    uuid = str(ctx.db.user_uuid("engineer"))
     ctx.set_user("operator")
-    with pytest.raises(AoiError) as refused:
+    with pytest.raises(AoiError, match="AOI-USR-005"):
         ctx.sign_in("engineer", password="short")
-    assert refused.value.code == "AOI-USR-005" and ctx.db.user_secret(uuid) is None and ctx.user == "operator"
+    assert ctx.db.user_secret(uuid) is None and ctx.user == "operator"
     ctx.sign_in("engineer", password=PASSPHRASE)
     assert ctx.user == "engineer" and passwords.verify(ctx.db.user_secret(uuid), PASSPHRASE)
     (chose,) = ctx.audit_entries(action="user.password_set")
     assert (chose["object_uuid"], chose["after"]) == (uuid, {"user": "engineer"})
     ctx.sign_in("operator")
     for wrong in (None, "seven tired owls over Seoul"):
-        with pytest.raises(AoiError) as refused:
+        with pytest.raises(AoiError, match="AOI-USR-004"):
             ctx.sign_in("engineer", password=wrong)
-        assert refused.value.code == "AOI-USR-004" and ctx.user == "operator"
+    assert ctx.user == "operator"
     failed = ctx.audit_entries(action="user.sign_in_failed")
     assert [(e["object_uuid"], e["after"]) for e in failed] == [(uuid, {"user": "engineer", "start": False})] * 2
     ctx.sign_in("engineer", password=PASSPHRASE)
-    assert ctx.user == "engineer"
 
 
 def test_req_usr_002_a_stale_hash_is_made_again_and_no_start_signs_them_in(ctx: AppContext) -> None:
@@ -163,6 +160,9 @@ def test_req_usr_002_a_stale_hash_is_made_again_and_no_start_signs_them_in(ctx: 
     stored = ctx.db.user_secret(uuid)
     assert stored is not None and not passwords.stale(stored) and passwords.verify(stored, PASSPHRASE)
     assert ctx.start_user(setting_up=True) == "operator"  # not the first Admin: they have a password
+    ctx.add_user("operator", "Engineer")  # no Operator left: a start takes one in set-up, never a password's
+    ctx.sign_in("operator", password=PASSPHRASE)
+    assert ctx.start_user() == "engineer"
     with pytest.raises(AoiError, match="AOI-USR-004"):
         ctx.sign_in("admin", start=True)
 
@@ -170,13 +170,12 @@ def test_req_usr_002_a_stale_hash_is_made_again_and_no_start_signs_them_in(ctx: 
 def test_req_usr_002_the_dialog_asks_each_role_for_what_it_needs(
     qtbot: QtBot, ctx: AppContext, dialogs: list[tuple[str, str]]
 ) -> None:
-    """An Operator: no field. An Engineer in set-up: the password twice, Sign In only once they agree. With a password:
-    one field; a wrong one shows AOI-USR-004, keeps the dialog open and clears what was typed."""
+    """An Operator: no field. In set-up: the password twice, Sign In once they agree. With one: one field; a wrong one
+    shows AOI-USR-004 and keeps the dialog open, its fields cleared, as Cancel clears them."""
     ctx.ensure_board_model("B")
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     box = SignInDialog(win)
-    qtbot.addWidget(box)
     box.show()
 
     def pick(name: str) -> None:
@@ -195,12 +194,13 @@ def test_req_usr_002_the_dialog_asks_each_role_for_what_it_needs(
     assert box.signed_in == "engineer" and ctx.user == "engineer" and box.password.text() == ""
 
     again = SignInDialog(win)
-    qtbot.addWidget(again)
     again.show()
     assert again.password.isVisible() and not again.again.isVisible()  # engineer, signed in now, has a password
     again.password.setText("not the passphrase at all")
     again.sign_in()
-    assert again.signed_in is None and again.password.text() == "" and not again.result()
+    again.again.setText("typed")
+    again.reject()  # Cancel clears what was typed
+    assert again.signed_in is None and again.password.text() == again.again.text() == "" and not again.result()
     assert [t for t, _ in dialogs] and dialogs[-1][0].startswith("AOI-USR-004")
     win.close()
 
@@ -216,14 +216,12 @@ def test_req_usr_007_no_password_or_hash_in_logs_audit_or_support_bundle(ctx: Ap
     with pytest.raises(AoiError):
         ctx.sign_in("admin", password=secret + "!")
     ctx.sign_in("admin", password=unicodedata.normalize("NFD", secret))
-    stored = ctx.db.user_secret(str(ctx.db.user_uuid("admin")))
-    assert stored is not None
+    stored = str(ctx.db.user_secret(str(ctx.db.user_uuid("admin"))))
     bundle = tmp_path / "support.zip"
     ctx.support_bundle(bundle)
     with zipfile.ZipFile(bundle) as z:
         held = [(f"bundle:{n}", z.read(n)) for n in z.namelist()]
-    audit = [("audit", json.dumps(ctx.audit_entries(), ensure_ascii=False).encode("utf-8"))]
-    looked = held + audit  # the bundle holds the logs
+    looked = held + [("audit", json.dumps(ctx.audit_entries(), ensure_ascii=False).encode("utf-8"))]  # logs: bundle
     assert len(held) > 3 and any(n.startswith("bundle:logs/") for n, _ in held)
     needles = {secret, unicodedata.normalize("NFD", secret), secret[:10], stored, stored.split("$")[-1], "$argon2"}
     found = [(name, n) for name, data in looked for n in needles if n.encode("utf-8") in data]

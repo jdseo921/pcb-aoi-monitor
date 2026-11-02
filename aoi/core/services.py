@@ -676,6 +676,7 @@ class AppContext:
         # once users can be disabled (REQ-USR-006), a disabled one is never signed in at a start
         if (last := self.last_signed_in()) is not None and last in startable:
             return last
+        users = [u for u in users if u["name"] in startable] or users  # none: an Admin must add an Operator (D.3)
         if any(u["name"] == "operator" for u in users):
             return "operator"
         rank = {r: i for i, r in enumerate(ROLES)}

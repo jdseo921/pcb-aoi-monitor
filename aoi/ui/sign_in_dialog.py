@@ -1,7 +1,6 @@
-"""Switch User's dialog (REQ-USR-002; ADR 0002, decision 1): pick a user; an Engineer or Admin types their password,
-or, at their first sign-in, chooses one and types it again. An Operator signs in with no password. A refusal (a wrong
-password, AOI-USR-004, or one that breaks a rule, AOI-USR-005) shows its coded dialog and leaves this one open with the
-password cleared. The password fields never echo, and their text is dropped once the call returns."""
+"""Switch User's dialog (REQ-USR-002; ADR 0002, decision 1): an Operator picks their name; an Engineer or Admin types
+their password, or at their first sign-in chooses one and types it again. A refusal (AOI-USR-004, -005) shows its coded
+dialog and leaves this one open. The fields never echo and are cleared once the call returns or the dialog closes."""
 
 from __future__ import annotations
 
@@ -80,6 +79,11 @@ class SignInDialog(QDialog):
         self.hint.setVisible(needs)
         typed = self.password.text()
         self.btn_sign_in.setEnabled(not needs or (bool(typed) and (not setup or typed == self.again.text())))
+
+    def done(self, result: int) -> None:
+        self.password.clear()  # Cancel too: no typed secret outlives the dialog
+        self.again.clear()
+        super().done(result)
 
     def sign_in(self) -> None:
         if not self.btn_sign_in.isEnabled():  # Enter in a field before the button is on
