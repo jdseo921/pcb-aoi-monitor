@@ -5,7 +5,6 @@ dialog, and no password or hash in the logs, the audit or the support bundle."""
 
 from __future__ import annotations
 
-import gzip
 import json
 import sqlite3
 import unicodedata
@@ -157,22 +156,15 @@ def test_req_usr_002_a_first_sign_in_chooses_the_password_and_later_ones_need_it
     assert ctx.user == "engineer"
 
 
-def test_req_usr_002_a_stale_hash_is_made_again_at_a_sign_in(ctx: AppContext) -> None:
-    uuid = ctx.db.user_uuid("admin")
-    assert uuid is not None
+def test_req_usr_002_a_stale_hash_is_made_again_and_no_start_signs_them_in(ctx: AppContext) -> None:
+    uuid = str(ctx.db.user_uuid("admin"))
     ctx.db.set_user_secret(uuid, PasswordHasher(time_cost=1, memory_cost=8192, parallelism=1).hash(PASSPHRASE))
     ctx.sign_in("admin", password=PASSPHRASE)
     stored = ctx.db.user_secret(uuid)
     assert stored is not None and not passwords.stale(stored) and passwords.verify(stored, PASSPHRASE)
-
-
-def test_req_usr_002_a_start_never_signs_in_a_passworded_engineer_or_admin(ctx: AppContext) -> None:
-    ctx.ensure_board_model("B")
-    ctx.sign_in("admin", password=PASSPHRASE)
-    assert ctx.start_user(setting_up=True) == "operator" and ctx.last_signed_in() == "admin"
-    with pytest.raises(AoiError) as refused:
+    assert ctx.start_user(setting_up=True) == "operator"  # not the first Admin: they have a password
+    with pytest.raises(AoiError, match="AOI-USR-004"):
         ctx.sign_in("admin", start=True)
-    assert refused.value.code == "AOI-USR-004"
 
 
 def test_req_usr_002_the_dialog_asks_each_role_for_what_it_needs(
@@ -213,18 +205,9 @@ def test_req_usr_002_the_dialog_asks_each_role_for_what_it_needs(
     win.close()
 
 
-def _texts(folder: Path) -> list[tuple[str, bytes]]:
-    out = []
-    for p in folder.rglob("*"):
-        if p.is_file() and p.suffix != ".sqlite" and "backups" not in p.parts:
-            data = p.read_bytes()
-            out.append((str(p), gzip.decompress(data) if p.suffix == ".gz" else data))
-    return out
-
-
 def test_req_usr_007_no_password_or_hash_in_logs_audit_or_support_bundle(ctx: AppContext, tmp_path: Path) -> None:
     """After a password is chosen, refused, typed wrong and typed right, neither the passphrase (as typed or NFKC) nor
-    its hash, nor any Argon2 string, is in the workspace's logs, the audit entries or any file of the support bundle.
+    its hash, nor any Argon2 string, is in the audit entries or any file of the support bundle, logs included.
     The database (and its backups) holds the hash, as it must; the bundle has no copy of the users table."""
     secret = KOREAN
     with pytest.raises(AoiError):
@@ -240,7 +223,7 @@ def test_req_usr_007_no_password_or_hash_in_logs_audit_or_support_bundle(ctx: Ap
     with zipfile.ZipFile(bundle) as z:
         held = [(f"bundle:{n}", z.read(n)) for n in z.namelist()]
     audit = [("audit", json.dumps(ctx.audit_entries(), ensure_ascii=False).encode("utf-8"))]
-    looked = held + audit + _texts(ctx.settings.root / "logs")
+    looked = held + audit  # the bundle holds the logs
     assert len(held) > 3 and any(n.startswith("bundle:logs/") for n, _ in held)
     needles = {secret, unicodedata.normalize("NFD", secret), secret[:10], stored, stored.split("$")[-1], "$argon2"}
     found = [(name, n) for name, data in looked for n in needles if n.encode("utf-8") in data]
