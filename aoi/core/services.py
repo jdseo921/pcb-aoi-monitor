@@ -4048,6 +4048,7 @@ class AppContext:
         REQ-SET-002, #201). When the entry cannot be written, settings.json goes back to what was in effect and the app
         keeps it (#178)."""
         if "workspace" in values:  # picked on Settings: refused before settings.json names it (REQ-SET-025)
+            Settings.check("workspace", values["workspace"])  # an empty or relative one is AOI-SET-008 first
             workspace_guard.check(str(values["workspace"]))
         before = self.settings.save_keys(values)
         try:

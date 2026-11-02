@@ -81,9 +81,15 @@ prints its exact date, and that of the CA, in the build's log. Renew it by **202
 `tools/new_pilot_signing.ps1` on the release engineer's machine. It reuses the CA, so the stations need nothing new,
 and replaces the two secrets; builds signed before keep their signatures, which are timestamped.
 
-The reminder: the **Pilot signing expiry** workflow runs on the first of each month and fails when the signing
-certificate or the CA ends within 60 days; GitHub mails a failed scheduled run to the repository's owner. Each signed
-build also shows a warning in its summary within those 60 days, and stops once the certificate has expired.
+The reminders, three of them so that one failing to arrive is not the end of it:
+
+- The **Pilot signing expiry** workflow runs on the first of each month and fails when the signing certificate or the
+  CA ends within 60 days. GitHub mails a failed scheduled run to the person who last changed its `cron` line, and turns
+  a scheduled workflow off after 60 days without activity in a public repository; whoever owns releases makes the
+  last change to that line, and re-enables the workflow from the Actions tab if GitHub turned it off.
+- Each signed build shows a warning in its summary within those 60 days, and stops once the certificate has expired.
+- The release engineer keeps a calendar entry for **2027-10-11**, "Renew the AOI pilot signing certificate", with a
+  link to this section; each renewal moves it to 30 days before the new certificate's 13th month.
 
 ### When the CA is lost or exposed
 
