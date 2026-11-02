@@ -1743,7 +1743,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1246"/>
+        <location filename="../ui/main_window.py" line="+1257"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5337,7 +5337,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1102"/>
+        <location filename="../ui/main_window.py" line="-1113"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6667,12 +6667,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+159"/>
+        <location line="+172"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+124"/>
+        <location line="+122"/>
         <source>Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User.</source>
         <translation type="unfinished">{board_model} 설정을 시작한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
     </message>
@@ -7627,7 +7627,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1059"/>
+        <location filename="../ui/main_window.py" line="-1070"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8960,13 +8960,21 @@
     </message>
     <message>
         <location line="-129"/>
-        <location line="+154"/>
+        <source>Disable / Enable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Reset Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+153"/>
         <source>Disable / Enable User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-153"/>
-        <location line="+164"/>
+        <location line="+11"/>
         <source>Reset Password or PIN</source>
         <translation type="unfinished"></translation>
     </message>
