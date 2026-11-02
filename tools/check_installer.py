@@ -107,8 +107,10 @@ def signature(file: Path) -> str:
     """The file's Authenticode status as Windows reads it: Valid, NotSigned, UnknownError (an untrusted root), …"""
     script = "(Get-AuthenticodeSignature -LiteralPath $env:FILE).Status.ToString()"
     args = ["powershell", "-NoProfile", "-NonInteractive", "-Command", script]
-    out = subprocess.run(args, env={**os.environ, "FILE": str(file)}, capture_output=True, text=True, check=True)
-    return out.stdout.strip()
+    # Under a pwsh step, PSModulePath names PowerShell 7's modules, which Windows PowerShell cannot load
+    env = {k: v for k, v in os.environ.items() if k.upper() != "PSMODULEPATH"} | {"FILE": str(file)}
+    out = subprocess.run(args, env=env, capture_output=True, text=True, check=False)
+    return out.stdout.strip() if out.returncode == 0 else f"unreadable ({out.stderr.strip()[:300]})"
 
 
 def says_what_it_is(setup: Path, shown: str | None, setup_status: str, exe_status: str | None) -> list[str]:
