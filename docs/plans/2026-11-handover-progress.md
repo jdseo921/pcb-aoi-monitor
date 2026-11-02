@@ -26,10 +26,10 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 
 | PR | Scope | Register | State |
 |---|---|---|---|
-| 0.1 + 0.3 | Plan of record committed, this file, the diagnosis, ADR 0024 (D1 to D19 provisional, D20 to D23 found by the diagnosis), the register rows and priority moves | REQ-SET-023 to -027, REQ-LOG-010, REQ-INSP-020, -021, REQ-TST-009, -010 added | in review (branch `docs/handover-pack`) |
-| 0.2 | The four Standards exported to `docs/standards/`, CLAUDE.md and citations re-pointed, a check that every cited Standard is in the repo | — (cite #5) | in review (#422, stacked on 0.1 + 0.3) |
-| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | in review: 0.4a #423 (the version and its CI check), 0.4b #424 (build number, VERSIONINFO, signed naming) |
-| 0.5 | "Working rules until v0.5.0" in CLAUDE.md, the PR template with the change-note checklist | — (cite #5) | in review (#425, stacked on 0.4b) |
+| 0.1 + 0.3 | Plan of record committed, this file, the diagnosis, ADR 0024 (D1 to D19 provisional, D20 to D23 found by the diagnosis), the register rows and priority moves | REQ-SET-023 to -027, REQ-LOG-010, REQ-INSP-020, -021, REQ-TST-009, -010 added | merged 2026-11-01 |
+| 0.2 | The four Standards exported to `docs/standards/`, CLAUDE.md and citations re-pointed, a check that every cited Standard is in the repo | — (cite #5) | merged 2026-11-01 (#422) |
+| 0.4 | Version discipline: `APP_VERSION` 0.4.0.dev0, CI fails a migration or status change without a bump, build number, VERSIONINFO, signed-build naming | REQ-SET-023 | merged 2026-11-01: 0.4a #423 (the version and its CI check), 0.4b #424 (build number, VERSIONINFO, signed naming) |
+| 0.5 | "Working rules until v0.5.0" in CLAUDE.md, the PR template with the change-note checklist | — (cite #5) | merged 2026-11-01 (#425) |
 | G0 doc | The scope document signed by Jay, the company and the factory (not software) | — | planned |
 
 ## G1: Safe to run (tag `v0.4.0`)
@@ -37,8 +37,8 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | PR | Scope | Register | State |
 |---|---|---|---|
 | 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | merged 2026-11-01: 1.1a #426 (engine), 1.1b #427 (status bar and CSV) |
-| 1.2 | Evidence policy (D1) | REQ-INSP-012 | in review: `feat/REQ-INSP-012-evidence-policy` |
-| 1.3 | Retention on a timer | REQ-LOG-010 | in review: `feat/REQ-LOG-010-retention` (stacked on 1.2; merges once Jay confirms D20 and D21) |
+| 1.2 | Evidence policy (D1) | REQ-INSP-012 | merged 2026-11-01 (#428) |
+| 1.3 | Retention on a timer | REQ-LOG-010 | merged 2026-11-01 (#429); its deletions wait for an Admin's in-app confirmation, D20 and D21 still provisional in ADR 0024 |
 | 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | planned |
 | 1.5 | Crash record (`faulthandler`, WER LocalDumps documented) | REQ-SET-026 | planned |
 | 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | planned |
