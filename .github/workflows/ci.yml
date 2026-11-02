@@ -80,9 +80,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     # The Windows run took 30 to 42 minutes across eleven runs on 2026-10-10 and one of them did not finish the
     # suite in 45, so 45 stopped a passing suite as 30 had before it; 75 left room for a runner half as fast again.
-    # By 2026-11-02 Windows took 65 to 73 minutes (#439, #441, #444), and 75 stopped four passing runs with no test
-    # failed, so Windows gets 110 until Prompt 10's CI speed work; Linux, at 33 to 58 minutes, keeps 75.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 110 || 75 }}
+    # By 2026-11-02 the Windows suite took 65 to 70 minutes (#439, #441), and 75 stopped four runs with no test failed
+    # (#444 at 91 % after 73 minutes of tests, so about 80 for the whole suite). Windows gets 120, half as long again,
+    # until Prompt 10's CI speed work; Linux, at 33 to 58 minutes, keeps 75.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 75 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
