@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -71,7 +72,8 @@ def test_req_set_027_ci_assembles_the_kit_checks_it_with_verify_ps1_and_keeps_it
 def powershell(script: str, *args: str) -> subprocess.CompletedProcess[str]:
     path = ROOT / "tools" / "release" / script
     cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(path), *args]
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False)  # noqa: S603
+    env = {k: v for k, v in os.environ.items() if k.upper() != "PSMODULEPATH"}  # pwsh's modules break PowerShell 5.1
+    return subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=120, check=False)  # noqa: S603
 
 
 @windows

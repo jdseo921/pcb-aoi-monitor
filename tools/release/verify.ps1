@@ -27,9 +27,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $failed = 0
-function Report([bool]$ok, [string]$what) {
-    if ($ok) { "PASS  $what" } else { "FAIL  $what"; $script:failed++ }
-}
+function Report([bool]$ok, [string]$what) { if ($ok) { "PASS  $what" } else { "FAIL  $what"; $script:failed++ } }
 
 $sums = Join-Path $Kit "SHA256SUMS.txt"
 if (-not (Test-Path $sums)) { "FAIL  no SHA256SUMS.txt in $Kit"; exit 1 }
