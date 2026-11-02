@@ -1,6 +1,7 @@
 """Switch User's dialog (REQ-USR-002; ADR 0002, decision 1): an Operator picks their name; an Engineer or Admin types
 their password, or at their first sign-in chooses one and types it again. A refusal (AOI-USR-004, -005) shows its coded
-dialog and leaves this one open. The fields never echo and are cleared once the call returns or the dialog closes."""
+dialog and leaves this one open. The fields never echo and are cleared once the call returns or the dialog closes.
+An Admin who lost their password presses Use Recovery Code…, types the code and chooses a new one (REQ-USR-005)."""
 
 from __future__ import annotations
 
@@ -27,6 +28,7 @@ class SignInDialog(QDialog):
         self.setWindowTitle(self.tr("Switch user"))
         self.setMinimumWidth(theme.CARD_W)
         self.signed_in: str | None = None
+        self.recovering = False  # Use Recovery Code… pressed: the code, then a new password twice
         self.users: list[dict[str, Any]] = self.ctx.users()
         self.pins = self.ctx.users_with_pins()  # Operators with a PIN, where the station asks for one (REQ-USR-003)
         lay = QVBoxLayout(self)
@@ -36,16 +38,23 @@ class SignInDialog(QDialog):
             self.user.addItem(self.tr("{user} ({role})").format(user=u["name"], role=role_text(u["role"])))
         picked = name or self.ctx.user  # the first Admin, from the first-run guide; else who is signed in
         self.user.setCurrentIndex(next((i for i, u in enumerate(self.users) if u["name"] == picked), 0))
-        self.user.currentIndexChanged.connect(self._sync)
+        self.user.currentIndexChanged.connect(self._leave_recovery)
         lay.addWidget(self.user)
         self.hint = QLabel()  # what the fields below ask for this user
         self.hint.setObjectName("muted")
         self.hint.setWordWrap(True)
         lay.addWidget(self.hint)
+        self.code = size_class(QLineEdit(), "T")  # a standing secret until used: never echoed, as a password
+        self.code.setEchoMode(QLineEdit.EchoMode.Password)
+        self.code.setPlaceholderText(self.tr("Recovery code"))
+        self.code.textChanged.connect(self._sync)
+        lay.addWidget(self.code)
         self.password, self.again = self._field(), self._field()
         lay.addWidget(self.password)
         lay.addWidget(self.again)
         row = QHBoxLayout()
+        self.btn_recover = size_class(button(self.tr("Use Recovery Code…"), slot=self.use_code), "T")
+        row.addWidget(self.btn_recover)
         row.addStretch(1)
         row.addWidget(size_class(button(self.tr("Cancel"), slot=self.reject), "T"))
         self.btn_sign_in = size_class(button(self.tr("Sign In"), "primary", self.sign_in), "T")
@@ -68,11 +77,23 @@ class SignInDialog(QDialog):
         """Whether the user chosen types a secret: an Engineer or Admin always, an Operator where the station asks."""
         return self.chosen()["role"] != "Operator" or self.ctx.settings.operator_pin
 
+    def use_code(self) -> None:
+        self.recovering = True
+        self._sync()
+        self.code.setFocus()
+
+    def _leave_recovery(self) -> None:
+        self.recovering = False
+        self.code.clear()
+        self._sync()
+
     def _sync(self) -> None:
         """The fields this user needs, and Sign In on once they are filled (and agree, for a secret chosen)."""
         user, needs = self.chosen(), self.needs()
         pin = user["role"] == "Operator"
-        setup = needs and (user["name"] not in self.pins if pin else user["status"] == "setup")
+        setup = needs and (user["name"] not in self.pins if pin else user["status"] == "setup" or self.recovering)
+        self.btn_recover.setVisible(user["role"] == "Admin" and user["status"] == "active" and not self.recovering)
+        self.code.setVisible(self.recovering)
         self.password.setVisible(needs)
         self.again.setVisible(setup)
         if pin:
@@ -85,7 +106,10 @@ class SignInDialog(QDialog):
         else:
             self.password.setPlaceholderText(self.tr("New password") if setup else self.tr("Password"))
             self.again.setPlaceholderText(self.tr("Type the new password again"))
-            if setup:
+            if self.recovering:
+                hint = self.tr("Type the recovery code of {user}, then choose a new password and type it again.")
+                self.hint.setText(hint.format(user=user["name"]))
+            elif setup:
                 hint = self.tr(
                     "{user} has no password yet: choose one of {low} to {high} characters, such as a few words."
                 )
@@ -94,9 +118,11 @@ class SignInDialog(QDialog):
                 self.hint.setText(self.tr("Type the password of {user}.").format(user=user["name"]))
         self.hint.setVisible(needs)
         typed = self.password.text()
-        self.btn_sign_in.setEnabled(not needs or (bool(typed) and (not setup or typed == self.again.text())))
+        ready = not needs or (bool(typed) and (not setup or typed == self.again.text()))
+        self.btn_sign_in.setEnabled(ready and (not self.recovering or bool(self.code.text().strip())))
 
     def done(self, result: int) -> None:
+        self.code.clear()
         self.password.clear()  # Cancel too: no typed secret outlives the dialog
         self.again.clear()
         super().done(result)
@@ -106,10 +132,15 @@ class SignInDialog(QDialog):
             return
         name = str(self.chosen()["name"])
         password = self.password.text() if self.needs() else None
+        code = self.code.text()
         self.password.clear()
         self.again.clear()
+        self.code.clear()
         try:
-            self.ctx.sign_in(name, password=password)  # audited, and the station's next start signs them in again
+            if self.recovering:
+                self.ctx.recover(name, code, password or "")  # audited, a new code made to show once
+            else:
+                self.ctx.sign_in(name, password=password)  # audited, and the station's next start signs them in again
         except AoiError as e:
             show_error(self, self.ctx.report_error(e, "Switch user"))
             return

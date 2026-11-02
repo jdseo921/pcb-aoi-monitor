@@ -145,6 +145,7 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-USR-012 | Admin without a password | {name} signed in without a password, so cannot manage users while another Admin has one. | Ask an Admin with a password to sign in under Switch User and do it. |
 | AOI-USR-013 | Last Admin who can sign in | {name} is the last Admin who can sign in with a password, so no one could then manage users or settings. | Add another Admin and hand the account over to them first. |
 | AOI-USR-014 | Last Operator | {name} is the last enabled Operator, whom the app signs in when it starts. | Add another Operator first. |
+| AOI-USR-015 | Recovery code not accepted | The recovery code typed is not the one {name} was given last. | Type the code from the sheet saved or printed when it was made; a code used once is replaced. Without it, another Admin resets the password on Settings. |
 
 ## The first-run guide's lines
 

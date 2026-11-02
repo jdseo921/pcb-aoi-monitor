@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+434"/>
+        <location line="+465"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -973,7 +973,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+43"/>
         <source>Disabling a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1275,14 +1275,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4661"/>
-        <location line="+3365"/>
+        <location line="-4721"/>
+        <location line="+3425"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3454"/>
+        <location line="-3514"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1540"/>
+        <location line="+1600"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4116"/>
+        <location line="-4176"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,7 +1634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1464"/>
+        <location line="+1524"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,7 +1751,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4543"/>
+        <location line="-4603"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3477,6 +3477,21 @@
     </message>
     <message>
         <location line="+34"/>
+        <source>Recovery code not accepted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The recovery code typed is not the one {name} was given last.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Type the code from the sheet saved or printed when it was made; a code used once is replaced. Without it, another Admin resets the password on Settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>Workspace from version 0.1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3976,7 +3991,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1475"/>
+        <location line="-1486"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4221,7 +4236,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+123"/>
+        <location line="+134"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4496,7 +4511,7 @@
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
     <message>
-        <location filename="../core/demo.py" line="+105"/>
+        <location filename="../core/demo.py" line="+108"/>
         <source>it has no readable bundle.json</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4507,7 +4522,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3607"/>
+        <location filename="../core/services.py" line="+3667"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -9198,12 +9213,12 @@
 <context>
     <name>SignInDialog</name>
     <message>
-        <location filename="../ui/sign_in_dialog.py" line="+27"/>
+        <location filename="../ui/sign_in_dialog.py" line="+28"/>
         <source>Switch user</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9213,7 +9228,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+11"/>
+        <source>Recovery code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Use Recovery Code…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>Cancel</source>
         <translation type="unfinished">취소</translation>
     </message>
@@ -9223,7 +9248,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+40"/>
         <source>New PIN</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9263,7 +9288,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+2"/>
+        <source>Type the recovery code of {user}, then choose a new password and type it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>{user} has no password yet: choose one of {low} to {high} characters, such as a few words.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9633,7 +9663,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3691"/>
+        <location filename="../core/services.py" line="-3751"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

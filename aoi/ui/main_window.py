@@ -818,7 +818,7 @@ class MainWindow(QMainWindow):
     # --- users / roles (spec 8) -------------------------------------------------------
     def switch_user(self, name: str | None = None) -> None:
         """Pick a user, `name` first if given; an Engineer or Admin signs in with their password (`SignInDialog`,
-        REQ-USR-002). The station's first Admin is then shown their new recovery
+        REQ-USR-002). The station's first Admin, or one who used their recovery code, is then shown their new recovery
         code once (`RecoveryCodeDialog`, REQ-USR-005)."""
         dialog = SignInDialog(self, name)
         dialog.exec()

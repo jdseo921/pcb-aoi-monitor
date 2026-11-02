@@ -1465,6 +1465,17 @@ CODES: dict[str, ErrorCode] = {
             personal=("name",),
         ),
         ErrorCode(
+            "AOI-USR-015",
+            QT_TRANSLATE_NOOP("Errors", "Recovery code not accepted"),
+            QT_TRANSLATE_NOOP("Errors", "The recovery code typed is not the one {name} was given last."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Type the code from the sheet saved or printed when it was made; a code used once is replaced. Without"
+                " it, another Admin resets the password on Settings.",
+            ),
+            personal=("name",),
+        ),
+        ErrorCode(
             "AOI-SET-001",
             QT_TRANSLATE_NOOP("Errors", "Workspace from version 0.1"),
             QT_TRANSLATE_NOOP("Errors", "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded."),

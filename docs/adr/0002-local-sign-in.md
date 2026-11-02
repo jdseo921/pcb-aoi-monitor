@@ -66,7 +66,11 @@ gloves, and must never be stopped from inspecting by a sign-in screen.
   name and, as the Context says, prove nothing about who acted. The G1 validation report says so.
 - One migration for the users table, so this work waits for #2.
 - New screens need sketches first: the sign-in dialog, user management in Settings and the first-run wizard.
-- The manual gains sign-in, lockout and recovery. The demo workspace has its own Engineer account, whose
-  passphrase is generated afresh at each demo reset and shown to the presenter, so no fixed password ships.
+- The manual gains sign-in, lockout and recovery. ~~The demo workspace has its own Engineer account, whose
+  passphrase is generated afresh at each demo reset and shown to the presenter, so no fixed password ships.~~
+  Amended 2026-11-02 (PR D.3b), as the handover prompts' D.3 asks for a known demo Admin so the demo scripts run
+  unattended: the demo workspace's Admin has a fixed password published in `docs/demo/README.md`, set when the demo
+  workspace opens, and only while no Admin has a password (a new station's own state). A workspace that is no demo puts
+  an Admin with that password back in set-up, so a demo.json dropped into a production workspace gives nothing.
 - Tests: hashing and rehashing, lockout and idle timing with a fake clock, and a role check on every `AppContext`
   write.

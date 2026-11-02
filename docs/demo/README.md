@@ -28,6 +28,14 @@ Korean drafts of each file are in [ko/](ko/), marked for review by a native spea
 - End every demo with a report the customer keeps: the CSV of results and the pictures with their defect boxes,
   on a USB stick.
 
+## The demo's Admin
+
+The demo workspace opens signed in as `admin`, whose password is `show the demo to the customer` (REQ-USR-005).
+It is the demo workspace's only, set when the workspace opens and again after **Reset Demo**, so the scripts' Switch
+User to the Admin runs unattended. It is published here on purpose. It is set only while no Admin has a password, as on a new station, and a workspace
+that is no demo puts an Admin with it back to choosing a new one.
+A production workspace has no default password; its first Admin chooses one in the first-run guide.
+
 ## Before every demo
 
 Rehearse once on the demo laptop, the day before or in the room, and tick each line:
