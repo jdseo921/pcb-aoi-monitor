@@ -1629,6 +1629,17 @@ CODES: dict[str, ErrorCode] = {
                 "Errors", "Close any program that holds files in the workspace open, or restart the PC, then the app."
             ),
         ),
+        ErrorCode(
+            "AOI-SET-024",
+            QT_TRANSLATE_NOOP("Errors", "Workspace folder not allowed"),
+            QT_TRANSLATE_NOOP("Errors", "The folder {path} cannot hold the workspace: {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Choose a folder on a drive of this PC that OneDrive does not copy, such as C:\\AOI_Workspace. To keep "
+                "the records, close the app and move the whole workspace folder there first, then choose it (install "
+                'guide, "Where the workspace goes"); at start, choose it in the window that opens next.',
+            ),
+        ),
     )
 }
 

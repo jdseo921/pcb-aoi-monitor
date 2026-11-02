@@ -36,7 +36,7 @@ import numpy as np
 from .. import defects as taxonomy
 from .. import logging_setup
 from ..config import APP_LABEL, APP_NAME, Settings, build_commit, resolve_device
-from ..data import atomic, credentials
+from ..data import atomic, credentials, workspace_guard
 from ..data.db import NOT_REVIEWED as NOT_REVIEWED  # screens name it through here (REQ-LOG-009)
 from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
@@ -451,13 +451,6 @@ def transactional(fn: Callable[Concatenate[AppContext, P], R]) -> Callable[Conca
     return cast("Callable[Concatenate[AppContext, P], R]", run)
 
 
-def _one_drive_roots() -> list[str]:
-    """The folders OneDrive copies to the cloud on this Windows account, as Windows names them in the environment: the
-    personal one and a work or school one; none elsewhere."""
-    names = ("OneDrive", "OneDriveConsumer", "OneDriveCommercial")
-    return [root for name in names if (root := os.environ.get(name, "").strip())]
-
-
 SHOWS_NOTHING = {"\u034f", "\u115f", "\u1160", "\u3164", "\uffa0"}  # a grapheme joiner and the Hangul fillers
 SHOWS_NOTHING |= {"\u17b4", "\u17b5", "\u2800"}  # two Khmer vowels written as nothing, the Braille blank
 SHOWS_NOTHING |= {chr(c) for c in (*range(0xFE00, 0xFE10), *range(0xE0100, 0xE01F0))}  # variation selectors
@@ -514,6 +507,8 @@ class AppContext:
         # each customer's dataset store key (REQ-TRN-017): Credential Manager on a station, never the workspace
         self.credentials = key_store if key_store is not None else credentials.default()
         self._keys: dict[str, bytes] = {}  # store UUID -> its key, read once and checked against its check value
+        # a folder on a network drive or in OneDrive is refused before a file is made in it (REQ-SET-025)
+        workspace_guard.check(self.settings.root)
         try:
             self.settings.ensure_dirs()
         except OSError as e:  # a drive not connected, a file where the folder must go (REQ-SET-019)
@@ -3501,7 +3496,7 @@ class AppContext:
             why = QT_TRANSLATE_NOOP(
                 "Errors", "a recovery key is never saved in the workspace, whose copies hold the files it opens"
             )
-        elif any(inside(where.resolve(), Path(r).resolve()) for r in _one_drive_roots()):
+        elif any(inside(where.resolve(), Path(r).resolve()) for r in workspace_guard.one_drive_roots()):
             why = QT_TRANSLATE_NOOP(
                 "Errors", "a recovery key is never saved in a folder OneDrive copies off the station; use a USB drive"
             )
@@ -4044,13 +4039,17 @@ class AppContext:
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Changing settings"))
     def save_settings(self, values: dict[str, Any]) -> None:
         """Write the Settings page's values over settings.json (`Settings.save_keys`: each value checked first,
-        AOI-SET-008, every other key kept as the file holds it) and audit `settings.change` with the values the file
-        held before (#197). The running app follows the device, defaults and retention at once; the workspace waits for
-        the restart, its database, log and folders staying on the open one so no file lands in a folder its database
-        does not list (REQ-SET-001), and the language is stored only (no translation is loaded before 2H 2027). The AI
-        device is resolved again: when it changes, training and inference use the new one from the next call and the
-        weights load again on it (load_model; REQ-SET-002, #201). When the entry cannot be written, settings.json goes
-        back to what was in effect and the app keeps it (#178)."""
+        AOI-SET-008, every other key kept as the file holds it; a workspace on a network drive or in OneDrive is
+        AOI-SET-024) and audit `settings.change` with the values the file held before (#197). The running app follows
+        the device, defaults and retention at once; the workspace waits for the restart, its database, log and folders
+        staying on the open one so no file lands in a folder its database does not list (REQ-SET-001), and the language
+        is stored only (no translation is loaded before 2H 2027). The AI device is resolved again: when it changes,
+        training and inference use the new one from the next call and the weights load again on it (load_model;
+        REQ-SET-002, #201). When the entry cannot be written, settings.json goes back to what was in effect and the app
+        keeps it (#178)."""
+        if "workspace" in values:  # picked on Settings: refused before settings.json names it (REQ-SET-025)
+            Settings.check("workspace", values["workspace"])  # an empty or relative one is AOI-SET-008 first
+            workspace_guard.check(str(values["workspace"]))
         before = self.settings.save_keys(values)
         try:
             self.audit("settings.change", "settings", None, before, values)

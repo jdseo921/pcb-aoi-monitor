@@ -1564,7 +1564,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+406"/>
+        <location line="+441"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1574,7 +1574,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-466"/>
+        <location line="-501"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1679,7 +1679,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+29"/>
         <source>Archiving records</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1689,7 +1689,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+161"/>
+        <location line="+194"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1699,7 +1699,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+93"/>
+        <location line="+91"/>
         <location line="+47"/>
         <source>Exporting overlay images</source>
         <translation type="unfinished"></translation>
@@ -1721,14 +1721,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4278"/>
+        <location line="-4313"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
-        <location filename="../ui/errors.py" line="+162"/>
-        <location filename="../ui/main_window.py" line="+1181"/>
+        <location filename="../ui/errors.py" line="+163"/>
+        <location filename="../ui/main_window.py" line="+1202"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3531,7 +3531,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+17"/>
+        <location line="+6"/>
+        <source>Workspace folder not allowed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The folder {path} cannot hold the workspace: {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Choose a folder on a drive of this PC that OneDrive does not copy, such as C:\AOI_Workspace. To keep the records, close the app and move the whole workspace folder there first, then choose it (install guide, &quot;Where the workspace goes&quot;); at start, choose it in the window that opens next.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+20"/>
         <source>Leave out / : * ? &quot; &lt; &gt; \ | and control characters, end with no dot or space, and use no device name such as CON or NUL.</source>
         <translation type="unfinished">/ : * ? &quot; &lt; &gt; \ | 와 제어 문자를 빼고, 점이나 공백으로 끝내지 말고, CON이나 NUL 같은 장치 이름은 쓰지 마십시오.</translation>
     </message>
@@ -3691,7 +3706,7 @@
         <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
     </message>
     <message>
-        <location line="-315"/>
+        <location line="-326"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4286,7 +4301,7 @@
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
     <message>
-        <location filename="../core/demo.py" line="+104"/>
+        <location filename="../core/demo.py" line="+105"/>
         <source>it has no readable bundle.json</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4320,6 +4335,16 @@
         <location filename="../core/annotation_files.py" line="+42"/>
         <source>it is not a YOLO or Pascal VOC label file this app reads</source>
         <translation>이 앱이 읽는 YOLO 또는 Pascal VOC 라벨 파일이 아닙니다</translation>
+    </message>
+    <message>
+        <location filename="../data/workspace_guard.py" line="+19"/>
+        <source>it is on a network drive, where the database&apos;s locks are not safe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>it is in a folder OneDrive copies to the cloud, which holds and puts back files</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -5112,7 +5137,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1040"/>
+        <location filename="../ui/main_window.py" line="-1059"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6442,7 +6467,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+126"/>
+        <location line="+143"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6462,7 +6487,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+15"/>
         <source>Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6492,7 +6517,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+3"/>
         <source>Switch User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7412,7 +7437,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-997"/>
+        <location filename="../ui/main_window.py" line="-1016"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
