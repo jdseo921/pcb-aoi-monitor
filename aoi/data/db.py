@@ -843,6 +843,26 @@ class Database:
         rows = self.query("SELECT overlay_path, diff_map_path, ai_map_path FROM inspections")
         return {Path(self.workspace, v).resolve() for r in rows for v in r.values() if v}  # one outside is no orphan
 
+    def evidence_stored(self) -> Iterator[str]:
+        """Every overlay and map file a record names, as stored (relative to the workspace): the self-check's list. Read
+        in batches on a connection of its own, so the app's statements never wait for 100,000 records."""
+        conn = sqlite3.connect(self.path, timeout=WAIT_MS / 1000)
+        try:
+            cursor = conn.execute("SELECT overlay_path, diff_map_path, ai_map_path FROM inspections")
+            while rows := cursor.fetchmany(500):
+                yield from (v for r in rows for v in r if v)
+        finally:
+            conn.close()
+
+    def quick_check(self) -> list[str]:
+        """SQLite's PRAGMA quick_check: each problem it finds, none when the database is whole (REQ-SET-024). On a
+        connection of its own, so the app's statements never wait for it on a large database."""
+        conn = sqlite3.connect(self.path, timeout=WAIT_MS / 1000)
+        try:
+            return [str(r[0]) for r in conn.execute("PRAGMA quick_check") if r[0] != "ok"]
+        finally:
+            conn.close()
+
     def false_calls_since(self, cutoff: str) -> int:
         """The boards reviewed as a False call at or after `cutoff` (UTC, ISO 8601), for the heartbeat."""
         return int(

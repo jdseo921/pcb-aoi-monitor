@@ -540,6 +540,7 @@ class AppContext:
         try:  # the first writes: the drive may refuse them, or another program hold the database (#171, #204)
             self.device = resolve_device(self.settings.device)
             swept, skipped = atomic.sweep_temp_files(self.settings.root)  # a crash mid-write leaves only a temp file
+            self._temp_left = len(skipped)  # for the self-check (REQ-SET-024)
             for path, reason in skipped:  # harmless: kept, and tried again at the next start (#204)
                 rel = path.relative_to(self.settings.root).as_posix()
                 self.log.warning("sweep.skipped", extra={"path": rel, "reason": reason})
@@ -4132,7 +4133,12 @@ class AppContext:
             self.log.warning("app.not_closed_cleanly")
 
     def _beat(self) -> None:
-        """The heartbeat timer: a beat at once, then every BEAT_EVERY_S till close; a failed one is logged."""
+        """The heartbeat timer: the self-check and a beat at once, then a beat every BEAT_EVERY_S till close; a failed
+        one is logged."""
+        try:
+            self.self_check()
+        except Exception:
+            self.log.warning("self_check.failed", exc_info=True)
         while True:
             try:
                 self.heartbeat()
@@ -4140,6 +4146,59 @@ class AppContext:
                 self.log.warning("heartbeat.failed", exc_info=True)
             if self._stopping.wait(heartbeat.BEAT_EVERY_S):
                 return
+
+    def self_check(self) -> dict[str, Any]:
+        """The start-up self-check (REQ-SET-024), run on the heartbeat's thread: SQLite's quick_check, each unshredded
+        store's key on this station, the files records name, temp files a crash left and could not be removed, the
+        migration backups and the free space. One alarm per failure: AOI-SET-020 to -023 (the drive's: AOI-LOG-005
+        and -006, from `check_disk`). Logged as `self_check.done` with the counts, and returned."""
+        found: dict[str, Any] = {"stores_without_key": [], "failed": []}
+
+        def step(name: str, check: Callable[[], object]) -> None:  # one that fails is logged; the rest still run
+            try:
+                check()
+            except Exception:
+                found["failed"].append(name)
+                self.log.warning("self_check.step_failed", extra={"step": name}, exc_info=True)
+
+        def database() -> None:
+            found["database_problems"] = len(self.db.quick_check())
+            if found["database_problems"]:
+                self._check_alarm("ERROR", "AOI-SET-020", problems=found["database_problems"])
+
+        def store_keys() -> None:
+            for store in [] if credentials.forgets(self.credentials) else self.db.stores():  # one that forgets: none
+                if not store["shredded_at"]:
+                    try:
+                        self._key(store)
+                    except AoiError:
+                        found["stores_without_key"].append(store["uuid"])
+                        self._check_alarm("ERROR", "AOI-SET-021", store=store["customer"])
+
+        def files() -> None:
+            root, found["missing_files"] = str(self.settings.root), 0
+            for n, name in enumerate(self.db.evidence_stored()):  # 100,000 records: seconds, so the UI gets turns
+                found["missing_files"] += not os.path.isfile(os.path.join(root, name))
+                if n % 100 == 99:
+                    time.sleep(0.002)
+            if found["missing_files"]:
+                self._check_alarm("WARN", "AOI-SET-022", count=found["missing_files"])
+            found["temp_files_left"] = self._temp_left
+            if self._temp_left:
+                self._check_alarm("WARN", "AOI-SET-023", count=self._temp_left)
+            found["backups"] = len(list(self.settings.root.glob(f"{self.settings.db_path.name}.bak-*")))
+
+        def drive() -> None:
+            space = self.check_disk()
+            found["free_bytes"] = space.free if space else None
+
+        for name, check in (("database", database), ("store_keys", store_keys), ("files", files), ("drive", drive)):
+            step(name, check)
+        self.log.info("self_check.done", extra=found)
+        return found
+
+    def _check_alarm(self, level: str, code: str, **values: Any) -> None:
+        self.alarm(level, AoiError(code, **values).what, code)
 
     def heartbeat(self) -> dict[str, Any]:
         """Rewrite heartbeat.json with the fields docs/operations/metrics.md names, and return them (REQ-SET-024)."""

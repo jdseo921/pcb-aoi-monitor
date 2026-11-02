@@ -1582,6 +1582,53 @@ CODES: dict[str, ErrorCode] = {
                 "it closed there and start the app again. This start changed nothing in the workspace.",
             ),
         ),
+        ErrorCode(
+            "AOI-SET-020",
+            QT_TRANSLATE_NOOP("Errors", "Workspace database damaged"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "At start, SQLite's check of the workspace database aoi.sqlite found {problems} problems in it.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Have an Admin close the app and restore the newest backup aoi.sqlite.bak-… (engineer manual, chapter"
+                " 1), then send a support bundle. Results saved meanwhile may not be kept.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-SET-021",
+            QT_TRANSLATE_NOOP("Errors", "Dataset store key missing"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "This station's key store holds no key for the dataset store of {store}, or another key, so its board"
+                " models cannot be trained or tested here.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors", "An Admin restores the key from the store's recovery sheet: Settings, Advanced, Restore Key…."
+            ),
+        ),
+        ErrorCode(
+            "AOI-SET-022",
+            QT_TRANSLATE_NOOP("Errors", "Evidence files missing"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "{count} overlay or map files that inspection records name are not in the workspace folder."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "If they were moved or deleted by hand, put them back from a backup; those records show no overlay or"
+                " map until then. Verdicts and checks are kept in the database.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-SET-023",
+            QT_TRANSLATE_NOOP("Errors", "Files left by a crash"),
+            QT_TRANSLATE_NOOP(
+                "Errors", "{count} temporary files that a crash left in the workspace could not be removed at start."
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Close any program that holds files in the workspace open, or restart the PC, then the app."
+            ),
+        ),
     )
 }
 

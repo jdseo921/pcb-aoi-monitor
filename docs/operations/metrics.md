@@ -27,6 +27,16 @@ so a reader never sees half of it. A file older than about two minutes means the
 One line per alarm, appended as it is raised: `time`, `level` (NG, WARN or ERROR), `code` (an `AOI-…` code from
 `docs/error-codes.md`, or `null`) and `text`, the alarm's English text. Tail it; the file is not rotated.
 
+## Start-up self-check
+
+At each start, on the heartbeat's thread, `AppContext.self_check` runs SQLite's `PRAGMA quick_check`, reads each
+unshredded dataset store's key from this station's key store, counts the files records name that are missing, the
+temp files a crash left that could not be removed and the migration backups, and measures the free space. Each failure
+raises one alarm, so it is also a line in `alerts.jsonl`: AOI-SET-020 (database), AOI-SET-021 (a store's key, one per
+store), AOI-SET-022 (missing files), AOI-SET-023 (temp files left), and AOI-LOG-005 or -006 for the drive. The log
+line `self_check.done` holds the counts, and `failed` names a check that could not run (a busy database, say),
+logged as `self_check.step_failed`; the other checks still run. The input and output folders are checked once they exist (PRs E.2, E.3).
+
 ## Clean exit
 
 `app.close` is logged on every clean exit. While the app runs the workspace holds `aoi.running`; a start that finds it
