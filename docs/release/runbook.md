@@ -57,5 +57,4 @@ skipped because it passed last time.
 15. [ ] **Close out**: the progress file and the release's issue say the version is on the station; a new
         `unreleased.md` is open for the next one.
 
-If any line fails, the kit does not go: fix it in a pull request, which makes a new build and a new kit, and start again
-from the first line that the fix touches.
+If any line fails, the kit does not go: fix it in a pull request and start again from the first line the fix touches.
