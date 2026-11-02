@@ -1,7 +1,7 @@
 # The pilot signing certificate's renewal reminder (REQ-SET-012, ADR 0011; docs/install/pilot-signing.md, "Renewal").
 # On the first of each month it reads the signing certificate's and the pilot CA's expiry and fails when either ends
-# within 60 days, or the signing certificate has expired; GitHub mails a failed scheduled run to the repository's
-# owner. It signs nothing. Before the certificate exists (no secret) it says so and passes.
+# within 60 days, or the signing certificate has expired; GitHub mails a failed scheduled run to whoever last changed
+# the cron line (docs/install/pilot-signing.md, "Renewal", names the other two reminders). It signs nothing. Before the certificate exists (no secret) it says so and passes.
 name: Pilot signing expiry
 
 on:
