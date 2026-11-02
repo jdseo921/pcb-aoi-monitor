@@ -551,11 +551,13 @@ class AppContext:
             self._unless_full("retention.not_archived", self._archive_old)
             self._unless_full("maps.not_swept", self._sweep_ok_maps)  # OK maps past their retention (REQ-INSP-012)
             self._unless_full("app.not_marked", self._mark_running)  # the next start knows whether this one closed
+            self._crash_record()
             for board_model in self.db.board_models():  # before S25 a workspace's results named no stored revision
                 self._unless_full("recipe.not_stored", functools.partial(self._ensure_recipe, board_model))
         except BaseException as e:
             with contextlib.suppress(OSError):
                 heartbeat.closed(self.settings.root)  # not opened, so not a run the next start should call unclosed
+            logging_setup.crash_release(self.settings.root / "logs")
             self.db.close()  # a refused workspace holds no file open while another folder is chosen (REQ-SET-016)
             logging_setup.close(self.log)
             self._lock.release()
@@ -639,6 +641,7 @@ class AppContext:
         with contextlib.suppress(OSError):  # a drive gone: the next start says this run did not close cleanly
             heartbeat.closed(self.settings.root)
         self.db.close()
+        logging_setup.crash_release(self.settings.root / "logs")  # Windows: a file held open keeps its folder
         logging_setup.close(self.log)
         self._lock.release()  # last: another copy may open the workspace now (#204)
 
@@ -4127,6 +4130,17 @@ class AppContext:
                 self.db.add_audit(None, None, "maps.sweep", "inspections", None, None, after, "OK maps past retention")
         self.log.info("maps.swept", extra={"days": days, "swept": len(swept), "skipped": skipped})
         return len(swept)
+
+    def _crash_record(self) -> None:
+        """faulthandler to this workspace's logs/crash.log while it is open (REQ-SET-026); a record the last run left is
+        logged as `app.crashed`. One that cannot be set up is logged, never a refused start."""
+        try:
+            crashed = logging_setup.crash_record(self.settings.root / "logs")
+        except OSError:
+            self.log.warning("crash_record.failed", exc_info=True)
+            return
+        if crashed is not None:
+            self.log.error("app.crashed", extra={"record": crashed.name})  # the last run died of a native fault
 
     def _mark_running(self) -> None:
         if heartbeat.started(self.settings.root):  # the run before was killed, crashed, or lost its power (REQ-SET-024)

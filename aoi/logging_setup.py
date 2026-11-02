@@ -10,8 +10,11 @@ look like secrets are dropped.
 from __future__ import annotations
 
 import contextlib
+import faulthandler
 import json
 import logging
+import os
+import sys
 import traceback
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -114,3 +117,38 @@ def setup(workspace: Path, level: int = logging.INFO, clock: Callable[[], dateti
     log.setLevel(level)
     log.propagate = False  # the file is the record; nothing goes to the console the operator never sees
     return log
+
+
+CRASH = "crash.log"  # in logs/: what faulthandler writes when the process dies of a native fault (REQ-SET-026)
+_crash_file: IO[str] | None = None
+
+
+def crash_record(logs: Path) -> Path | None:
+    """Point faulthandler at logs/crash.log, so a native crash (an access violation in PyTorch or OpenCV) leaves every
+    thread's Python stack there (REQ-SET-026). A record the last run left is kept as crash-<UTC time>.log and returned,
+    for the start to log; the file stays open while the process runs, empty unless it crashes."""
+    global _crash_file
+    logs.mkdir(parents=True, exist_ok=True)
+    current, kept = logs / CRASH, None
+    if current.is_file() and current.stat().st_size:
+        kept = logs / f"crash-{datetime.now(UTC):%Y%m%dT%H%M%SZ}.log"
+        os.replace(current, kept)
+    if _crash_file is not None:
+        faulthandler.disable()
+        _crash_file.close()
+    _crash_file = open(current, "a", encoding="utf-8")  # noqa: SIM115  (held open for faulthandler)
+    faulthandler.enable(_crash_file, all_threads=True)
+    return kept
+
+
+def crash_release(logs: Path) -> None:
+    """Close crash.log when it is the one in `logs`, as its workspace closes: Windows keeps a folder with a file held
+    open from being moved or deleted (Reset Demo deletes the demo's logs/). A crash after it goes to stderr, if any."""
+    global _crash_file
+    if _crash_file is None or Path(_crash_file.name).parent != logs:
+        return  # another workspace's, opened since
+    faulthandler.disable()
+    _crash_file.close()
+    _crash_file = None
+    with contextlib.suppress(AttributeError, ValueError, OSError, RuntimeError):  # a windowed build has no stderr
+        faulthandler.enable(sys.__stderr__)  # type: ignore[arg-type]

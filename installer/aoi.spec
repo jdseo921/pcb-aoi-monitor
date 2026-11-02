@@ -43,6 +43,8 @@ if sys.platform == "win32":
 # log's app_version (REQ-SET-023, aoi/config.py build_number()); a build made by hand has none.
 BUILD = int(os.environ["AOI_BUILD_NUMBER"]) if os.environ.get("AOI_BUILD_NUMBER") else None
 (Path(workpath) / "BUILD").write_text("" if BUILD is None else f"{BUILD}\n", encoding="ascii")
+# The commit it was built from (GitHub sets GITHUB_SHA), in every error dialog's Details (REQ-SET-026)
+(Path(workpath) / "COMMIT").write_text(os.environ.get("GITHUB_SHA", "")[:12] + "\n", encoding="ascii")
 
 DEMO = ROOT / "demo-bundle"  # the demo workspace Settings loads in one click (REQ-SET-007), built by its tool
 if not (DEMO / "bundle.json").is_file():
@@ -56,6 +58,7 @@ a = Analysis(
         (str(SELFTEST / "*"), "selftest"),  # two synthetic boards and selftest.json, never a photograph
         (str(DEMO), "demo-bundle"),  # where aoi/core/demo.py bundle_dir() finds it in a build
         (str(Path(workpath) / "BUILD"), "."),  # beside the app's own files, where build_number() reads it
+        (str(Path(workpath) / "COMMIT"), "."),  # and build_commit()
     ],
     # Never used by the app. Tk has no window here. setuptools comes only through torch.utils.cpp_extension, which
     # builds C++ extensions, and would pull in build tools outside the shipped set. The QtNetwork module comes only

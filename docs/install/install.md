@@ -86,6 +86,25 @@ Under AppLocker, the default rules allow apps in `C:\Program Files`, where the i
 Control for Business, an unsigned build is blocked unless the policy allows it by path or hash; the signed release
 (not built yet, plan item J6) is meant to be allowed by its publisher.
 
+## When the app crashes
+
+A crash of the app's own Python code leaves its stack in `logs\crash.log` in the workspace (faulthandler, every
+thread); the next start renames it `crash-<UTC time>.log` and logs `app.crashed` with that name. Every error dialog's
+**Show Details…** ends with the app's version, build and commit, to quote when reporting it.
+
+A crash in a native library (Qt, PyTorch, a driver) may leave nothing there. To have Windows keep a dump of it, an IT
+administrator can opt in, per PC, with Windows Error Reporting's LocalDumps key; the installer does not set it:
+
+```text
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\AOI-PoC-Inspector.exe
+  DumpFolder  REG_EXPAND_SZ  %USERPROFILE%\AOI_Workspace\logs\dumps
+  DumpCount   REG_DWORD      5
+  DumpType    REG_DWORD      1     (1 = mini dump; 2 = full dump, which holds board images from memory)
+```
+
+A dump can hold anything the app had in memory, images included: send one to us only under the customer's data rules.
+Delete the key to stop.
+
 ## Backup and restore
 
 There is no one-click backup yet. To back up a station:
