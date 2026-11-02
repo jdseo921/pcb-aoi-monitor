@@ -1,0 +1,97 @@
+"""Switch User's dialog (REQ-USR-002; ADR 0002, decision 1): pick a user; an Engineer or Admin types their password,
+or, at their first sign-in, chooses one and types it again. An Operator signs in with no password. A refusal (a wrong
+password, AOI-USR-004, or one that breaks a rule, AOI-USR-005) shows its coded dialog and leaves this one open with the
+password cleared. The password fields never echo, and their text is dropped once the call returns."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from PySide6.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout
+
+from ..core import passwords
+from ..errors import AoiError
+from . import theme
+from .errors import show_error
+from .pages.base import button, role_text, size_class
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+
+
+class SignInDialog(QDialog):
+    """`signed_in` names the user signed in once the dialog is accepted."""
+
+    def __init__(self, shell: MainWindow) -> None:
+        super().__init__(shell)
+        self.shell, self.ctx = shell, shell.ctx
+        self.setWindowTitle(self.tr("Switch user"))
+        self.setMinimumWidth(theme.CARD_W)
+        self.signed_in: str | None = None
+        self.users: list[dict[str, Any]] = self.ctx.users()
+        lay = QVBoxLayout(self)
+        lay.addWidget(QLabel(self.tr("User")))
+        self.user = size_class(QComboBox(), "T")
+        for u in self.users:
+            self.user.addItem(self.tr("{user} ({role})").format(user=u["name"], role=role_text(u["role"])))
+        self.user.setCurrentIndex(next((i for i, u in enumerate(self.users) if u["name"] == self.ctx.user), 0))
+        self.user.currentIndexChanged.connect(self._sync)
+        lay.addWidget(self.user)
+        self.hint = QLabel()  # what the fields below ask for this user
+        self.hint.setObjectName("muted")
+        self.hint.setWordWrap(True)
+        lay.addWidget(self.hint)
+        self.password, self.again = self._field(), self._field()
+        lay.addWidget(self.password)
+        lay.addWidget(self.again)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(size_class(button(self.tr("Cancel"), slot=self.reject), "T"))
+        self.btn_sign_in = size_class(button(self.tr("Sign In"), "primary", self.sign_in), "T")
+        self.btn_sign_in.setDefault(True)
+        row.addWidget(self.btn_sign_in)
+        lay.addLayout(row)
+        self._sync()
+
+    def _field(self) -> QLineEdit:
+        field = size_class(QLineEdit(), "T")
+        field.setEchoMode(QLineEdit.EchoMode.Password)
+        field.setMaxLength(passwords.MAX_LENGTH * 2)  # longer is refused with its reason, not cut off unseen
+        field.textChanged.connect(self._sync)
+        return field
+
+    def chosen(self) -> dict[str, Any]:
+        return self.users[max(self.user.currentIndex(), 0)]
+
+    def _sync(self) -> None:
+        """The fields this user needs, and Sign In on once they are filled (and agree, for a password chosen)."""
+        user = self.chosen()
+        needs = user["role"] != "Operator"
+        setup = needs and user["status"] == "setup"
+        self.password.setVisible(needs)
+        self.again.setVisible(setup)
+        self.password.setPlaceholderText(self.tr("New password") if setup else self.tr("Password"))
+        self.again.setPlaceholderText(self.tr("Type the new password again"))
+        if setup:
+            hint = self.tr("{user} has no password yet: choose one of {low} to {high} characters, such as a few words.")
+            self.hint.setText(hint.format(user=user["name"], low=passwords.MIN_LENGTH, high=passwords.MAX_LENGTH))
+        else:
+            self.hint.setText(self.tr("Type the password of {user}.").format(user=user["name"]) if needs else "")
+        self.hint.setVisible(needs)
+        typed = self.password.text()
+        self.btn_sign_in.setEnabled(not needs or (bool(typed) and (not setup or typed == self.again.text())))
+
+    def sign_in(self) -> None:
+        if not self.btn_sign_in.isEnabled():  # Enter in a field before the button is on
+            return
+        name = str(self.chosen()["name"])
+        password = self.password.text() if self.chosen()["role"] != "Operator" else None
+        self.password.clear()
+        self.again.clear()
+        try:
+            self.ctx.sign_in(name, password=password)  # audited, and the station's next start signs them in again
+        except AoiError as e:
+            show_error(self, self.ctx.report_error(e, "Switch user"))
+            return
+        self.signed_in = name
+        self.accept()

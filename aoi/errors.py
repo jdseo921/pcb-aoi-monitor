@@ -1372,6 +1372,25 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-USR-004",
+            QT_TRANSLATE_NOOP("Errors", "Password not accepted"),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not signed in: the password typed is not theirs."),
+            QT_TRANSLATE_NOOP(
+                "Errors", "Type the password again, checking Caps Lock and the input language; an Admin can reset it."
+            ),
+            personal=("name",),
+        ),
+        ErrorCode(
+            "AOI-USR-005",
+            QT_TRANSLATE_NOOP("Errors", "Password not allowed"),
+            QT_TRANSLATE_NOOP("Errors", "The password chosen for {name} {reason}."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Choose a passphrase of 15 to 64 characters, such as a few words you remember; any language is fine.",
+            ),
+            personal=("name",),
+        ),
+        ErrorCode(
             "AOI-SET-001",
             QT_TRANSLATE_NOOP("Errors", "Workspace from version 0.1"),
             QT_TRANSLATE_NOOP("Errors", "This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded."),

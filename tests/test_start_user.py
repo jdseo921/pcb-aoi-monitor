@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PySide6.QtWidgets import QInputDialog
 from pytestqt.qtbot import QtBot
 
 from aoi import config
@@ -30,6 +29,7 @@ from aoi.ui.demo_workspace import open_demo
 from aoi.ui.errors import open_workspace
 from aoi.ui.main_window import MainWindow, build_window
 from tests.budgets import LONG_TRIES, judged
+from tests.conftest import PASSPHRASE, answer_sign_in
 
 ROOT = Path(__file__).resolve().parents[1]
 START_BUDGET_S = 5.0  # REQ-SET-020: usable within 5 s of starting
@@ -44,12 +44,14 @@ def _reopened(ctx: AppContext) -> AppContext:
 
 def test_req_usr_003_a_start_signs_in_who_signed_in_last_on_the_station(ctx: AppContext) -> None:
     """No one has signed in yet: a start signs in operator. Switch User's sign-in is audited with the user before, and
-    the next start signs that user in again; a start's own sign-in (user.start) is audited and changes no later start;
-    a station being set up still starts with the first Admin."""
+    the next start signs that user in again, unless they have a password (REQ-USR-002): an Engineer who chose one at
+    their first sign-in is never signed in by a start, which falls back to operator; a start's own sign-in (user.start)
+    is audited and changes no later start; a station being set up still starts with its first Admin while that Admin
+    has no password."""
     ctx.ensure_board_model("B")  # set up: no longer the first start's Admin
     ctx.set_user("operator")
     assert ctx.start_user() == "operator" and ctx.last_signed_in() is None
-    ctx.sign_in("engineer")
+    ctx.sign_in("engineer", password=PASSPHRASE)  # their first: it sets their password
     assert ctx.user == "engineer" and ctx.last_signed_in() == "engineer"
     (entry,) = ctx.audit_entries(action="user.sign_in")
     assert (entry["object_type"], entry["object_uuid"]) == ("user", ctx.db.user_uuid("engineer"))
@@ -59,12 +61,15 @@ def test_req_usr_003_a_start_signs_in_who_signed_in_last_on_the_station(ctx: App
 
     again = _reopened(ctx)
     try:
-        assert again.user == "engineer" and again.start_user() == "engineer"
+        assert again.user == "operator" and again.start_user() == "operator" and again.last_signed_in() == "engineer"
+        with pytest.raises(AoiError) as refused:
+            again.sign_in("engineer", start=True)  # nor by a start told to
+        assert refused.value.code == "AOI-USR-004" and again.user == "operator"
         again.sign_in("admin", start=True)  # as a start does: audited, but no sign-in of a person
         (started,) = again.audit_entries(action="user.start")
         assert (started["object_uuid"], started["before"]) == (again.db.user_uuid("admin"), None)
         assert started["after"] == {"user": "admin", "role": "Admin"}
-        assert again.last_signed_in() == again.start_user() == "engineer"
+        assert again.last_signed_in() == "engineer" and again.start_user() == "operator"
         assert again.start_user(setting_up=True) == "admin"
     finally:
         again.close()
@@ -86,7 +91,7 @@ def test_req_usr_003_a_sign_in_refused_or_not_audited_leaves_the_user_before(
     monkeypatch.setattr(ctx.db, "add_audit", full)
     for start in (False, True):
         with pytest.raises(sqlite3.OperationalError):
-            ctx.sign_in("admin", start=start)
+            ctx.sign_in("admin", start=start, password=PASSPHRASE)
         assert ctx.user == "operator" and ctx.last_signed_in() is None
 
 
@@ -95,16 +100,16 @@ def test_req_usr_003_switch_user_signs_in_and_the_next_start_keeps_them(
 ) -> None:
     """The window's start signs its user in (user.start); the header's Switch User signs a user in through
     AppContext.sign_in, and a sign-in that cannot be audited leaves the header as it was. The window of the next start
-    opens with the user who signed in last, and its status line says so, where it opened with operator, and no such
-    line, before anyone had signed in."""
+    opens with the user who signed in last, a second Operator here, and its status line says so, where it opened with
+    operator, and no such line, before anyone had signed in."""
     ctx.ensure_board_model("B")
+    ctx.db.add_user("kim", "Operator")
     workspace = ctx.settings.workspace
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     assert ctx.user == "operator" and "signed in last" not in win.statusBar().currentMessage()
     assert [e["after"]["user"] for e in ctx.audit_entries(action="user.start")] == ["operator"]
-    pick = staticmethod(lambda *args: ("engineer (Engineer)", True))
-    monkeypatch.setattr(QInputDialog, "getItem", pick)
+    answer_sign_in(monkeypatch, "kim")
 
     def full(*args: Any) -> str:
         raise sqlite3.OperationalError("database or disk is full")
@@ -115,16 +120,16 @@ def test_req_usr_003_switch_user_signs_in_and_the_next_start_keeps_them(
             win.switch_user()
     assert ctx.user == "operator" and win.user_label.text() == "operator  ·  Operator"
     win.switch_user()
-    assert ctx.user == "engineer" and win.user_label.text() == "engineer  ·  Engineer"
-    assert [e["after"]["user"] for e in ctx.audit_entries(action="user.sign_in")] == ["engineer"]
+    assert ctx.user == "kim" and win.user_label.text() == "kim  ·  Operator"
+    assert [e["after"]["user"] for e in ctx.audit_entries(action="user.sign_in")] == ["kim"]
     win.close()  # closes the workspace, as quitting the app does
 
     again = MainWindow(AppContext(Settings(workspace=workspace, device="cpu")))
     qtbot.addWidget(again)
     try:
-        assert again.ctx.user == "engineer" and again.user_label.text() == "engineer  ·  Engineer"
+        assert again.ctx.user == "kim" and again.user_label.text() == "kim  ·  Operator"
         said = again.statusBar().currentMessage()
-        assert said.startswith("Signed in as engineer (Engineer), who signed in last on this station."), said
+        assert said.startswith("Signed in as kim (Operator), who signed in last on this station."), said
     finally:
         again.close()
 
@@ -164,13 +169,14 @@ def test_req_usr_003_a_workspace_switch_signs_in_the_role_carried_once_and_never
 ) -> None:
     """The demo opened with its Admin, then Leave Demo: the station's window opens with its first Admin, the role
     carried, audited once as user.start, with no line saying who signed in last; the station's next start still signs
-    in the Engineer who signed in last with Switch User, not the Admin the demo signed in by itself."""
+    in the Operator who signed in last with Switch User, not the Admin the demo signed in by itself."""
     monkeypatch.setenv("AOI_DEMO_BUNDLE", str(demo_bundle))
     ctx = open_workspace()
     assert ctx is not None
     ctx.set_user("engineer")
     ctx.ensure_board_model("B")  # set up
-    ctx.sign_in("engineer")
+    ctx.db.add_user("kim", "Operator")
+    ctx.sign_in("kim")
     production = ctx.settings.root
     ctx.close()
     opened = open_demo()
@@ -185,14 +191,14 @@ def test_req_usr_003_a_workspace_switch_signs_in_the_role_carried_once_and_never
         assert "signed in last" not in station.statusBar().currentMessage()
         started = [e["after"]["user"] for e in station.ctx.audit_entries(action="user.start")]
         assert started == ["admin"]  # one sign-in, as the window opened
-        assert [e["after"]["user"] for e in station.ctx.audit_entries(action="user.sign_in")] == ["engineer"]
-        assert station.ctx.last_signed_in() == station.ctx.start_user() == "engineer"
+        assert [e["after"]["user"] for e in station.ctx.audit_entries(action="user.sign_in")] == ["kim"]
+        assert station.ctx.last_signed_in() == station.ctx.start_user() == "kim"
     finally:
         station.close()
     again = build_window(AppContext(Settings.load(), keys))
     assert again is not None
     try:
-        assert again.ctx.user == "engineer" and "signed in last" in again.statusBar().currentMessage()
+        assert again.ctx.user == "kim" and "signed in last" in again.statusBar().currentMessage()
     finally:
         again.close()
 
