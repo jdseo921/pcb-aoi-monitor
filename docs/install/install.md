@@ -85,8 +85,10 @@ The app refuses two places with AOI-SET-024, when the folder is picked in Settin
   Documents and Desktop. The sync client holds files open and can put back an older copy of the database without its
   log, or evidence files that no longer match their records.
 
-At start the refusal is followed by a folder picker; choose a local folder there. To back up a workspace, copy it while
-the app is closed (see "Backup and restore").
+At start the refusal is followed by a folder picker. A folder chosen there that holds no workspace opens empty, so to
+keep a station's records, **first** close the app and move the whole workspace folder to a local folder, then choose
+that folder. Before upgrading a station, check where its workspace is (Settings, or `settings.json`). To back up a
+workspace, copy it while the app is closed (see "Backup and restore").
 
 ## Antivirus, AppLocker and App Control
 

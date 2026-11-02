@@ -40,7 +40,21 @@ def test_req_set_025_a_network_path_a_remote_drive_and_onedrive_are_refused_and_
         workspace_guard, "drive_type", lambda anchor: asked.append(anchor) or workspace_guard.DRIVE_REMOTE
     )
     assert workspace_guard.refusal(tmp_path / "AOI_Workspace") == workspace_guard.NETWORK  # Z: mapped to a share
-    assert asked == [Path(tmp_path).anchor]
+    assert set(asked) == {Path(tmp_path).anchor}
+    monkeypatch.undo()
+
+
+def test_req_set_025_a_link_into_onedrive_is_refused_and_an_empty_workspace_is_aoi_set_008_first(
+    tmp_path: Path, one_drive: Path, ctx: AppContext
+) -> None:
+    link = tmp_path / "AOI"  # a junction or a link from a local folder into OneDrive, made by hand
+    link.symlink_to(one_drive, target_is_directory=True)
+    assert workspace_guard.refusal(link / "AOI_Workspace") == workspace_guard.ONE_DRIVE
+    assert workspace_guard.refusal("//?/C:/AOI_Workspace") is None  # the long-path prefix with forward slashes
+    ctx.set_user("admin")
+    with pytest.raises(AoiError) as refused:
+        ctx.save_settings({"workspace": ""})
+    assert refused.value.code == "AOI-SET-008"
 
 
 def test_req_set_025_a_start_on_onedrive_is_refused_before_a_file_is_made_and_offers_another_folder(

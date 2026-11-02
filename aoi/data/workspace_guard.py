@@ -37,20 +37,23 @@ def drive_type(anchor: str) -> int | None:
 
 
 def refusal(folder: str | Path) -> Phrase | None:
-    """Why `folder` cannot hold a workspace, or None when it can."""
-    text = os.fspath(folder)
-    if text.startswith(("\\\\?\\", "\\\\.\\")):  # a long-path prefix: \\?\C:\… is local, \\?\UNC\server\… is not
-        text = text[4:]
-        if text[:4].upper() == "UNC\\":
+    """Why `folder` cannot hold a workspace, or None when it can: judged as written and again with its links and
+    junctions followed (os.path.realpath), so a local folder that leads to a share or into OneDrive is caught."""
+    written = os.fspath(folder)
+    for text in (written, os.path.realpath(written)):
+        head = text[:4].replace("/", "\\")
+        if head in ("\\\\?\\", "\\\\.\\"):  # a long-path prefix: \\?\C:\… is local, \\?\UNC\server\… is not
+            text = text[4:]
+            if text[:4].replace("/", "\\").upper() == "UNC\\":
+                return NETWORK
+        elif head.startswith("\\\\"):  # \\server\share, or //server/share
             return NETWORK
-    elif text.startswith(("\\\\", "//")):  # \\server\share
-        return NETWORK
-    text = os.path.abspath(text)
-    anchor = Path(text).anchor
-    if anchor and drive_type(anchor) == DRIVE_REMOTE:
-        return NETWORK
-    if any(inside(text, root) for root in one_drive_roots()):
-        return ONE_DRIVE
+        text = os.path.abspath(text)
+        anchor = Path(text).anchor
+        if anchor and drive_type(anchor) == DRIVE_REMOTE:
+            return NETWORK
+        if any(inside(text, root) or inside(text, os.path.realpath(root)) for root in one_drive_roots()):
+            return ONE_DRIVE
     return None
 
 
