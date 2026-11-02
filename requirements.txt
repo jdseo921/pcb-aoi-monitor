@@ -5,6 +5,7 @@ PySide6-Essentials==6.11.2  # Qt's LGPL modules, not the PySide6 meta-package: i
 torch==2.14.1       # 2.6+ for weights-only loading (REQ-TRN-014); CPU build in CI, CUDA build on GPU stations (README)
 opencv-python==5.0.0.93
 numpy==2.4.6
+argon2-cffi==25.1.0  # Argon2id password and PIN hashes (ADR 0002, REQ-USR-002); MIT, its bindings MIT
 cryptography==50.0.2  # AES-256-GCM of each customer's dataset store (ADR 0010); Apache-2.0 OR BSD-3-Clause
 filelock==4.2.1     # torch's; pinned here as a security floor (CVE-2026-112908, -112909, -112911, -112912, -112915, -112935, -112939; fixed in 4.2.1); MIT
 setuptools==84.1.0  # torch's; pinned here as a security floor (GHSA-xmj3-9gf7-h52w; fixed in 84.1.0); MIT

@@ -4346,6 +4346,26 @@
         <source>it is in a folder OneDrive copies to the cloud, which holds and puts back files</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location filename="../core/passwords.py" line="+26"/>
+        <source>is shorter than {length} characters</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>is longer than {length} characters</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>is the name of a user, a customer or the product</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>is not 4 to 6 digits</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>Explain</name>

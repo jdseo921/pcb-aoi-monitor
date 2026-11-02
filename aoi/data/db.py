@@ -28,6 +28,7 @@ from .paths import resolve, to_stored
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
 NOT_REVIEWED = "NOT_REVIEWED"  # the history filter's review: an NG or WARN record no one has reviewed (REQ-LOG-009)
 WAIT_MS = 5000  # how long a write waits for another program's lock on the database before SQLite refuses it
+USER_COLUMNS = "id, uuid, name, role, status, failed_attempts, locked_until"  # never secret_hash (REQ-USR-002)
 DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
 SAMPLES = (  # a sample with its current label, the one label row no other has superseded (migration 0014), and the
     # second user's check of that row, if any (migration 0015)
@@ -89,7 +90,7 @@ class Database:
             raise
         if not self.query("SELECT 1 FROM users LIMIT 1"):
             for n, r in (("operator", "Operator"), ("engineer", "Engineer"), ("admin", "Admin")):
-                self.execute("INSERT INTO users(uuid, name, role) VALUES(?,?,?)", (new_uuid(), n, r))
+                self.add_user(n, r)  # the Engineer and the Admin choose a password at their first sign-in
 
     def close(self) -> None:
         with self._lock:
@@ -1065,7 +1066,18 @@ class Database:
         return self.query("SELECT * FROM alarms ORDER BY id DESC LIMIT ?", (int(limit),))
 
     def users(self) -> list[dict[str, Any]]:
-        return self.query("SELECT * FROM users ORDER BY id")
+        """Every user, oldest first, without the hash of their password or PIN, which only `user_secret` reads."""
+        return self.query(f"SELECT {USER_COLUMNS} FROM users ORDER BY id")
+
+    def user_secret(self, uuid: str) -> str | None:
+        """The Argon2id hash of the user's password or PIN; None while they have none (REQ-USR-002)."""
+        r = self.query("SELECT secret_hash FROM users WHERE uuid=?", (uuid,))
+        return str(r[0]["secret_hash"]) if r and r[0]["secret_hash"] else None
+
+    def set_user_secret(self, uuid: str, secret_hash: str | None) -> None:
+        """Store the user's new hash; a password chosen makes an Engineer or Admin in set-up active."""
+        status = "CASE status WHEN 'setup' THEN 'active' ELSE status END"
+        self.execute(f"UPDATE users SET secret_hash=?, status={status} WHERE uuid=?", (secret_hash, uuid))
 
     def user_uuid(self, name: str) -> str | None:
         r = self.query("SELECT uuid FROM users WHERE name=?", (name,))
@@ -1144,7 +1156,13 @@ class Database:
         return rows
 
     def add_user(self, name: str, role: str) -> None:
+        """Add a user, an Engineer or Admin in set-up until they choose a password, or change a user's role. A move
+        between Operator and a role above drops the secret, a PIN being no password, and starts set-up again; a
+        disabled user stays disabled."""
+        same = "(role='Operator') = (excluded.role='Operator')"
         self.execute(
-            "INSERT INTO users(uuid, name, role) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET role=excluded.role",
-            (new_uuid(), name, role),
+            "INSERT INTO users(uuid, name, role, status) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET "
+            f"secret_hash = CASE WHEN {same} THEN secret_hash END, "
+            f"status = CASE WHEN status='disabled' OR {same} THEN status ELSE excluded.status END, role=excluded.role",
+            (new_uuid(), name, role, "active" if role == "Operator" else "setup"),
         )

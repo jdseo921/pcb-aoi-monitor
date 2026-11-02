@@ -39,13 +39,13 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | 1.1 | Disk guard: alarm at 80 %, NG-only evidence at 95 %, start-up no longer refuses the workspace on a full disk | REQ-LOG-006 | merged 2026-11-01: 1.1a #426 (engine), 1.1b #427 (status bar and CSV) |
 | 1.2 | Evidence policy (D1) | REQ-INSP-012 | merged 2026-11-01 (#428) |
 | 1.3 | Retention on a timer | REQ-LOG-010 | merged 2026-11-01 (#429); its deletions wait for an Admin's in-app confirmation, D20 and D21 still provisional in ADR 0024 |
-| 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | in review: 1.4a heartbeat, alerts and clean exit (`feat/REQ-SET-024-heartbeat`); 1.4b the self-check (`feat/REQ-SET-024-self-check`) |
-| 1.5 | Crash record (`faulthandler`, WER LocalDumps documented) | REQ-SET-026 | in review (`feat/REQ-SET-026-crash-record`) |
-| 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | in review: 1.6a the bundle and its command line (`feat/REQ-LOG-007-support-bundle`); 1.6b the Admin button, About and the station ID (`feat/REQ-SET-011-about`) |
-| 1.7 | Workspace guards: remote drive and OneDrive root refused | REQ-SET-025 | in review (`feat/REQ-SET-025-workspace-guards`) |
-| 1.8 | Signing hygiene and installer wording | REQ-SET-012 | in review (`feat/REQ-SET-012-signing-hygiene`) |
-| 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | in review (`feat/REQ-SET-027-release-kit`) |
-| D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | planned |
+| 1.4 | Heartbeat, `alerts.jsonl`, start-up self-check, clean-exit marker | REQ-SET-024 | merged 2026-11-02: 1.4a #431 (heartbeat, alerts and clean exit), 1.4b #432 (the self-check) |
+| 1.5 | Crash record (`faulthandler`, WER LocalDumps documented) | REQ-SET-026 | merged 2026-11-02 (#433) |
+| 1.6 | Support bundle and About | REQ-LOG-007, REQ-SET-011 | merged 2026-11-02: 1.6a #434 (the bundle and its command line), 1.6b #435 (the Admin button, About and the station ID) |
+| 1.7 | Workspace guards: remote drive and OneDrive root refused | REQ-SET-025 | merged 2026-11-02 (#436) |
+| 1.8 | Signing hygiene and installer wording | REQ-SET-012 | merged 2026-11-02 (#437); the pilot CA key has no offline backup, as Jay chose |
+| 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | merged 2026-11-02 (#438) |
+| D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | in review: D.1a the hash, its rules and migration 0029 (`feat/REQ-USR-002-password-store`); D.1b sign-in with a password and the dialog (`feat/REQ-USR-002-passwords`) |
 | D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | planned |
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | planned |
 | E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | issue (to open) | planned |
@@ -154,3 +154,8 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   installer check holds each variant to its name, label and signature; the monthly expiry workflow; the CA key has no
   backup by design (not exportable), and keeping an offline exportable copy is put to Jay.
 - 2026-11-02: PR 1.9 on `feat/REQ-SET-027-release-kit`; a run of its runbook on a clean VM waits for the release.
+- 2026-11-02: Jay merged #429 to #438 in order, chose no offline backup of the pilot CA key, and confirmed D3 (accounts
+  with passwords before G1) on a decision card. On his "Go", Prompt 5 (train D) started, the second train today. PR D.1
+  came to about 620 lines, so it is two: D.1a the Argon2id hash (argon2-cffi 25.1.0, MIT), its rules and migration
+  0029, with no change in behaviour; D.1b sign-in with a password and its dialog, where the seeded Engineer and Admin
+  choose their password at their first sign-in until D.3 brings the first-run Admin.
