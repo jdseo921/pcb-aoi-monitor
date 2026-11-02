@@ -154,3 +154,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   installer check holds each variant to its name, label and signature; the monthly expiry workflow; the CA key has no
   backup by design (not exportable), and keeping an offline exportable copy is put to Jay.
 - 2026-11-02: PR 1.9 on `feat/REQ-SET-027-release-kit`; a run of its runbook on a clean VM waits for the release.
+- 2026-11-02: after train D, Jay said "Keep going"; Prompt 6 waits for train D's merge and the factory's file-naming
+  contract. `ci/REQ-SET-020-windows-test-time`: the Windows test job may run 110 minutes (Linux keeps 75), as 75 stopped
+  four passing Windows runs (#442 to #445) at 73 to 76 minutes with no test failed.
