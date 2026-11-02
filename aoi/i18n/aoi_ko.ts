@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+377"/>
+        <location line="+376"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1245,14 +1245,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3126"/>
-        <location line="+3140"/>
+        <location line="-3125"/>
+        <location line="+3139"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3229"/>
+        <location line="-3228"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1352,7 +1352,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1316"/>
+        <location line="+1315"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1564,7 +1564,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+440"/>
+        <location line="+441"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1574,12 +1574,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-500"/>
+        <location line="-501"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3891"/>
+        <location line="-3890"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1604,7 +1604,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1240"/>
+        <location line="+1239"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1679,7 +1679,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+29"/>
         <source>Archiving records</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3542,11 +3542,11 @@
     </message>
     <message>
         <location line="+1"/>
-        <source>Choose a folder on a drive of this PC that OneDrive does not copy, such as C:\AOI_Workspace (install guide, &quot;Where the workspace goes&quot;); at start, choose it in the window that opens next.</source>
+        <source>Choose a folder on a drive of this PC that OneDrive does not copy, such as C:\AOI_Workspace. To keep the records, close the app and move the whole workspace folder there first, then choose it (install guide, &quot;Where the workspace goes&quot;); at start, choose it in the window that opens next.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+20"/>
         <source>Leave out / : * ? &quot; &lt; &gt; \ | and control characters, end with no dot or space, and use no device name such as CON or NUL.</source>
         <translation type="unfinished">/ : * ? &quot; &lt; &gt; \ | 와 제어 문자를 빼고, 점이나 공백으로 끝내지 말고, CON이나 NUL 같은 장치 이름은 쓰지 마십시오.</translation>
     </message>
@@ -3706,7 +3706,7 @@
         <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
     </message>
     <message>
-        <location line="-325"/>
+        <location line="-326"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4312,7 +4312,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3382"/>
+        <location filename="../core/services.py" line="+3381"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4337,7 +4337,7 @@
         <translation>이 앱이 읽는 YOLO 또는 Pascal VOC 라벨 파일이 아닙니다</translation>
     </message>
     <message>
-        <location filename="../data/workspace_guard.py" line="+20"/>
+        <location filename="../data/workspace_guard.py" line="+19"/>
         <source>it is on a network drive, where the database&apos;s locks are not safe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9213,7 +9213,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3466"/>
+        <location filename="../core/services.py" line="-3465"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
