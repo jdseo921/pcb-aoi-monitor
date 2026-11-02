@@ -36,7 +36,7 @@ gloves, and must never be stopped from inspecting by a sign-in screen.
    shows a one-time recovery code, stored only as a hash, that lets that Admin set a new password. A lost
    password and code are fixed by a Windows administrator running the installer's repair, which creates a new
    Admin and writes an audit entry. The app does not try to defend itself against a Windows administrator.
-7. **Records.** A user is a UUID, name, role, password or PIN hash, status (active or disabled), failed-attempt
+7. **Records.** A user is a UUID, name, role, password or PIN hash, status (active or disabled; and set-up, an Engineer or Admin with no password yet, added by migration 0029 under ADR 0024 D3), failed-attempt
    count and lock time, with times in UTC ISO 8601. In daily use users are disabled rather than deleted, so past
    records keep their names. When a person asks, an Admin exports their records and removes the account, and
    past records keep only a pseudonymous operator ID (LEG Privacy, REQ-USR-008). Sign-ins, failures, locks,

@@ -11,6 +11,7 @@ from argon2 import PasswordHasher
 
 from aoi.config import APP_NAME
 from aoi.core import passwords
+from aoi.core.services import AppContext
 from aoi.data.db import Database
 
 KOREAN = "부산 바다 위를 나는 일곱 마리 올빼미"  # 21 characters, typed composed (NFC)
@@ -23,7 +24,7 @@ def test_req_usr_002_a_secret_is_an_argon2id_hash_of_its_nfkc_text() -> None:
     assert stored.startswith("$argon2id$v=19$m=65536,t=3,p=4$") and KOREAN not in stored
     assert passwords.verify(stored, unicodedata.normalize("NFD", KOREAN))
     assert not passwords.verify(stored, KOREAN[:-1]) and not passwords.verify(None, KOREAN)
-    assert not passwords.verify("not a hash", KOREAN) and not passwords.stale(stored)
+    assert not passwords.verify("not a hash", KOREAN) and not passwords.stale(stored) and passwords.stale("not a hash")
     weak = PasswordHasher(time_cost=1, memory_cost=8192, parallelism=1).hash(KOREAN)
     assert passwords.verify(weak, KOREAN) and passwords.stale(weak)
     assert passwords.hash_secret(KOREAN) != stored  # a new salt each time
@@ -84,3 +85,37 @@ def test_req_usr_007_users_never_carry_the_hash(tmp_path: Path) -> None:
         assert next(u for u in db.users() if u["name"] == "engineer")["status"] == "setup"
     finally:
         db.close()
+
+
+def test_req_usr_007_a_hash_set_or_dropped_moves_the_status(tmp_path: Path) -> None:
+    """A hash set clears failed attempts and the lock; a hash dropped (a reset) puts an Engineer back in set-up, never
+    active with no password; a disabled user stays disabled either way."""
+    db = Database(tmp_path / "aoi.sqlite")
+    try:
+        uuid = str(db.user_uuid("admin"))
+        db.execute("UPDATE users SET failed_attempts=3, locked_until='2026-11-02T10:00:00+00:00' WHERE uuid=?", (uuid,))
+        db.set_user_secret(uuid, passwords.hash_secret(KOREAN))
+        row = next(u for u in db.users() if u["uuid"] == uuid)
+        assert (row["status"], row["failed_attempts"], row["locked_until"]) == ("active", 0, None)
+        db.set_user_secret(uuid, None)
+        assert next(u for u in db.users() if u["uuid"] == uuid)["status"] == "setup"
+        db.execute("UPDATE users SET status='disabled' WHERE uuid=?", (uuid,))
+        db.set_user_secret(uuid, passwords.hash_secret(KOREAN))
+        assert next(u for u in db.users() if u["uuid"] == uuid)["status"] == "disabled"
+    finally:
+        db.close()
+
+
+def test_req_usr_006_a_role_change_that_drops_the_password_says_so(ctx: AppContext) -> None:
+    """user.change records the status before and after: a move to Operator and back starts set-up again."""
+    uuid = str(ctx.db.user_uuid("engineer"))
+    ctx.db.set_user_secret(uuid, passwords.hash_secret(KOREAN))
+    ctx.set_user("admin")
+    ctx.add_user("engineer", "Operator")
+    ctx.add_user("engineer", "Engineer")
+    changes = [(e["before"], e["after"]) for e in ctx.audit_entries(action="user.change")]  # newest first
+    assert changes == [
+        ({"role": "Operator", "status": "active"}, {"name": "engineer", "role": "Engineer", "status": "setup"}),
+        ({"role": "Engineer", "status": "active"}, {"name": "engineer", "role": "Operator", "status": "active"}),
+    ]
+    assert ctx.db.user_secret(uuid) is None

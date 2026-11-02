@@ -1564,7 +1564,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+441"/>
+        <location line="+442"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1574,7 +1574,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-501"/>
+        <location line="-502"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1674,7 +1674,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+128"/>
+        <location line="+129"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1721,7 +1721,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4313"/>
+        <location line="-4314"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4347,7 +4347,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/passwords.py" line="+26"/>
+        <location filename="../core/passwords.py" line="+27"/>
         <source>is shorter than {length} characters</source>
         <translation type="unfinished"></translation>
     </message>

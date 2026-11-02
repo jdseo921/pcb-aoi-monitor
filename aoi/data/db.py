@@ -1075,9 +1075,17 @@ class Database:
         return str(r[0]["secret_hash"]) if r and r[0]["secret_hash"] else None
 
     def set_user_secret(self, uuid: str, secret_hash: str | None) -> None:
-        """Store the user's new hash; a password chosen makes an Engineer or Admin in set-up active."""
-        status = "CASE status WHEN 'setup' THEN 'active' ELSE status END"
-        self.execute(f"UPDATE users SET secret_hash=?, status={status} WHERE uuid=?", (secret_hash, uuid))
+        """Store the user's new hash, which clears their failed attempts and lock: a password chosen makes an Engineer
+        or Admin in set-up active. None drops it (a reset) and puts an active Engineer or Admin back in set-up, never
+        active with no password; a disabled user stays disabled."""
+        status = (
+            "CASE WHEN status='disabled' THEN status WHEN ? IS NOT NULL THEN 'active' "
+            "WHEN role='Operator' THEN status ELSE 'setup' END"
+        )
+        self.execute(
+            f"UPDATE users SET secret_hash=?, status={status}, failed_attempts=0, locked_until=NULL WHERE uuid=?",
+            (secret_hash, secret_hash, uuid),
+        )
 
     def user_uuid(self, name: str) -> str | None:
         r = self.query("SELECT uuid FROM users WHERE name=?", (name,))

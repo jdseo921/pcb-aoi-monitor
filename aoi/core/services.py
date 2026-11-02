@@ -4031,8 +4031,9 @@ class AppContext:
             raise AoiError("AOI-USR-002", name=name, role=Phrase("Role", role))  # the role's name as the UI shows it
         before = next((u for u in users if u["name"] == name), None)
         self.db.add_user(name, role)
-        old = {"role": before["role"]} if before else None
-        self.audit("user.change", "user", self.db.user_uuid(name), old, {"name": name, "role": role})
+        old = {"role": before["role"], "status": before["status"]} if before else None
+        status = next(u["status"] for u in self.db.users() if u["name"] == name)  # set-up again: the secret dropped
+        self.audit("user.change", "user", self.db.user_uuid(name), old, {"name": name, "role": role, "status": status})
         if name == self._actor.name:  # the signed-in user's own role: the next role check reads the stored one
             self._actor = Actor(name, role, self.db.user_uuid(name))
 

@@ -1,5 +1,5 @@
 """Passwords and PINs (REQ-USR-002; ADR 0002, decisions 2 and 3). A secret is stored only as an Argon2id hash with
-argon2-cffi's default parameters, RFC 9106's low-memory profile (3 passes, 64 MiB, 4 lanes, 16-byte salt, 32-byte
+RFC 9106's low-memory profile (3 passes, 64 MiB, 4 lanes, 16-byte salt, 32-byte
 hash), of its text normalised to NFKC, so a Korean passphrase typed with another input method still matches. A hash
 carries its parameters; one made with older ones is `stale` and replaced at the next successful sign-in. A new password
 is 15 to 64 characters of any kind, with no composition rule and no expiry, and is not a user's name, a customer's or
@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import unicodedata
 from collections.abc import Iterable
+from functools import cache
 
-from argon2 import PasswordHasher
+from argon2 import PasswordHasher, profiles
 from argon2.exceptions import InvalidHashError, VerificationError
 
 from ..config import APP_NAME
@@ -21,7 +22,7 @@ from ..errors import QT_TRANSLATE_NOOP, Phrase
 
 MIN_LENGTH, MAX_LENGTH = 15, 64  # NIST SP 800-63B-4 asks for 15 where a password is the only factor
 PIN_DIGITS = range(4, 7)
-_HASHER = PasswordHasher()  # Argon2id, argon2-cffi's defaults (RFC 9106 low memory)
+_HASHER = PasswordHasher.from_parameters(profiles.RFC_9106_LOW_MEMORY)  # Argon2id; named, not the library's default
 
 TOO_SHORT = QT_TRANSLATE_NOOP("Errors", "is shorter than {length} characters")
 TOO_LONG = QT_TRANSLATE_NOOP("Errors", "is longer than {length} characters")
@@ -39,19 +40,31 @@ def hash_secret(secret: str) -> str:
     return _HASHER.hash(normal(secret))
 
 
+@cache
+def _absent() -> str:
+    """A hash to verify against when an account has none, made once, when first needed, not at import."""
+    return _HASHER.hash("no password")
+
+
 def verify(stored: str | None, secret: str) -> bool:
-    """Whether `secret` is the one `stored` hashes; False for no hash or one that cannot be read."""
-    if not stored:
-        return False
+    """Whether `secret` is the one `stored` hashes; False for no hash or one that cannot be read. No hash takes as
+    long as a wrong secret, so the time a refusal takes does not say which accounts have a password."""
     try:
+        if not stored:
+            _HASHER.verify(_absent(), normal(secret))  # for its time only: the answer is False whatever it says
+            return False
         return bool(_HASHER.verify(stored, normal(secret)))
     except (VerificationError, InvalidHashError):
         return False
 
 
 def stale(stored: str) -> bool:
-    """Whether `stored` was made with other parameters than today's, so a sign-in that verified it hashes again."""
-    return bool(_HASHER.check_needs_rehash(stored))
+    """Whether `stored` was made with other parameters than today's, so a sign-in that verified it hashes again; a
+    hash that cannot be read is stale too."""
+    try:
+        return bool(_HASHER.check_needs_rehash(stored))
+    except InvalidHashError:
+        return True
 
 
 def refusal(password: str, names: Iterable[str]) -> Phrase | None:
