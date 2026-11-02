@@ -24,7 +24,7 @@ $found = [ordered]@{
     Version = $app.DisplayVersion
     Installed = $app.InstallDate
     Folder = $folder
-    Build = if (Test-Path $info) { (Get-Content $info -TotalCount 1) } else { $null }
+    Build = if (Test-Path $info) { [string](Get-Content $info -TotalCount 1) } else { $null }  # a bare string in JSON
     ExeVersion = if (Test-Path $exe) { (Get-Item $exe).VersionInfo.ProductVersion } else { $null }
     Signature = if (Test-Path $exe) { (Get-AuthenticodeSignature -LiteralPath $exe).Status.ToString() } else { $null }
 }
