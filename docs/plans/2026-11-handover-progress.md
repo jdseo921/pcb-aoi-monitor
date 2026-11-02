@@ -159,7 +159,4 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   came to about 620 lines, so it is two: D.1a the Argon2id hash (argon2-cffi 25.1.0, MIT), its rules and migration
   0029, with no change in behaviour; D.1b sign-in with a password and its dialog, where the seeded Engineer and Admin
   choose their password at their first sign-in until D.3 brings the first-run Admin.
-- 2026-11-02: #442's first CI run hit the 75-minute limit: each window put an event filter on the application, which
-  slowed every event of the suite; one filter now serves the app. D.3 came to about 950 lines, so it is three PRs:
-  D.3a user administration (#443), D.3b the first Admin with a recovery code, D.3c sign-in with the code and the
-  demo's known Admin. Train D stops there for Jay's report.
+- 2026-11-02: #442's CI timed out on an event filter per window, now one per app. D.3 is three PRs (about 950 lines).
