@@ -135,3 +135,5 @@ Item format: "- [REQ-INSP-005] Start, Stop, Next Board and Save Result work by F
 the ID in brackets. A change that can alter a verdict goes in the first section with its before/after result on
 the synthetic regression set and a note that customers re-validate before it goes live (Engineering, Change control).
 -->
+
+- [REQ-USR-007] Migration 0029 adds a password hash, a status, a failed-attempt count and a lock time to each user, and marks every Engineer and Admin as waiting to choose a password; nothing changes at sign-in until passwords are asked for. / 마이그레이션 0029가 각 사용자에 비밀번호 해시, 상태, 실패 횟수, 잠금 시각을 추가하고 모든 엔지니어와 관리자를 비밀번호 설정 대기로 표시합니다. 비밀번호를 묻기 시작할 때까지 로그인 방식은 바뀌지 않습니다.
