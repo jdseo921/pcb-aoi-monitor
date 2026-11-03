@@ -59,6 +59,7 @@ from . import (
     labels,
     lineage,
     model_card,
+    passwords,
     report,
     retention,
     run_progress,
@@ -665,14 +666,17 @@ class AppContext:
         either (a table edited outside the app), the first user of the lowest stored role. Its role is the stored one,
         whatever the name (#197)."""
         users = self.db.users()  # never empty: the database seeds operator, engineer and admin
+        # never one who must prove who they are: an Engineer or Admin with a password signs in with Switch User
+        startable = {str(u["name"]) for u in users if u["status"] == "setup" or u["role"] == "Operator"}
         if setting_up or demo.is_demo(self.settings.root):
-            if admin := next((u for u in users if u["role"] == "Admin"), None):
+            if admin := next((u for u in users if u["role"] == "Admin" and u["name"] in startable), None):
                 return str(admin["name"])
-        if (started := self.guide_starter()) is not None:
+        if (started := self.guide_starter()) is not None and started.user in startable:
             return started.user
         # once users can be disabled (REQ-USR-006), a disabled one is never signed in at a start
-        if (last := self.last_signed_in()) is not None:
+        if (last := self.last_signed_in()) is not None and last in startable:
             return last
+        users = [u for u in users if u["name"] in startable] or users  # none: an Admin must add an Operator (D.3)
         if any(u["name"] == "operator" for u in users):
             return "operator"
         rank = {r: i for i, r in enumerate(ROLES)}
@@ -708,13 +712,17 @@ class AppContext:
         the first-run guide's dialogs open (B5, Q68); None with none. Writes nothing."""
         return drives.last_plugged()
 
-    def sign_in(self, name: str, start: bool = False) -> None:
+    def sign_in(self, name: str, start: bool = False, password: str | None = None) -> None:
         """Sign `name` in: `set_user`, then an audit entry naming them and their role. As a person does with Switch
         User, `user.sign_in`, with the user signed in before, which the station's next start signs in again
-        (`last_signed_in`); as a start does, `start`, `user.start`, which no later start reads. Anyone may sign in;
-        AOI-USR-003 refuses a name the users table does not hold, and an entry that cannot be written leaves the user
-        before signed in."""
+        (`last_signed_in`); as a start does, `start`, `user.start`, which no later start reads. AOI-USR-003 refuses a
+        name the users table does not hold, and an entry that cannot be written leaves the user before signed in.
+        An Engineer or Admin proves who they are with their password (`_check_password`, REQ-USR-002); one in set-up
+        chooses it here, at their first sign-in. An Operator needs none."""
         previous = self._actor
+        row = next((u for u in self.db.users() if u["name"] == name), None)
+        if row is not None and row["role"] != "Operator":
+            self._check_password(row, password, start)
         self.set_user(name)
         try:
             after = {"user": self.user, "role": self.role}
@@ -726,6 +734,30 @@ class AppContext:
         except BaseException:
             self._actor = previous  # signed in only once audited
             raise
+
+    def _check_password(self, user: dict[str, Any], password: str | None, start: bool = False) -> None:
+        """Let an Engineer or Admin sign in only with their password, never at a start: a wrong one is audited as
+        `user.sign_in_failed` and refused with AOI-USR-004. A hash with old parameters is made again. One in set-up
+        (no password yet) may start, as before, and chooses their password at a sign-in (`user.password_set`),
+        refused with AOI-USR-005 when it breaks a rule (`passwords.refusal`). Neither secret nor hash is audited."""
+        uuid, name = str(user["uuid"]), str(user["name"])
+        if user["status"] == "setup":
+            if start:
+                return
+            names = [str(u["name"]) for u in self.db.users()] + [str(s["customer"]) for s in self.db.stores()]
+            refused = passwords.refusal(password or "", names)
+            if refused is not None:
+                raise AoiError("AOI-USR-005", name=name, reason=refused)
+            with self.db.transaction():
+                self.db.set_user_secret(uuid, passwords.hash_secret(password or ""))
+                self.audit("user.password_set", "user", uuid, None, {"user": name})
+            return
+        stored = self.db.user_secret(uuid)
+        if start or password is None or not passwords.verify(stored, password):
+            self.audit("user.sign_in_failed", "user", uuid, None, {"user": name, "start": start})
+            raise AoiError("AOI-USR-004", name=name)
+        if stored is not None and passwords.stale(stored):
+            self.db.set_user_secret(uuid, passwords.hash_secret(password))
 
     def last_signed_in(self) -> str | None:
         """The name of the user who signed in last on this station with Switch User (the newest `user.sign_in` entry),

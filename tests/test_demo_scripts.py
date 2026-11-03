@@ -27,7 +27,6 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QFileDialog,
-    QInputDialog,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -47,6 +46,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import Page
 from aoi.ui.pages.inspection import InspectionPage
 from tests.budgets import LONG_TRIES, judged
+from tests.conftest import answer_sign_in
 from tests.dialog_watch import watched
 from tests.test_demo_ui import (  # noqa: F401 (an autouse fixture)
     VERDICTS,
@@ -110,7 +110,7 @@ def answered(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 def picked(monkeypatch: pytest.MonkeyPatch, usb: Path) -> list[str]:
     """The files, folders and users the script picks itself, by the picker's title: each export's file and folder on
-    the USB stick, as the script says, and Switch User's pick (QInputDialog.getItem, patched where the script
+    the USB stick, as the script says, and Switch User's pick (answer_sign_in, patched where the script
     switches), none shown as a dialog."""
     picks: list[str] = []
 
@@ -652,16 +652,11 @@ def test_req_set_007_the_forty_five_minute_script_clicked_through(
         assert theme.presenter() and not settings.hardware.isVisible()
 
         # 36:00 to 40:00, who may do what
-        def switch(title: str, pick: str) -> tuple[str, bool]:
-            picks.append(title)
-            return pick, True
-
-        for pick in ("operator (Operator)", "admin (Admin)"):
-            monkeypatch.setattr(
-                QInputDialog, "getItem", staticmethod(lambda _p, title, *_a, pick=pick: switch(title, pick))
-            )
+        for pick in ("operator", "admin"):
+            titles = answer_sign_in(monkeypatch, pick)
             press(qtbot, win, named(win, "Switch User"))
-            operator = pick.startswith("operator")
+            picks += titles  # the dialog's title, as it opened
+            operator = pick == "operator"
             assert win.ctx.role == ("Operator" if operator else "Admin")
             greyed = [t for t in ("Training", "AI Model Test", "Recipe Editor") if not win._items[t].flags()]
             assert greyed == (["Training", "AI Model Test", "Recipe Editor"] if operator else [])

@@ -45,7 +45,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | 1.7 | Workspace guards: remote drive and OneDrive root refused | REQ-SET-025 | merged 2026-11-02 (#436) |
 | 1.8 | Signing hygiene and installer wording | REQ-SET-012 | merged 2026-11-02 (#437); the pilot CA key has no offline backup, as Jay chose |
 | 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | merged 2026-11-02 (#438) |
-| D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | in review: D.1a the hash, its rules and migration 0029 (`feat/REQ-USR-002-password-store`); D.1b sign-in with a password and the dialog (`feat/REQ-USR-002-passwords`) |
+| D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | in review: D.1a the hash, its rules and migration 0029 (#439); D.1b sign-in with a password and the dialog (`feat/REQ-USR-002-passwords`) |
 | D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | planned |
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | planned |
 | E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | issue (to open) | planned |

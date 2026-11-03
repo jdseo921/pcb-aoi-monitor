@@ -933,7 +933,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+192"/>
+        <location filename="../core/services.py" line="+193"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+376"/>
+        <location line="+407"/>
         <location line="+137"/>
         <source>Importing samples</source>
         <translation type="unfinished"></translation>
@@ -1245,14 +1245,14 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="-3125"/>
-        <location line="+3139"/>
+        <location line="-3156"/>
+        <location line="+3170"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3228"/>
+        <location line="-3259"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1352,7 +1352,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1315"/>
+        <location line="+1346"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1579,7 +1579,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-3890"/>
+        <location line="-3921"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1604,7 +1604,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1239"/>
+        <location line="+1270"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1721,14 +1721,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4314"/>
+        <location line="-4345"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1202"/>
+        <location filename="../ui/main_window.py" line="+1198"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3342,6 +3342,36 @@
     </message>
     <message>
         <location line="+6"/>
+        <source>Password not accepted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{name} was not signed in: the password typed is not theirs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Type the password again, checking Caps Lock and the input language; an Admin can reset it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Password not allowed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The password chosen for {name} {reason}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Choose a passphrase of 15 to 64 characters, such as a few words you remember; any language is fine.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Workspace from version 0.1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3841,7 +3871,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1382"/>
+        <location line="-1401"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4026,7 +4056,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+156"/>
+        <location line="+175"/>
         <source>Workspace in use</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4312,7 +4342,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3381"/>
+        <location filename="../core/services.py" line="+3412"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -5157,7 +5187,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1059"/>
+        <location filename="../ui/main_window.py" line="-1055"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6492,7 +6522,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+116"/>
+        <location line="+117"/>
         <source>Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User.</source>
         <translation type="unfinished">{board_model} 설정을 시작한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
     </message>
@@ -6562,22 +6592,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+15"/>
-        <source>{user} ({role})</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Switch user</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+0"/>
-        <source>User</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+14"/>
+        <location line="+25"/>
         <source>{user}  ·  {role}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7457,7 +7472,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1016"/>
+        <location filename="../ui/main_window.py" line="-1012"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8874,6 +8889,59 @@
     </message>
 </context>
 <context>
+    <name>SignInDialog</name>
+    <message>
+        <location filename="../ui/sign_in_dialog.py" line="+27"/>
+        <source>Switch user</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>User</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>{user} ({role})</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Cancel</source>
+        <translation type="unfinished">취소</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Sign In</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>New password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Type the new password again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>{user} has no password yet: choose one of {low} to {high} characters, such as a few words.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Type the password of {user}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SplitSheet</name>
     <message>
         <location filename="../ui/pages/training_versions.py" line="+248"/>
@@ -9233,7 +9301,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3465"/>
+        <location filename="../core/services.py" line="-3496"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

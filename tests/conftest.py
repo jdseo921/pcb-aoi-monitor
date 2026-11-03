@@ -42,6 +42,7 @@ from aoi.hal import drives  # noqa: E402
 from aoi.ui import theme, workers  # noqa: E402
 from aoi.ui.board_model_dialog import NewBoardModelDialog  # noqa: E402
 from aoi.ui.errors import AlreadyOpenBox, ErrorBox  # noqa: E402
+from aoi.ui.sign_in_dialog import SignInDialog  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tests.run_pinned import PINNED_DRIVE  # noqa: E402
 from tools.make_synthetic_dataset import ng_type, write_dataset  # noqa: E402
@@ -215,6 +216,27 @@ def answer_new_board_model(monkeypatch: pytest.MonkeyPatch, name: str) -> list[s
         return dialog.result()
 
     monkeypatch.setattr(NewBoardModelDialog, "exec", exec_)
+    return titles
+
+
+PASSPHRASE = "seven tired owls over Busan"  # a test's password for every Engineer and Admin (REQ-USR-002)
+
+
+def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str) -> list[str]:
+    """Switch User answered with `name` and Sign In, in place of the dialog's event loop: an Engineer or Admin types
+    PASSPHRASE (twice at their first sign-in, which sets it); "" cancels. Returns the titles of the dialogs opened."""
+    titles: list[str] = []
+
+    def exec_(dialog: SignInDialog) -> int:
+        titles.append(dialog.windowTitle())
+        if name:
+            dialog.user.setCurrentIndex(next(i for i, u in enumerate(dialog.users) if u["name"] == name))
+            dialog.password.setText(PASSPHRASE)
+            dialog.again.setText(PASSPHRASE)
+            dialog.sign_in()
+        return dialog.result()
+
+    monkeypatch.setattr(SignInDialog, "exec", exec_)
     return titles
 
 

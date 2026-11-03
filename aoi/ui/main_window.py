@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLayout,
     QListWidget,
@@ -75,6 +74,7 @@ from .pages.profile3d import Profile3DPage
 from .pages.recipe_editor import RecipeEditorPage
 from .pages.settings import SettingsPage
 from .pages.training import TrainingPage
+from .sign_in_dialog import SignInDialog
 from .widgets.empty_state import EmptyState
 from .widgets.image_view import ImageView
 from .workers import drop_queued
@@ -629,7 +629,8 @@ class MainWindow(QMainWindow):
         started = None if carried is not None or self.in_demo else ctx.guide_starter()
         start = ctx.start_user(setting_up=not ctx.board_models())
         if carried is not None:
-            start = next((str(u["name"]) for u in ctx.users() if u["role"] == carried), start)
+            free = [u for u in ctx.users() if u["role"] == "Operator" or u["status"] == "setup"]  # as start_user's
+            start = next((str(u["name"]) for u in free if u["role"] == carried), start)
         guided = started if started is not None and start == started.user else None
         self._reload_board_models(guided.board_model if guided else None)
         ctx.sign_in(start, start=True)
@@ -780,17 +781,12 @@ class MainWindow(QMainWindow):
 
     # --- users / roles (spec 8) -------------------------------------------------------
     def switch_user(self) -> None:
-        users = self.ctx.users()
-        names = [self.tr("{user} ({role})").format(user=u["name"], role=role_text(u["role"])) for u in users]
-        sel, ok = QInputDialog.getItem(self, self.tr("Switch user"), self.tr("User"), names, 0, False)
-        if ok:
-            name = str(users[names.index(sel)]["name"])
-            try:
-                self.ctx.sign_in(name)  # audited, and the station's next start signs them in again
-            except AoiError as e:
-                show_error(self, self.ctx.report_error(e, "Switch user"))
-                return
-            self.set_user(name)
+        """Pick a user; an Engineer or Admin signs in with their password (`SignInDialog`, REQ-USR-002)."""
+        dialog = SignInDialog(self)
+        dialog.exec()
+        dialog.deleteLater()  # with its fields, cleared on closing
+        if dialog.signed_in is not None:
+            self.set_user(dialog.signed_in)
 
     def set_user(self, user: str) -> None:
         """Sign `user` in with the role the users table holds for them (#197); the header and the pages follow it."""

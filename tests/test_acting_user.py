@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from PySide6.QtWidgets import QInputDialog
 from pytestqt.qtbot import QtBot
 
 from aoi.core import anomaly, services
@@ -22,7 +21,7 @@ from aoi.core.services import AppContext
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.training import TrainingPage
-from tests.conftest import distinct_copies
+from tests.conftest import answer_sign_in, distinct_copies
 from tests.test_req_done_in_v01 import BOARD, _window
 
 Held = tuple[threading.Event, threading.Event]
@@ -164,8 +163,7 @@ def test_req_usr_001_a_run_stops_at_switch_user_so_every_board_names_who_pressed
     page._set_queue([Path(s["path"]) for s in ctx.samples(BOARD, "OK")[:3]])
     page.start_run()
     assert reached.wait(30)
-    pick = staticmethod(lambda *a: (next(n for n in a[3] if n.startswith("engineer ")), True))
-    monkeypatch.setattr(QInputDialog, "getItem", pick)
+    answer_sign_in(monkeypatch, "engineer")
     win.switch_user()  # an Engineer signs in, on the Inspection page too, while the Operator's run is at board 1
     release.set()
     qtbot.waitUntil(lambda: page.worker is None and not page.running, timeout=30000)
@@ -222,8 +220,7 @@ def test_req_usr_001_a_switch_user_on_the_last_board_ends_the_run_as_usual(
     page._set_queue([Path(ctx.samples(BOARD, "OK")[0]["path"])])
     page.start_run()
     assert reached.wait(30)
-    pick = staticmethod(lambda *a: (next(n for n in a[3] if n.startswith("engineer ")), True))
-    monkeypatch.setattr(QInputDialog, "getItem", pick)
+    answer_sign_in(monkeypatch, "engineer")
     win.switch_user()
     release.set()
     qtbot.waitUntil(lambda: page.worker is None and not page.running, timeout=30000)
