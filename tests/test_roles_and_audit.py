@@ -239,6 +239,8 @@ WRITES: dict[str, tuple[str, Callable[[AppContext, Path, Path], Any]]] = {
     "archive_old": ("inspection.archive", lambda ctx, data, tmp: ctx.archive_old(-1)),
     "add_user": ("user.change", lambda ctx, data, tmp: ctx.add_user("kim", "Engineer")),
     "unlock_user": ("user.unlock", lambda ctx, data, tmp: ctx.unlock_user("engineer")),
+    "set_user_enabled": ("user.disable", lambda ctx, data, tmp: ctx.set_user_enabled("engineer", False)),
+    "reset_secret": ("user.reset", lambda ctx, data, tmp: ctx.reset_secret("engineer")),
     "save_settings": ("settings.change", lambda ctx, data, tmp: ctx.save_settings({"default_epochs": 7})),
     "confirm_retention": ("retention.confirm", lambda ctx, data, tmp: ctx.confirm_retention()),
     "support_bundle": ("support.bundle", lambda ctx, data, tmp: ctx.support_bundle(tmp / "support.zip")),
@@ -277,6 +279,7 @@ CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
 # among it (sign_in, audited as user.sign_in or user.start: anyone may sign in; last_signed_in reads who did last)
 UNCHECKED = {
     "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "sign_in", "last_signed_in",
+    "startable",  # the names a start may sign in (REQ-USR-006): reads only
     "load_model", "recipe",
     "note_window",  # the window's handle beside the lock, for a second start (A6): any role's window, not the database
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
@@ -311,7 +314,7 @@ CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read
 # from the decorators under test (#181): built from REQUIRED_ROLE, a lowered @requires refused fewer roles and passed.
 EXPECTED_ROLE = {name: "Engineer" for name in CALLS} | {"add_user": "Admin", "save_settings": "Admin"}
-EXPECTED_ROLE["unlock_user"] = "Admin"  # users are the Admin's (REQ-USR-004, REQ-USR-006)
+EXPECTED_ROLE |= {f: "Admin" for f in ("unlock_user", "set_user_enabled", "reset_secret")}  # REQ-USR-004, -006
 EXPECTED_ROLE["confirm_retention"] = "Admin"  # the policy every sweep deletes under (ADR 0024 D20)
 EXPECTED_ROLE["support_bundle"] = "Admin"  # the station's logs and audit leave it (REQ-LOG-007)
 EXPECTED_ROLE |= {"create_store": "Admin", "restore_store_key": "Admin", "move_in": "Admin", "shred_store": "Admin"}
@@ -386,6 +389,7 @@ def test_req_usr_001_the_current_user_is_held_with_uuid_name_and_role(ctx: AppCo
     ctx.set_user("operator")
     assert ctx.role == "Operator" and ctx.user_uuid == ctx.db.user_uuid("operator")
     ctx.set_user("admin")
+    ctx.add_user("lee", "Operator")  # the station keeps an Operator to start with (AOI-USR-014, REQ-USR-006)
     ctx.add_user("operator", "Engineer")
     ctx.set_user("operator")
     assert ctx.role == "Engineer"  # the role comes from the users table, never from the caller (#197)
@@ -530,6 +534,7 @@ def test_req_usr_001_a_promoted_operator_starts_with_the_stored_role(qtbot: QtBo
     first = AppContext(workspace)
     first.set_user("admin")
     first.ensure_board_model("B1")
+    first.add_user("lee", "Operator")  # the station keeps an Operator to start with (AOI-USR-014, REQ-USR-006)
     first.add_user("operator", "Admin")
     first.close()
     ctx, win = _restart(qtbot, workspace)  # a board model exists: the station starts with 'operator'

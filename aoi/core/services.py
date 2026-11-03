@@ -666,8 +666,7 @@ class AppContext:
         either (a table edited outside the app), the first user of the lowest stored role. Its role is the stored one,
         whatever the name (#197)."""
         users = self.db.users()  # never empty: the database seeds operator, engineer and admin
-        # never one who must prove who they are: an Engineer or Admin with a password signs in with Switch User
-        startable = {str(u["name"]) for u in users if u["status"] == "setup" or u["role"] == "Operator"}
+        startable = self.startable()
         if setting_up or demo.is_demo(self.settings.root):
             if admin := next((u for u in users if u["role"] == "Admin" and u["name"] in startable), None):
                 return str(admin["name"])
@@ -676,11 +675,24 @@ class AppContext:
         # once users can be disabled (REQ-USR-006), a disabled one is never signed in at a start
         if (last := self.last_signed_in()) is not None and last in startable:
             return last
-        users = [u for u in users if u["name"] in startable] or users  # none: an Admin must add an Operator (D.3)
+        # none (a table edited outside the app; user administration keeps an Operator): one in set-up
+        users = [u for u in users if u["name"] in startable] or [u for u in users if u["status"] == "setup"] or users
         if any(u["name"] == "operator" for u in users):
             return "operator"
         rank = {r: i for i, r in enumerate(ROLES)}
         return str(min(users, key=lambda u: rank.get(u["role"], len(ROLES)))["name"]) if users else "operator"
+
+    def startable(self) -> set[str]:
+        """The names a start may sign in: never one who must prove who they are, so an enabled Operator, or an Engineer
+        or Admin in set-up only while no Admin has a password (a station's first run); once one has, an Admin hands
+        each account over (REQ-USR-006). Never a disabled user. Writes nothing."""
+        users = self.db.users()
+        first_run = not any(u["role"] == "Admin" and u["status"] == "active" for u in users)
+        return {
+            str(u["name"])
+            for u in users
+            if u["role"] == "Operator" and u["status"] != "disabled" or (first_run and u["status"] == "setup")
+        }
 
     def guide_starter(self) -> GuideStarter | None:
         """While the station is set up, with no AI model active and no board inspected on any board model, and the
@@ -721,6 +733,8 @@ class AppContext:
         chooses it here, at their first sign-in. An Operator needs none."""
         previous = self._actor
         row = next((u for u in self.db.users() if u["name"] == name), None)
+        if row is not None and row["status"] == "disabled":
+            raise AoiError("AOI-USR-010", name=name)  # REQ-USR-006: kept on past records, never signed in
         if row is not None and (row["role"] != "Operator" or (self.settings.operator_pin and not start)):
             self._check_password(row, password, start)  # an Operator's PIN, where the station asks for one
         self.set_user(name)
@@ -745,6 +759,8 @@ class AppContext:
         if user["status"] == "setup" or (pin and self.db.user_secret(uuid) is None):
             if start:
                 return
+            if not pin and not self._may_set_up():
+                raise AoiError("AOI-USR-009", name=name)  # an Admin hands the account over (REQ-USR-006)
             names = [str(u["name"]) for u in self.db.users()] + [str(s["customer"]) for s in self.db.stores()]
             refused = passwords.pin_refusal(password or "") if pin else passwords.refusal(password or "", names)
             if refused is not None:
@@ -776,6 +792,82 @@ class AppContext:
             self.db.set_user_secret(uuid, passwords.hash_secret(password))  # which clears the count too
         elif user.get("failed_attempts") or user.get("locked_until"):
             self.db.unlock_user(uuid)
+
+    def _may_set_up(self) -> bool:
+        """Whether an Engineer or Admin in set-up may choose their password now: an Admin with a password is signed in
+        to hand the account over, or no Admin has one yet (a station's first run, the demo)."""
+        admins = [u for u in self.db.users() if u["role"] == "Admin" and u["status"] == "active"]
+        return not admins or (self._actor.role == "Admin" and any(u["uuid"] == self._actor.uuid for u in admins))
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Disabling a user"))
+    @transactional
+    def set_user_enabled(self, name: str, enabled: bool) -> None:
+        """Disable a user, who then cannot sign in and keeps their name on past records, or enable them again
+        (REQ-USR-006), audited `user.disable` or `user.enable`. Refused for the Admin signed in,
+        AOI-USR-011 for the Admin signed in, who would lock themself out; `_keeps_station` for the rest."""
+        user = self._user_admin(name)
+        status = (
+            "setup"
+            if enabled and user["role"] != "Operator" and not self.db.user_secret(user["uuid"])
+            else ("active" if enabled else "disabled")
+        )
+        self._keeps_station(name, user["role"], status)
+        if not enabled and name == self._actor.name:
+            raise AoiError("AOI-USR-011", name=name)
+        self.db.execute("UPDATE users SET status=? WHERE uuid=?", (status, user["uuid"]))
+        action = "user.enable" if enabled else "user.disable"
+        self.audit(action, "user", str(user["uuid"]), {"status": user["status"]}, {"user": name, "status": status})
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Resetting a password"))
+    @transactional
+    def reset_secret(self, name: str) -> None:
+        """Drop a user's password or PIN (REQ-USR-006): an Engineer or Admin goes back to set-up and chooses a new one
+        at their next sign-in, with an Admin signed in; an Operator chooses a new PIN. Clears any lock; audited
+        `user.reset` with the status before and after, never with the secret. Refused for the Admin signed in
+        (AOI-USR-011) and for the last Admin with a password (`_keeps_station`)."""
+        user = self._user_admin(name)
+        if name == self._actor.name:
+            raise AoiError("AOI-USR-011", name=name)
+        status = "setup" if user["role"] != "Operator" and user["status"] == "active" else str(user["status"])
+        self._keeps_station(name, user["role"], status)
+        self.db.set_user_secret(str(user["uuid"]), None)
+        self.audit(
+            "user.reset", "user", str(user["uuid"]), {"status": user["status"]}, {"user": name, "status": status}
+        )
+
+    def _user_admin(self, name: str) -> dict[str, Any]:
+        """The users-table row an Admin's user administration acts on (AOI-USR-003 when there is none), once the Admin
+        acting has proven who they are: with a password, or while no Admin has one (a first run). AOI-USR-012 for an
+        Admin signed in without one, as a start in set-up once did (REQ-USR-006)."""
+        self._proven()
+        user = next((u for u in self.db.users() if u["name"] == name), None)
+        if user is None:
+            raise AoiError("AOI-USR-003", name=name)
+        return user
+
+    def _proven(self) -> None:
+        """AOI-USR-012 unless the Admin acting has a password, or no Admin has one yet (a first run)."""
+        if not self._may_set_up():
+            raise AoiError("AOI-USR-012", name=self._actor.name)
+
+    def _keeps_station(self, name: str, role: str, status: str) -> None:
+        """Refuse a change to `name` (its role and status after it) that would leave the station with no Admin who can
+        sign in, or no Admin with a password where one had one (AOI-USR-013), or no enabled Operator for a start where
+        there was one (AOI-USR-014): no one could then manage users, or open the app (REQ-USR-006)."""
+        users = self.db.users()
+        after = [{**u, "role": role, "status": status} if u["name"] == name else u for u in users]
+
+        def admins(rows: list[dict[str, Any]], statuses: set[str]) -> bool:
+            return any(u["role"] == "Admin" and u["status"] in statuses for u in rows)
+
+        if admins(users, {"active"}) > admins(after, {"active"}) or not admins(after, {"active", "setup"}):
+            raise AoiError("AOI-USR-013", name=name)
+
+        def operators(rows: list[dict[str, Any]]) -> bool:
+            return any(u["role"] == "Operator" and u["status"] != "disabled" for u in rows)
+
+        if operators(users) > operators(after):
+            raise AoiError("AOI-USR-014", name=name)
 
     def end_idle(self) -> str | None:
         """End an Engineer's or Admin's session left idle (REQ-USR-004): sign in the shift's operator again, the
@@ -812,9 +904,7 @@ class AppContext:
     def unlock_user(self, name: str) -> None:
         """An Admin ends a user's lock before its time and clears their wrong-password count, audited `user.unlock`
         with the lock it ended (REQ-USR-004)."""
-        user = next((u for u in self.db.users() if u["name"] == name), None)
-        if user is None:
-            raise AoiError("AOI-USR-003", name=name)
+        user = self._user_admin(name)
         with self.db.transaction():
             self.db.unlock_user(str(user["uuid"]))
             before = {"locked_until": user["locked_until"], "failed_attempts": user["failed_attempts"]}
@@ -4124,6 +4214,9 @@ class AppContext:
         if role != "Admin" and [u["name"] for u in users if u["role"] == "Admin"] == [name]:
             raise AoiError("AOI-USR-002", name=name, role=Phrase("Role", role))  # the role's name as the UI shows it
         before = next((u for u in users if u["name"] == name), None)
+        self._proven()  # an Admin who has proven who they are (REQ-USR-006)
+        if before is not None:
+            self._keeps_station(name, role, "active" if before["status"] == "active" else str(before["status"]))
         self.db.add_user(name, role)
         old = {"role": before["role"], "status": before["status"]} if before else None
         status = next(u["status"] for u in self.db.users() if u["name"] == name)  # set-up again: the secret dropped

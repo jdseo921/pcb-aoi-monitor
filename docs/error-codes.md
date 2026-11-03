@@ -139,6 +139,12 @@ register; `{braces}` are filled in when the error is raised.
 | AOI-USR-006 | Account locked | {name} is locked for {minutes} more minutes after too many wrong passwords. | Wait, or ask an Admin to unlock it on Settings; the Operator view still works. |
 | AOI-USR-007 | Account locked until unlocked | {name} is locked after 100 wrong passwords, or its lock time cannot be read. | Ask an Admin to unlock it with Unlock User on Settings. |
 | AOI-USR-008 | PIN not allowed | The PIN chosen for {name} {reason}. | Choose 4 to 6 digits and type them twice. |
+| AOI-USR-009 | An Admin hands the account over | {name} has no password yet, and one is chosen only with an Admin signed in. | Ask an Admin to sign in, then choose {name} under Switch User and type the new password twice. |
+| AOI-USR-010 | User disabled | {name} is disabled, so cannot sign in; their name stays on past records. | Ask an Admin to enable the user again on Settings, under Users & roles. |
+| AOI-USR-011 | Signed-in Admin | {name} is signed in now, so cannot disable or reset their own account. | Another Admin does it, from their own sign-in. |
+| AOI-USR-012 | Admin without a password | {name} signed in without a password, so cannot manage users while another Admin has one. | Ask an Admin with a password to sign in under Switch User and do it. |
+| AOI-USR-013 | Last Admin who can sign in | {name} is the last Admin who can sign in with a password, so no one could then manage users or settings. | Add another Admin and hand the account over to them first. |
+| AOI-USR-014 | Last Operator | {name} is the last enabled Operator, whom the app signs in when it starts. | Add another Operator first. |
 
 ## The first-run guide's lines
 

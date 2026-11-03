@@ -160,6 +160,10 @@ class SettingsPage(Page):
         self.btn_unlock = button(self.tr("Unlock User"), slot=self.unlock_user)
         row.addWidget(self.btn_unlock)
         ul.addLayout(row)
+        row = QHBoxLayout()
+        row.addWidget(button(self.tr("Disable / Enable"), slot=self.toggle_user))
+        row.addWidget(button(self.tr("Reset Password"), slot=self.reset_secret))
+        ul.addLayout(row)
         right.addWidget(ug, 1)
         self.hardware = QGroupBox(self.tr("Hardware interfaces"))
         hl = QVBoxLayout(self.hardware)
@@ -293,6 +297,45 @@ class SettingsPage(Page):
             except AoiError as e:
                 self.error(e)
             self.on_show()
+
+    def _pick_user(self, title: str, ask: str) -> dict[str, Any] | None:
+        """Pick a user, each shown with their status, then a question with No as its default; the row picked."""
+        users = self.ctx.users()
+        shown = [self.tr("{user} ({status})").format(user=u["name"], status=self.status_text(u)) for u in users]
+        picked, ok = QInputDialog.getItem(self, title, self.tr("User"), shown, 0, False)
+        if not ok or picked not in shown:
+            return None
+        user = users[shown.index(picked)]
+        no = QMessageBox.StandardButton.No
+        asked = QMessageBox.question(
+            self, title, ask.format(user=user["name"]), QMessageBox.StandardButton.Yes | no, no
+        )
+        return user if asked == QMessageBox.StandardButton.Yes else None
+
+    def toggle_user(self) -> None:
+        """Disable a user, or enable a disabled one again (REQ-USR-006); audited, the last Admin kept."""
+        ask = self.tr("Disable {user}, or enable them again if they are disabled?")
+        if (user := self._pick_user(self.tr("Disable / Enable User"), ask)) is None:
+            return
+        try:
+            self.ctx.set_user_enabled(str(user["name"]), user["status"] == "disabled")
+        except AoiError as e:
+            self.error(e)
+        self.on_show()
+
+    def reset_secret(self) -> None:
+        """Drop a user's password or PIN: they choose a new one at their next sign-in, with an Admin signed in."""
+        ask = self.tr("Drop {user}'s password or PIN? They choose a new one at their next sign-in.")
+        if (user := self._pick_user(self.tr("Reset Password or PIN"), ask)) is None:
+            return
+        name = str(user["name"])
+        try:
+            self.ctx.reset_secret(name)
+        except AoiError as e:
+            self.error(e)
+            return
+        self.on_show()
+        self.shell.status(self.tr("{user} chooses a new password or PIN at their next sign-in.").format(user=name))
 
     def status_text(self, user: dict[str, Any]) -> str:
         if minutes := user["locked_minutes"]:
