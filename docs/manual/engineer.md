@@ -46,6 +46,16 @@ comes once the workspace is open, while the main window is built (a damaged data
 AOI-SET-007 too, writes its details to that workspace's log (event `error.shown`, context `start-up`) and closes the
 app with the workspace closed; send that log file to support.
 
+**Result files (REQ-INSP-021).** Set `"output_folder"` in `settings.json` to a full path of a folder that exists (a
+local folder or a share the line's systems read), and restart: each board saved from then on is written there as
+`<board ID>_<record UUID>.json` and a one-line `.csv`, and added to `shift_<date>.csv` (the local date, with a header).
+`docs/schemas/result-file.schema.json` gives the fields; the board ID is the image file's name without its extension
+until the line's file-naming contract arrives. Empty, the default, writes none. One output folder per station: two
+stations writing to one folder overwrite each other's shift CSV. A folder that is gone or refuses the files raises
+AOI-INSP-019 once (the app never makes the folder again, so files never land on the station's own disk by mistake),
+the boards are still judged and recorded, and the boards missed are not written later: export them from Logs & Export.
+The Settings page and the self-check take the folder in a later release.
+
 **Settings and settings.json.** A workspace folder saved on the Settings page is used from the next start; until
 then the app keeps the open workspace, its database, log and folders. The AI device, the default epochs and input
 size and the log retention apply at once: training and inspection use a new AI device from the next run (a training run

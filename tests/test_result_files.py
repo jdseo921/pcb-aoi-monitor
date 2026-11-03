@@ -15,7 +15,7 @@ import pytest
 from aoi.config import Settings
 from aoi.core.cycle import FrameMeta
 from aoi.core.imaging import list_images
-from aoi.core.result_files import COLUMNS, SHIFT_PREFIX
+from aoi.core.result_files import COLUMNS, SHIFT_PREFIX, csv_row
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from tests.test_req_done_in_v01 import BOARD
@@ -53,6 +53,7 @@ def test_req_insp_021_every_board_has_its_result_files_within_1_s_of_its_verdict
     trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path
 ) -> None:
     out = tmp_path / "out"
+    out.mkdir()  # an Admin points it at a folder that exists
     trained_ctx.settings.output_folder = str(out)
     cycle, waits = trained_ctx.inspection_cycle(), []
     for path in sorted(list_images(synthetic_dataset / "test"))[:10]:  # OK and NG boards
@@ -73,10 +74,22 @@ def test_req_insp_021_every_board_has_its_result_files_within_1_s_of_its_verdict
         (line,) = csv.reader(out.joinpath(f"{d['board_id']}_{d['record_uuid']}.csv").read_text("utf-8").splitlines())
         cells = ["" if d[c] is None else str(d[c]) for c in COLUMNS[:6]] + [str(len(d["defects"]))]
         assert line[:7] == cells and line[-3:] == [d["evidence"], d["board_model"], d["record_uuid"]]
+        boxes = [
+            f"{e['type']}:{e['severity']}:{b['x']},{b['y']},{b['w']},{b['h']}" for e in d["defects"] for b in [e["box"]]
+        ]
+        assert line[7] == "|".join(boxes) and d["time"] == stored[d["record_uuid"]]["time"]
     (shift,) = out.glob(f"{SHIFT_PREFIX}*.csv")
     rows = list(csv.DictReader(shift.read_text("utf-8").splitlines()))
     assert [r["record_uuid"] for r in rows] == [r["uuid"] for r in sorted(stored.values(), key=lambda r: r["id"])]
     assert len(rows) == 10 and list(rows[0]) == list(COLUMNS)
+    singles = {f.stem.rsplit("_", 1)[1]: f.read_text("utf-8") for f in out.glob("*.csv") if f != shift}
+    assert shift.read_text("utf-8").splitlines(keepends=True)[1:] == [singles[r["record_uuid"]] for r in rows]
+
+
+def test_req_insp_021_a_csv_line_leaves_an_empty_cell_for_none_and_quotes_a_comma() -> None:
+    doc = {c: f"{c}" for c in COLUMNS} | {"board_id": 'A,"1"', "model_version": None, "recipe_rev": None, "defects": []}
+    (line,) = csv.reader([csv_row(doc)])
+    assert line[0] == 'A,"1"' and line[4:8] == ["", "", "0", ""] and csv_row(doc).count("\n") == 1
 
 
 def test_req_insp_021_a_folder_that_refuses_the_files_is_alarmed_and_the_record_kept(
@@ -84,11 +97,15 @@ def test_req_insp_021_a_folder_that_refuses_the_files_is_alarmed_and_the_record_
 ) -> None:
     (tmp_path / "a file").write_text("not a folder")
     trained_ctx.settings.output_folder = str(tmp_path / "a file")
-    path = sorted(list_images(synthetic_dataset / "test"))[0]
-    outcome = trained_ctx.inspection_cycle().board(BOARD, FrameMeta(path))()
-    assert outcome.record_id is not None and outcome.save_error is None
-    (alarm,) = [a for a in trained_ctx.alarms() if a["code"] == "AOI-INSP-019"]
-    assert path.name in alarm["message"] and "a file" in alarm["message"]
+    first, second = sorted(list_images(synthetic_dataset / "test"))[:2]
+    cycle = trained_ctx.inspection_cycle()
+    outcomes = [cycle.board(BOARD, FrameMeta(p))() for p in (first, second)]
+    assert all(o.record_id is not None and o.save_error is None for o in outcomes)
+    (alarm,) = [a for a in trained_ctx.alarms() if a["code"] == "AOI-INSP-019"]  # once, not once per board
+    assert first.name in alarm["message"] and "a file" in alarm["message"]
+    trained_ctx.settings.output_folder = str(tmp_path / "gone")  # never made on the station's own disk
+    cycle.board(BOARD, FrameMeta(second))()
+    assert not (tmp_path / "gone").exists()
 
 
 def test_req_insp_021_no_output_folder_writes_none_and_a_relative_one_is_refused(tmp_path: Path) -> None:

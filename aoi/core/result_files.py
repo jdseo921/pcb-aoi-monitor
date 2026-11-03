@@ -1,13 +1,17 @@
 """Result files (REQ-INSP-021, ADR 0024 D10): each saved board as a JSON file and a one-line CSV in the output folder,
 written atomically after its record commits, and a line in the shift CSV of the local date, which lists every board of
-the day. The fields are those of `docs/schemas/result-file.schema.json`; the CSV columns are `COLUMNS`. Until the line's
+the day. The fields are those of `docs/schemas/result-file.schema.json`; the CSV columns are `COLUMNS`. Its CSV files
+are for machines: UTF-8 with no byte order mark and cells as they are, with no formula guard, unlike the CSV export a
+person opens in Excel (`AppContext.csv_bytes`, #113), since a guard would change a board ID. Until the line's
 file-naming contract arrives (REQ-INSP-020), a board's ID is its image file's stem."""
 
 from __future__ import annotations
 
 import csv
+import errno
 import io
 import json
+import os
 import threading
 from pathlib import Path
 from typing import Any
@@ -63,12 +67,15 @@ def csv_row(doc: dict[str, Any]) -> str:
 
 
 def write(folder: Path, doc: dict[str, Any], day: str, stem: str) -> list[Path]:
-    """Write the board's `<stem>_<record UUID>.json` and `.csv`, then add its line to `shift_<day>.csv` (with the
-    header first in a new one); each file is replaced whole, so a reader never sees half of one. Returns the paths."""
-    name = folder / f"{stem}_{doc['record_uuid']}"
-    row = csv_row(doc)
-    atomic.write_text(name.with_suffix(".json"), json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
-    atomic.write_text(name.with_suffix(".csv"), row)
+    """Write the board's `<stem>_<record UUID>.json` and `.csv` together or not at all, then add its line to
+    `shift_<day>.csv` (with the header first in a new one), replacing the file whole, so a reader never sees half of
+    one. The folder must exist: one gone (a share or drive not there) is never made again on the station's own disk.
+    The shift CSV is this station's: two stations never share an output folder. Returns the paths."""
+    if not folder.is_dir():
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), str(folder))
+    name, row = folder / f"{stem}_{doc['record_uuid']}", csv_row(doc)
+    body = (json.dumps(doc, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    atomic.write_all([(name.with_suffix(".json"), body), (name.with_suffix(".csv"), row.encode("utf-8"))])
     shift = folder / f"{SHIFT_PREFIX}{day}.csv"
     with _shift_lock:
         before = shift.read_text(encoding="utf-8") if shift.is_file() else ",".join(COLUMNS) + "\n"

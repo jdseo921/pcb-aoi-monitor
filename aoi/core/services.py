@@ -579,6 +579,7 @@ class AppContext:
         self._closed = False
         self._stopping = threading.Event()  # the timers: threads of the context's own, not Qt's
         self.pulse, self._started = heartbeat.Pulse(), time.monotonic()  # the boards the heartbeat counts (REQ-SET-024)
+        self._result_files_failing = False  # AOI-INSP-019 was raised and no board's files were written since
         self._retention = threading.Thread(target=self._retain, name="retention", daemon=True)  # REQ-LOG-010
         self._beating = threading.Thread(target=self._beat, name="heartbeat", daemon=True)
         self._retention.start()
@@ -2108,10 +2109,10 @@ class AppContext:
             _remove(files)
             raise
         # The row has committed: its files are named now and stay, whatever the log lines below meet.
-        self._write_result_files(board_model, path, res, insp, uid, "none" if skip else "jpeg" if light else "png", day)
         if alarm is not None:
             self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
             self._alert(alarm[0], alarm[2], alarm[1])
+        self._write_result_files(iid, board_model, path, res, insp, "none" if skip else "jpeg" if light else "png", day)
         last = {"board_model": board_model, "ai_model": insp.model_version, "recipe_rev": insp.recipe_rev}
         self.pulse.add(res.verdict, res.elapsed_ms, last)  # what the heartbeat counts (REQ-SET-024)
         self._watch_drift(board_model, res.view)
@@ -2143,18 +2144,25 @@ class AppContext:
         self._alert(level, code, log_text or message)
 
     def _write_result_files(
-        self, board_model: str, path: str, res: InspectionResult, insp: Inspector, uid: str, evidence: str, day: str
+        self, iid: int, board_model: str, path: str, res: InspectionResult, insp: Inspector, evidence: str, day: str
     ) -> None:
-        """After a board is saved, its result files in `Settings.output_folder` when one is set (REQ-INSP-021). Never
-        raises: files not written are alarmed (WARN, AOI-INSP-019) and logged, and the board stays saved."""
+        """After a board is saved and its NG alarm raised, its result files in `Settings.output_folder` when one is set
+        (REQ-INSP-021), with the record's own time. Never raises: files not written are logged, and alarmed (WARN,
+        AOI-INSP-019) once until a board's files are written again, so a folder gone does not fill the alarm list; the
+        board stays saved, and its files are not written later."""
         folder = self.settings.output_folder
         if not folder:
             return
         try:
-            doc = result_files.document(board_model, path, res, insp, uid, evidence, now_utc())
+            record = self.db.inspection(iid) or {}
+            doc = result_files.document(board_model, path, res, insp, record.get("uuid", ""), evidence, record["time"])
             result_files.write(Path(folder), doc, day, _stem(path))
+            self._result_files_failing = False
         except Exception as e:
             self.log.warning("result_file.not_written", exc_info=True, extra={"board_model": board_model})
+            if self._result_files_failing:
+                return
+            self._result_files_failing = True
             what = Phrase("Errors", CODES["AOI-INSP-019"].what)  # marked for translation where the code is listed
             text = what.fill(file=Path(path).name, folder=folder, reason=system_reason(e, True))
             try:
