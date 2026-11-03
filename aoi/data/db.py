@@ -1122,6 +1122,16 @@ class Database:
         r = self.query("SELECT object_uuid FROM audit WHERE action='user.sign_in' ORDER BY id DESC LIMIT 1")
         return str(r[0]["object_uuid"]) if r and r[0]["object_uuid"] is not None else None
 
+    def last_operator(self) -> str | None:
+        """The UUID of the Operator signed in last on this station, by Switch User, a start or an idle end: the shift's
+        operator, whom an idle end signs in again (REQ-USR-004); None while no Operator has been."""
+        sql = (
+            "SELECT object_uuid FROM audit WHERE action IN ('user.sign_in', 'user.start', 'user.idle_end') "
+            "AND role='Operator' ORDER BY id DESC LIMIT 1"
+        )
+        r = self.query(sql)
+        return str(r[0]["object_uuid"]) if r and r[0]["object_uuid"] is not None else None
+
     # --- audit trail (REQ-LOG-004): append only, enforced by triggers in migration 0003 ----
     def add_audit(
         self,

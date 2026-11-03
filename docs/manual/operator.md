@@ -11,9 +11,12 @@ Words: verdicts are OK, NG and WARN (양품, 불량, 확인 필요); see the Cha
 **Your name.** Once the station is set up, with an AI model judging boards or a board inspected, the app starts signed
 in as the user who signed in last on this station with Switch User, and the status bar at the bottom says so (`operator`
 until anyone has); the header names the user signed in and their role, at its right. If that is not you, press **Switch
-User** there, pick your name in the list (each name shows its role) and press OK: every board you start from then on is
-recorded under your name, which the Operator column of Logs & Export shows. There is nothing to type, so pick only your
-own name; if it is not in the list, ask an Admin to add it (Settings › Users & roles). The sidebar greys the pages your
+User** there, pick your name in the list (each name shows its role) and press **Sign In**: every board you start from
+then on is recorded under your name, which the Operator column of Logs & Export shows. Pick only your own name; if it is
+not in the list, ask an Admin to add it (Settings › Users & roles). Where the station asks for a PIN, the first time you
+choose 4 to 6 digits and type them twice, and after that you type your PIN; five wrong PINs in a row lock your name for
+5 minutes (AOI-USR-006). An Engineer or Admin left without input for 15 minutes is signed out back to you, the operator
+of the shift, but never while a board is being inspected. The sidebar greys the pages your
 role cannot open, and pointing at one names the role it needs: an Operator opens Home, Inspection, Compare and Logs &
 Export. The app opens on the page shown when it was last closed, or on Home when your role cannot open that page.
 

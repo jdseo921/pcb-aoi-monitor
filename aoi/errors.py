@@ -1374,7 +1374,7 @@ CODES: dict[str, ErrorCode] = {
         ErrorCode(
             "AOI-USR-004",
             QT_TRANSLATE_NOOP("Errors", "Password not accepted"),
-            QT_TRANSLATE_NOOP("Errors", "{name} was not signed in: the password typed is not theirs."),
+            QT_TRANSLATE_NOOP("Errors", "{name} was not signed in: the password or PIN typed is not theirs."),
             QT_TRANSLATE_NOOP(
                 "Errors", "Type the password again, checking Caps Lock and the input language; an Admin can reset it."
             ),
@@ -1404,6 +1404,13 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "Account locked until unlocked"),
             QT_TRANSLATE_NOOP("Errors", "{name} is locked after 100 wrong passwords, or its lock time cannot be read."),
             QT_TRANSLATE_NOOP("Errors", "Ask an Admin to unlock it with Unlock User on Settings."),
+            personal=("name",),
+        ),
+        ErrorCode(
+            "AOI-USR-008",
+            QT_TRANSLATE_NOOP("Errors", "PIN not allowed"),
+            QT_TRANSLATE_NOOP("Errors", "The PIN chosen for {name} {reason}."),
+            QT_TRANSLATE_NOOP("Errors", "Choose 4 to 6 digits and type them twice."),
             personal=("name",),
         ),
         ErrorCode(

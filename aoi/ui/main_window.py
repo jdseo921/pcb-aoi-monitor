@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -453,6 +454,34 @@ class _HeldPress(QObject):
         return False
 
 
+class _InputWatch(QObject):
+    """A press, key, wheel or touch in the app: an Engineer's or Admin's idle time starts again (REQ-USR-004). One for
+    the application, whatever windows it opens (`watch_input`), so no event passes through a filter per window."""
+
+    INPUT = {QEvent.Type.MouseButtonPress, QEvent.Type.KeyPress, QEvent.Type.Wheel, QEvent.Type.TouchBegin}
+
+    def __init__(self, app: QObject | None) -> None:
+        super().__init__(app)
+        self.last = time.monotonic()
+
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
+        if e.type() in self.INPUT:
+            self.last = time.monotonic()
+        return False
+
+
+def watch_input() -> _InputWatch:
+    """The application's one `_InputWatch`, installed on it the first time a window asks; reset to now."""
+    app = QApplication.instance()
+    watch = app.findChild(_InputWatch) if app is not None else None
+    if watch is None:
+        watch = _InputWatch(app)
+        if app is not None:
+            app.installEventFilter(watch)
+    watch.last = time.monotonic()
+    return watch
+
+
 class _GivesWay(QLabel):
     """A header label that never sets the window's minimum width: `MainWindow._fit_header` hides it where the header's
     controls need its room, so a 1366 px window is never held wider by it (A7)."""
@@ -513,6 +542,7 @@ class _PageStack(QStackedWidget):
 
 
 DRIVE_CHECK_MS = 60_000  # the status bar measures the drive's free space each minute (REQ-LOG-006)
+IDLE_CHECK_MS = 30_000  # how often an idle Engineer's or Admin's session is looked at (REQ-USR-004)
 
 
 class MainWindow(QMainWindow):
@@ -619,6 +649,11 @@ class MainWindow(QMainWindow):
         self._drive_timer.timeout.connect(self.show_drive)
         self._drive_timer.start(DRIVE_CHECK_MS)
         self.show_drive()
+        self.input = watch_input()
+        self._idle_timer = QTimer(self)
+        # only a window on screen: one closed, or never shown (a test's), never ends a session
+        self._idle_timer.timeout.connect(lambda: self.isVisible() and self.check_idle())
+        self._idle_timer.start(IDLE_CHECK_MS)
         ctx.usb_drive()  # the USB drives there as the window opens: one plugged in after is the last (Q68)
         # the demo, and a station with no board model yet to set up, start with an Admin; while the first-run guide sets
         # the station up, with the user who started it, its board model in the header and Home shown (Q75); any other
@@ -787,6 +822,30 @@ class MainWindow(QMainWindow):
         dialog.deleteLater()  # with its fields, cleared on closing
         if dialog.signed_in is not None:
             self.set_user(dialog.signed_in)
+
+    def check_idle(self) -> bool:
+        """End an Engineer's or Admin's session after `idle_minutes` without input, back to the shift's operator
+        (`AppContext.end_idle`, REQ-USR-004). Never while a board is being inspected: the next check, 30 s on, ends it,
+        and a run under way then stops after its board as at any sign-in (#177). Never in the demo, where the presenter
+        talks. A dialog left open is closed first, as Cancel would; one that will not close (a recovery key waiting to
+        be kept) keeps the session. Returns whether it ended one."""
+        busy = getattr(self.pages["Inspection"], "worker", None) is not None
+        idle = time.monotonic() - self.input.last >= self.ctx.settings.idle_minutes * 60
+        if self.ctx.role == "Operator" or self.in_demo or busy or not idle:
+            return False
+        for _ in range(5):  # a dialog over a dialog, the top one first
+            modal = QApplication.activeModalWidget()
+            if isinstance(modal, QDialog):
+                modal.reject()
+        if QApplication.activeModalWidget() is not None:
+            return False
+        before, operator = self.ctx.user, self.ctx.end_idle()
+        if operator is None:
+            return False
+        self.set_user(operator)
+        said = self.tr("The session of {user} ended after {minutes} minutes without input; {operator} is signed in.")
+        self.status(said.format(user=before, minutes=self.ctx.settings.idle_minutes, operator=self.ctx.user))
+        return True
 
     def set_user(self, user: str) -> None:
         """Sign `user` in with the role the users table holds for them (#197); the header and the pages follow it."""

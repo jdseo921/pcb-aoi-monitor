@@ -71,8 +71,14 @@ before, and `user.start` for the user a start signs in. The demo workspace alway
 sign-in they choose one of 15 to 64 characters and type it twice. Five wrong passwords in a row lock the account for 5
 minutes (AOI-USR-006), and while it is locked even the right password is not checked; the 100th wrong one since the last
 right one locks it until an Admin unlocks it (AOI-USR-007). An Admin sees each user's status under Users & roles and
-ends a lock with **Unlock User**. Operators are never locked out. `lock_after` and `lock_minutes` in `settings.json` set
-the two numbers (3 to 20, and 1 to 60 minutes).
+ends a lock with **Unlock User**. A lock never stops the Operator view; where Operators have PINs, wrong ones lock only that Operator's name. `lock_after` and `lock_minutes` in `settings.json` set
+the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, key or touch, an
+Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited `user.idle_end`; never
+while a board is being inspected (a run under way stops after its board, as at any sign-in), never in the demo
+workspace, and a dialog left open is closed first, as Cancel would. A barcode scanner that types as a keyboard counts as
+input, so one in use keeps the session alive. `operator_pin: true` in `settings.json` asks
+each Operator for a 4 to 6 digit PIN at Switch User, chosen at their first sign-in (AOI-USR-008 for one that is not); a
+start still signs the Operator in, so the Operator view is never held.
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48

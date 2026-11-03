@@ -83,10 +83,11 @@ _LEAST = {  # the smallest whole number a count setting takes; a map retention o
     "demo_pace_s": 1,
     "lock_after": 3,
     "lock_minutes": 1,
+    "idle_minutes": 1,
     "shift_check_hours": 0,  # 0: no shift check is asked for (REQ-INSP-017)
 }
 # the largest whole number a setting takes, where there is one
-_MOST = {"demo_pace_s": 10, "shift_check_hours": 24, "lock_after": 20, "lock_minutes": 60}
+_MOST = {"demo_pace_s": 10, "shift_check_hours": 24, "lock_after": 20, "lock_minutes": 60, "idle_minutes": 120}
 
 
 SHIFT_CHECK_HOURS = 12  # the default: a shift of up to 12 h (ADR 0014); tests/conftest.py sets 0 for tests not about it
@@ -132,6 +133,8 @@ class Settings:
     shift_check_hours: int = field(default_factory=lambda: SHIFT_CHECK_HOURS)
     lock_after: int = 5  # REQ-USR-004 (ADR 0002, decision 4): wrong passwords in a row that lock an account,
     lock_minutes: int = 5  # for this long, or until an Admin unlocks it
+    operator_pin: bool = False  # REQ-USR-003: an Operator signs in with a 4 to 6 digit PIN, chosen at their first
+    idle_minutes: int = 15  # REQ-USR-004: an Engineer's or Admin's session ends after this long without input
 
     # --- paths derived from workspace ------------------------------------
     @property
