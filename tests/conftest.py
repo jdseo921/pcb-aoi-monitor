@@ -223,9 +223,9 @@ def answer_new_board_model(monkeypatch: pytest.MonkeyPatch, name: str) -> list[s
 PASSPHRASE = "seven tired owls over Busan"  # a test's password for every Engineer and Admin (REQ-USR-002)
 
 
-def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str) -> list[str]:
+def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str, password: str = PASSPHRASE) -> list[str]:
     """Switch User answered with `name` and Sign In, in place of the dialog's event loop: an Engineer or Admin types
-    PASSPHRASE (twice at their first sign-in, which sets it); "" cancels. The station's first Admin's recovery code is
+    `password` (twice at their first sign-in, which sets it); "" cancels. The station's first Admin's recovery code is
     taken as saved. Returns the titles of the dialogs opened."""
     titles: list[str] = []
 
@@ -233,8 +233,8 @@ def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str) -> list[str]:
         titles.append(dialog.windowTitle())
         if name:
             dialog.user.setCurrentIndex(next(i for i, u in enumerate(dialog.users) if u["name"] == name))
-            dialog.password.setText(PASSPHRASE)
-            dialog.again.setText(PASSPHRASE)
+            dialog.password.setText(password)
+            dialog.again.setText(password)
             dialog.sign_in()
         return dialog.result()
 

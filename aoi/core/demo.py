@@ -46,6 +46,9 @@ KEEP = frozenset({"settings.json", MARKER})  # what a reset leaves in the demo f
 BUILD_ONLY = frozenset({"logs", ".aoi.lock", "heartbeat.json", "aoi.running"})
 
 
+ADMIN_PASSWORD = "show the demo to the customer"  # noqa: S105 (the demo workspace's, published: docs/demo/README.md)
+
+
 def bundle_dir() -> Path:
     """Where the bundle is: the AOI_DEMO_BUNDLE folder when set, demo-bundle/ beside the app's files in a build
     (PyInstaller's folder), or demo-bundle/ in the repository when the app runs from its sources."""

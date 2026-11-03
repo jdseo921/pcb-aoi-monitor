@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
 )
 from pytestqt.qtbot import QtBot
 
+from aoi.core import demo as demo_kit
 from aoi.core.jobs import Job
 from aoi.ui import errors as ui_errors
 from aoi.ui import main_window, theme
@@ -653,7 +654,7 @@ def test_req_set_007_the_forty_five_minute_script_clicked_through(
 
         # 36:00 to 40:00, who may do what
         for pick in ("operator", "admin"):
-            titles = answer_sign_in(monkeypatch, pick)
+            titles = answer_sign_in(monkeypatch, pick, demo_kit.ADMIN_PASSWORD)  # the demo's known one (REQ-USR-005)
             press(qtbot, win, named(win, "Switch User"))
             picks += titles  # the dialog's title, as it opened
             operator = pick == "operator"

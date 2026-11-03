@@ -283,6 +283,7 @@ UNCHECKED = {
     "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "sign_in", "last_signed_in",
     "startable",  # the names a start may sign in (REQ-USR-006): reads only
     "take_recovery_code",  # the code made at the last sign-in, once, for the screen (REQ-USR-005): reads only
+    "recover",  # a sign-in with the recovery code, as sign_in is, with no role yet (REQ-USR-005)
     "load_model", "recipe",
     "note_window",  # the window's handle beside the lock, for a second start (A6): any role's window, not the database
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",

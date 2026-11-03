@@ -1,6 +1,7 @@
 """The first Admin and their recovery code (REQ-USR-005; ADR 0002, decision 6): the station's first Admin chooses their
 password from the first-run guide and is shown a one-time recovery code, stored only as a hash, until it is saved or
-printed."""
+printed; with it the Admin signs in and chooses a new password after losing theirs; and the demo workspace's Admin
+has a known password (docs/demo/README.md), so the demo scripts run unattended."""
 
 from __future__ import annotations
 
@@ -14,12 +15,16 @@ import pytest
 from PySide6.QtWidgets import QDialog, QFileDialog
 from pytestqt.qtbot import QtBot
 
-from aoi.core import passwords
+from aoi.config import Settings
+from aoi.core import demo, passwords
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.recovery_code_dialog import RecoveryCodeDialog
+from aoi.ui.sign_in_dialog import SignInDialog
 from tests.conftest import PASSPHRASE, answer_sign_in
+
+NEW = "a different passphrase for later"
 
 
 def test_req_usr_005_the_first_admin_gets_a_recovery_code_stored_only_as_a_hash(
@@ -103,3 +108,135 @@ def test_req_usr_005_the_guide_makes_the_first_admin_and_shows_the_code_until_it
     assert saved["after"]["path"].endswith("code.txt")
     with pytest.raises(AoiError, match="AOI-LOG-002"):
         ctx.save_code_sheet("the sheet", ctx.settings.root / "code.txt")  # never in the workspace
+
+
+def test_req_usr_005_the_recovery_code_signs_in_once(ctx: AppContext) -> None:
+    ctx.sign_in("admin", password=PASSPHRASE)
+    code = ctx.take_recovery_code()
+    assert code is not None
+    ctx.sign_in("operator")
+    with pytest.raises(AoiError, match="AOI-USR-015"):
+        ctx.recover("admin", "AAAAA BBBBB CCCCC DDDDD EEEEE", NEW)
+    (failed,) = ctx.audit_entries(action="user.sign_in_failed")
+    assert failed["after"] == {"user": "admin", "start": False, "recovery": True}
+    with pytest.raises(AoiError, match="AOI-USR-015"):
+        ctx.recover("engineer", code, NEW)  # an Engineer has no code
+    with pytest.raises(AoiError, match="AOI-USR-005"):
+        ctx.recover("admin", code, "short")
+    ctx.recover("admin", code.lower(), NEW)
+    assert ctx.user == "admin" and [e["action"] for e in ctx.audit_entries()][:3] == [
+        "user.sign_in",
+        "user.recovery_code_made",
+        "user.recovered",
+    ]
+    again = ctx.take_recovery_code()
+    assert again is not None and again != code
+    with pytest.raises(AoiError, match="AOI-USR-015"):
+        ctx.recover("admin", code, NEW)  # used once
+    ctx.sign_in("operator")
+    ctx.sign_in("admin", password=NEW)
+    ctx.add_user("kim", "Admin")
+    ctx.sign_in("kim", password=PASSPHRASE)
+    ctx.reset_secret("admin")
+    assert ctx.db.recovery_hash(str(ctx.db.user_uuid("admin"))) is None  # a reset drops it with the password
+
+
+def test_req_usr_005_the_sign_in_dialog_takes_the_recovery_code(qtbot: QtBot, ctx: AppContext) -> None:
+    ctx.sign_in("admin", password=PASSPHRASE)
+    code = ctx.take_recovery_code()
+    assert code is not None
+    ctx.sign_in("operator")
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    box = SignInDialog(win, "admin")
+    assert box.chosen()["name"] == "admin" and not box.btn_recover.isHidden() and box.code.isHidden()
+    box.btn_recover.click()
+    assert not box.code.isHidden() and not box.again.isHidden() and not box.btn_sign_in.isEnabled()
+    box.code.setText(code)
+    box.password.setText(NEW)
+    box.again.setText(NEW)
+    assert box.btn_sign_in.isEnabled()
+    box.sign_in()
+    assert box.signed_in == "admin" and box.code.text() == "" and ctx.take_recovery_code() not in (None, code)
+    box.user.setCurrentIndex(0)  # another user: the code's field goes
+    assert box.code.isHidden() and not box.recovering
+
+
+def test_req_usr_005_the_demo_opens_as_its_admin_whose_password_is_known(workspace: Settings) -> None:
+    workspace.root.mkdir(parents=True)
+    (workspace.root / demo.MARKER).write_text("{}", encoding="utf-8")
+    first = AppContext(workspace)
+    try:
+        assert first.user == "admin" and first.take_recovery_code() is None
+        (made,) = first.audit_entries(action="user.password_set")
+        assert made["after"] == {"user": "admin", "demo": True}
+        first.sign_in("operator")
+        first.sign_in("admin", password=demo.ADMIN_PASSWORD)  # docs/demo/README.md
+    finally:
+        first.close()
+    again = AppContext(workspace)  # opened again: the password is kept, the Admin started
+    try:
+        assert again.user == "admin" and len(again.audit_entries(action="user.password_set")) == 1
+    finally:
+        again.close()
+
+
+def test_req_usr_005_a_demo_marker_dropped_into_a_workspace_gives_nothing(workspace: Settings) -> None:
+    """The review's case: a demo.json dropped into a workspace whose Admin has a password neither starts that Admin nor
+    gives anyone the published password; and a workspace that stops being a demo puts its demo Admin back in set-up."""
+    first = AppContext(workspace)
+    try:
+        first.sign_in("admin", password=PASSPHRASE)
+        first.add_user("kim", "Admin")  # waiting for a hand-over
+    finally:
+        first.close()
+    (workspace.root / demo.MARKER).write_text("{}", encoding="utf-8")
+    dropped = AppContext(workspace)
+    try:
+        assert dropped.user == "operator" and not dropped.audit_entries(action="user.password_set")[0]["after"].get(
+            "demo"
+        )
+        assert next(u for u in dropped.users() if u["name"] == "kim")["status"] == "setup"
+        with pytest.raises(AoiError, match="AOI-USR-004"):
+            dropped.sign_in("admin", start=True)
+    finally:
+        dropped.close()
+    folder = workspace.root.parent / "demo-ws"
+    folder.mkdir()
+    (folder / demo.MARKER).write_text("{}", encoding="utf-8")
+    shown = Settings(workspace=str(folder), device="cpu")
+    AppContext(shown).close()  # the demo's Admin gets the published password
+    (folder / demo.MARKER).unlink()  # no demo any more
+    after = AppContext(shown)
+    try:
+        assert next(u for u in after.users() if u["name"] == "admin")["status"] == "setup"
+        (reset,) = after.audit_entries(action="user.reset")
+        assert reset["after"] == {"user": "admin", "demo": True}
+    finally:
+        after.close()
+
+
+def test_req_usr_005_a_locked_admin_recovers_and_a_disabled_one_does_not(ctx: AppContext) -> None:
+    ctx.sign_in("admin", password=PASSPHRASE)
+    code = ctx.take_recovery_code()
+    assert code is not None
+    uuid = str(ctx.db.user_uuid("admin"))
+    ctx.db.execute(
+        "UPDATE users SET failed_attempts=100, locked_until=? WHERE uuid=?", (passwords.UNTIL_UNLOCKED, uuid)
+    )
+    ctx.sign_in("operator")
+    with pytest.raises(AoiError, match="AOI-USR-015"):
+        ctx.recover("admin", "AAAAA BBBBB CCCCC DDDDD EEEEE", NEW)
+    assert next(u for u in ctx.users() if u["uuid"] == uuid)["failed_attempts"] == 100  # a wrong code counts no guess
+    ctx.recover("admin", code, NEW)  # the lock does not stop it, and it ends
+    row = next(u for u in ctx.users() if u["uuid"] == uuid)
+    assert (row["failed_attempts"], row["locked_until"]) == (0, None)
+    (recovered,) = ctx.audit_entries(action="user.recovered")
+    assert recovered["before"] == {"failed_attempts": 100, "locked_until": passwords.UNTIL_UNLOCKED}
+    again = ctx.take_recovery_code()
+    assert again is not None
+    ctx.add_user("kim", "Admin")
+    ctx.sign_in("kim", password=PASSPHRASE)
+    ctx.set_user_enabled("admin", False)
+    with pytest.raises(AoiError, match="AOI-USR-010"):
+        ctx.recover("admin", again, NEW)

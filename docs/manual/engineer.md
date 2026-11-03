@@ -81,8 +81,9 @@ keeps an Admin with a password (AOI-USR-013) and an enabled Operator for a start
 **The first Admin and the recovery code.** On a new station the first-run guide on Home asks first for the Admin's
 password: **Choose the Admin's Password…** opens Switch User with the Admin picked. Once it is chosen, a recovery
 code of 25 letters and digits shows once, with **Save to File…** and **Print…**; **Done** waits until it is saved or
-printed. Keep the sheet apart from the station: the next build signs the Admin in with it after a lost password.
-Until then, another Admin resets a lost password.
+printed. Keep the sheet apart from the station. An Admin who loses their password presses **Use Recovery Code…** at
+Switch User, types the code and chooses a new password; the code then works no more, and a new one shows once. A
+wrong code is refused (AOI-USR-015). Without the code, another Admin resets the password.
 
 A lock never stops the Operator view; where Operators have PINs, wrong ones lock only that Operator's name. `lock_after` and `lock_minutes` in `settings.json` set
 the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, key or touch, an

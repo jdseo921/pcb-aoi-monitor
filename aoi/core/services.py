@@ -545,6 +545,7 @@ class AppContext:
             self.log.info("app.start", extra=extra)
             self._recovery_code: tuple[str, str] | None = None  # (Admin's UUID, code) until shown (REQ-USR-005)
             self.set_user(self.start_user())  # the role the users table holds, never one written here (#197)
+            self._unless_full("demo.admin_not_set", self._demo_admin)  # the demo's Admin, with its known password
             # the system's own start-up writes: on a drive too full for them they wait for the next start (REQ-LOG-006)
             self._unless_full("retention.not_archived", self._archive_old)
             self._unless_full("maps.not_swept", self._sweep_ok_maps)  # OK maps past their retention (REQ-INSP-012)
@@ -668,6 +669,8 @@ class AppContext:
         whatever the name (#197)."""
         users = self.db.users()  # never empty: the database seeds operator, engineer and admin
         startable = self.startable()
+        if demo.is_demo(self.settings.root) and (known := self._demo_admins()):  # its Admin, password known
+            return known[0]
         if setting_up or demo.is_demo(self.settings.root):
             if admin := next((u for u in users if u["role"] == "Admin" and u["name"] in startable), None):
                 return str(admin["name"])
@@ -756,6 +759,8 @@ class AppContext:
         (no password yet) may start, as before, and chooses their password at a sign-in (`user.password_set`),
         refused with AOI-USR-005 when it breaks a rule (`passwords.refusal`). Neither secret nor hash is audited."""
         uuid, name = str(user["uuid"]), str(user["name"])
+        if start and demo.is_demo(self.settings.root) and name in self._demo_admins():
+            return  # the demo opens as its Admin, whose password is the published one (REQ-USR-005)
         pin = user["role"] == "Operator"  # an Operator's secret is a PIN, chosen at their first sign-in (REQ-USR-003)
         if user["status"] == "setup" or (pin and self.db.user_secret(uuid) is None):
             if start:
@@ -816,6 +821,32 @@ class AppContext:
         held, self._recovery_code = self._recovery_code, None
         return held[1] if held is not None and held[0] == self._actor.uuid else None
 
+    def recover(self, name: str, code: str, password: str) -> None:
+        """An Admin who lost their password signs in with their recovery code and chooses a new password (REQ-USR-005;
+        ADR 0002, decision 6). The code is used up: a new one is made, to be shown once (`take_recovery_code`). A wrong
+        code, or a user with none, is audited `user.sign_in_failed` with `recovery` and refused with AOI-USR-015; a lock
+        does not stop it, as the code's 125 bits are beyond guessing. AOI-USR-010 for a disabled user, AOI-USR-005 for a
+        password that breaks a rule. Audited `user.recovered`, then signed in as at Switch User."""
+        user = next((u for u in self.db.users() if u["name"] == name), None)
+        if user is None:
+            raise AoiError("AOI-USR-003", name=name)
+        uuid = str(user["uuid"])
+        if user["status"] == "disabled":
+            raise AoiError("AOI-USR-010", name=name)
+        if user["role"] != "Admin" or not passwords.verify(self.db.recovery_hash(uuid), passwords.code_text(code)):
+            self.audit("user.sign_in_failed", "user", uuid, None, {"user": name, "start": False, "recovery": True})
+            raise AoiError("AOI-USR-015", name=name)
+        names = [str(u["name"]) for u in self.db.users()] + [str(s["customer"]) for s in self.db.stores()]
+        if (refused := passwords.refusal(password, names)) is not None:
+            raise AoiError("AOI-USR-005", name=name, reason=refused)
+        with self.db.transaction():
+            self.db.set_user_secret(uuid, passwords.hash_secret(password))
+            cleared = {"failed_attempts": user["failed_attempts"], "locked_until": user["locked_until"]}
+            self.audit("user.recovered", "user", uuid, cleared, {"user": name})  # the lock it ended, on record
+            code = self._new_code(uuid, name)
+        self._recovery_code = (uuid, code)  # held once stored, for this Admin only (`take_recovery_code`)
+        self.sign_in(name, password=password)
+
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Saving a recovery code"))
     def save_code_sheet(self, text: str, dest: str | Path) -> Path:
         """Save to File… of the Admin's recovery code while it is shown, once: `text`, as the screen words it, written
@@ -835,6 +866,35 @@ class AppContext:
         any file it prints to, never the code; AOI-LOG-002 for a file in the workspace or a OneDrive folder."""
         after = {"printer": printer} | (self._refuse_key_copy(file, CODE_COPY) if file is not None else {})
         self.audit("user.code_printed", "user", self.user_uuid, None, after)
+
+    def _demo_admins(self) -> list[str]:
+        """The enabled Admins whose password is the demo's published one (`demo.ADMIN_PASSWORD`)."""
+        rows = (u for u in self.db.users() if u["role"] == "Admin" and u["status"] == "active")
+        known = demo.ADMIN_PASSWORD
+        return [str(u["name"]) for u in rows if passwords.verify(self.db.user_secret(str(u["uuid"])), known)]
+
+    def _demo_admin(self) -> None:
+        """The demo's known Admin (REQ-USR-005, docs/demo/README.md). In the demo workspace, while no Admin has a
+        password (as its bundle ships it, and after Reset Demo), its first Admin in set-up gets the published password,
+        audited `user.password_set` with `demo`; so a script's Switch User to the Admin runs unattended. That is the
+        first run's own state, where whoever starts the station chooses the first Admin's password, so a demo.json
+        dropped into a workspace whose Admin has a password gives nothing. Outside the demo, an Admin whose password is
+        the published one is put back in set-up, audited `user.reset` with `demo`, so it never outlives the demo."""
+        users = self.db.users()
+        if not demo.is_demo(self.settings.root):
+            for name in self._demo_admins():
+                uuid = str(next(u["uuid"] for u in users if u["name"] == name))
+                with self.db.transaction():
+                    self.db.set_user_secret(uuid, None)
+                    self.audit("user.reset", "user", uuid, {"status": "active"}, {"user": name, "demo": True})
+            return
+        if any(u["role"] == "Admin" and u["status"] == "active" for u in users):
+            return
+        admin = next((u for u in users if u["role"] == "Admin" and u["status"] == "setup"), None)
+        if admin is not None:
+            with self.db.transaction():
+                self.db.set_user_secret(str(admin["uuid"]), passwords.hash_secret(demo.ADMIN_PASSWORD))
+                self.audit("user.password_set", "user", str(admin["uuid"]), None, {"user": admin["name"], "demo": True})
 
     def _may_set_up(self) -> bool:
         """Whether an Engineer or Admin in set-up may choose their password now: an Admin with a password is signed in

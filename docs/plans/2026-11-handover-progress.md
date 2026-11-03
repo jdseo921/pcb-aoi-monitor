@@ -47,7 +47,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | merged 2026-11-02 (#438) |
 | D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | in review: D.1a the hash, its rules and migration 0029 (#439); D.1b sign-in with a password and the dialog (`feat/REQ-USR-002-passwords`) |
 | D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | in review: D.2a lockout and Unlock User (#441); D.2b the PIN and the idle end (`feat/REQ-USR-003-pin-idle`) |
-| D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin |
+| D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin (`feat/REQ-USR-005-recovery-sign-in`) |
 | E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | issue (to open) | planned |
 | E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | planned |
 | E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | planned |
