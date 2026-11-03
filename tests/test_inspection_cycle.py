@@ -8,12 +8,14 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pytest
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
 from aoi.core.cycle import FrameMeta
 from aoi.core.imaging import list_images
 from aoi.core.services import AppContext
+from aoi.errors import AoiError
 from aoi.hal import FolderCamera
 from tests.conftest import TrainedModel, engineer, restored
 from tests.test_req_done_in_v01 import BOARD, _window
@@ -84,3 +86,21 @@ def test_447_a_recipe_saved_during_a_headless_run_is_named_by_aoi_insp_013(
     (alarm,) = [a for a in trained_ctx.alarms() if a["code"] == "AOI-INSP-013"]
     assert outcomes[1].path.name in alarm["message"] and f"recipe revision {grabbed[1]}" in alarm["message"]
     assert alarm["phrase"]  # shown in the UI language of the day it is read
+
+
+def test_447_a_headless_run_keeps_the_shift_check_and_goes_on_past_a_refused_alarm(
+    trained_ctx: AppContext, synthetic_dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paths = sorted(list_images(synthetic_dataset / "test"))[:2]
+
+    def refused(*args: object, **kwargs: object) -> None:
+        raise OSError("database is locked")
+
+    monkeypatch.setattr(trained_ctx, "alarm", refused)  # AOI-INSP-013 is refused: logged, and the run goes on
+    recipe = trained_ctx.recipe(BOARD)[1]
+    recipe.anomaly_threshold = 0.5
+    source = CameraSource(paths, lambda: trained_ctx.save_recipe(recipe))
+    assert [o.moved for o in trained_ctx.inspection_cycle().run(BOARD, source)] == [False, True]
+    monkeypatch.setattr(trained_ctx, "shift_check", lambda bm: {"state": "none", "hours": 8})  # never run: no board
+    with pytest.raises(AoiError, match="AOI-INSP-016"):
+        next(trained_ctx.inspection_cycle().run(BOARD, CameraSource(paths)))
