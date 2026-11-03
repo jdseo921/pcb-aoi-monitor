@@ -163,3 +163,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-02: after train D, Jay said "Keep going"; Prompt 6 waits for train D's merge and the factory's file-naming
   contract. `ci/REQ-SET-020-windows-test-time`: the Windows test job may run 120 minutes (Linux keeps 75), as the 75-minute
   limit stopped the Windows jobs of #442 to #445 with no test failed (#444's suite at 91 % after 73 minutes).
+- 2026-11-03: #448's Windows check twice put Inspection's first opening at the 300 ms budget (REQ-SET-020), as on
+  `main`; Jay chose to fix it first: `perf/REQ-SET-020-inspection-first-open` rests the start-up self-check and fills
+  the alarm list in one step, the 2026-11-04 train, before train E is merged.
