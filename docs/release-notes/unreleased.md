@@ -91,6 +91,9 @@ renamed to `<version>.md` and a new `unreleased.md` starts empty.
 - [REQ-SET-023] Every Windows build from CI carries its build number in BUILD-INFO.txt, in the log's app_version (0.4.0.dev0+build.N) and in the program file's properties (Details tab). A build of main or a tag signed with the pilot certificate is named pilot-signed, and its installer says "Pilot build, signed with the AOI PoC Inspector pilot certificate"; only unsigned builds say they must never go to a customer. No verdict changes. / CI가 만든 모든 Windows 빌드는 BUILD-INFO.txt, 로그의 app_version(0.4.0.dev0+build.N), 프로그램 파일 속성(자세히 탭)에 빌드 번호를 담습니다. 파일럿 인증서로 서명한 main 또는 태그 빌드는 pilot-signed로 이름이 붙고, 설치 프로그램은 "Pilot build, signed with the AOI PoC Inspector pilot certificate"라고 안내합니다. 고객에게 절대 전달하면 안 된다는 문구는 서명하지 않은 빌드에만 표시됩니다. 판정은 바뀌지 않습니다.
 - [#447] Inspecting a board, from its image to its saved record, now works with no screen, with the records the
   Inspection page saves. / 보드 검사(이미지부터 저장된 기록까지)가 이제 화면 없이도 동작하며, 검사 화면과 같은 기록을 저장합니다.
+- [#447] The Inspection page inspects through it. The alarms for no active AI model, a run stopped by a board model change
+  and a run whose engine changed now show in the screen's language when read. / 검사 화면이 이를 통해 검사합니다. 활성
+  AI 모델 없음, 보드 모델 변경으로 멈춘 실행, 엔진이 바뀐 실행의 알람은 이제 읽는 시점의 화면 언어로 표시됩니다.
 
 ## Fixed / 수정 (draft)
 

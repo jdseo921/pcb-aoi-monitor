@@ -5748,14 +5748,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+108"/>
+        <location filename="../ui/pages/inspection.py" line="+101"/>
         <location line="+107"/>
-        <location line="+259"/>
+        <location line="+228"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-365"/>
+        <location line="-334"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5837,7 +5837,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+235"/>
+        <location line="+204"/>
         <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
         <translation type="unfinished">✓ 교대 점검: 모든 판정이 올바름 · {until}까지 보드를 검사할 수 있습니다</translation>
     </message>
@@ -5852,17 +5852,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-241"/>
+        <location line="-210"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-155"/>
+        <location line="-151"/>
         <source>Save Image… needs the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+33"/>
         <source>Shift Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5917,17 +5917,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+57"/>
-        <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
-        <source>AI model {version} of {board_model} is not active: only the Golden board comparison runs. An Engineer activates it with Activate {version}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+28"/>
+        <location line="+60"/>
         <source>Shift check: judging the master samples of {board_model}…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6037,37 +6027,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+82"/>
+        <location line="+70"/>
         <source>Review saved: {review} for record {record}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
-        <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+17"/>
-        <source>The AI model, recipe, scale or Golden board changed during this run: {file} was judged with AI model {version}, recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+6"/>
-        <source>The recipe, scale or Golden board changed during this run: {file} was judged with the AI check off, recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+10"/>
-        <source>no scale</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+0"/>
-        <source>a scale of {scale:.2f} px/mm</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+11"/>
+        <location line="+28"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7802,7 +7767,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-735"/>
+        <location filename="../ui/pages/inspection.py" line="-652"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>

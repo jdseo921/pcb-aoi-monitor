@@ -93,7 +93,7 @@ second test fails a screen module that holds one of them once imported (#202). `
 
 The inspection cycle (#447), `aoi/core/cycle.py`'s `InspectionCycle` from `AppContext.inspection_cycle()`, takes a board
 from its frame to its saved record with the engine it keeps while current, and stores the run's operational alarms.
-A screen runs `board()` on the pool thread and `settle()` on the UI thread; a driver with no screen calls
+The Inspection page runs `board()` on the pool thread and `settle()` on the UI thread; a driver with no screen calls
 `run(board_model, source)` with a frame source whose `grab()` gives `(frame, FrameMeta)` or None.
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
