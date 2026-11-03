@@ -160,3 +160,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   0029, with no change in behaviour; D.1b sign-in with a password and its dialog, where the seeded Engineer and Admin
   choose their password at their first sign-in until D.3 brings the first-run Admin.
 - 2026-11-02: #442's CI timed out on an event filter per window, now one per app. D.3 is three PRs (about 950 lines).
+- 2026-11-02: after train D, Jay said "Keep going"; Prompt 6 waits for train D's merge and the factory's file-naming
+  contract. `ci/REQ-SET-020-windows-test-time`: the Windows test job may run 120 minutes (Linux keeps 75), as the 75-minute
+  limit stopped the Windows jobs of #442 to #445 with no test failed (#444's suite at 91 % after 73 minutes).
