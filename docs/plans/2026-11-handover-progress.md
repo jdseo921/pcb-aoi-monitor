@@ -164,6 +164,7 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   contract. `ci/REQ-SET-020-windows-test-time`: the Windows test job may run 120 minutes (Linux keeps 75), as the 75-minute
   limit stopped the Windows jobs of #442 to #445 with no test failed (#444's suite at 91 % after 73 minutes).
 - 2026-11-03: Jay said "Merge and proceed": #446, then #439 to #445, merged (`main` merged up the stack for the progress
-  file). Prompt 6 started: D9 and D10 are on a decision card, and E.2 waits for the factory's file-naming contract. E.1
+  file). Prompt 6 started: Jay confirmed D9 and D10 as written (ADR 0024); E.2 waits for the factory's file-naming
+  contract. E.1
   is two PRs (#447): E.1a `refactor/447-inspection-cycle`, `aoi/core/cycle.py`'s `InspectionCycle` with a headless test
   against the page's records; E.1b `refactor/447-inspection-page`, the Inspection page as its driver.
