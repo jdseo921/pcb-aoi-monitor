@@ -218,7 +218,7 @@ def test_req_insp_005_feedback_within_100_ms(
     press(qtbot, win, page.act_next)
     took = perf_counter() - t0
     assert took < BUDGET_S, f"F8 returned after {took * 1000:.0f} ms"
-    assert page.last is None and page.worker is not None and page.inspector is None, "no result, no engine yet"
+    assert page.last is None and page.worker is not None and page.cycle.engine is None, "no result, no engine yet"
     assert page.verdict.text() == "Inspecting…" and theme.INFO_COLOR in page.verdict.styleSheet()
     painted = watch.first("Inspecting…") - t0
     print(f"F8: returned after {took * 1000:.1f} ms, busy banner painted after {painted * 1000:.1f} ms")
@@ -229,7 +229,7 @@ def test_req_insp_005_feedback_within_100_ms(
     qtbot.waitUntil(lambda: len(engine.builds) == 1, timeout=10000)  # the build is on the pool thread, after the press
     engine.release()
     qtbot.waitUntil(lambda: page.worker is None, timeout=60000)
-    assert page.last is not None and page.inspector is not None
+    assert page.last is not None and page.cycle.engine is not None
 
     engine.hold()
     t0 = perf_counter()
@@ -332,10 +332,10 @@ def test_req_insp_005_an_engine_built_for_the_state_before_is_dropped(
     win.navigate("Inspection")
     engine.release()
     qtbot.waitUntil(lambda: page.worker is None, timeout=30000)
-    assert page.last is not None and page.inspector is None, "the engine built before the revisit is not kept"
+    assert page.last is not None and page.cycle.engine is None, "the engine built before the revisit is not kept"
     press(qtbot, win, page.act_next)
     qtbot.waitUntil(lambda: page.worker is None, timeout=30000)
-    assert len(engine.builds) == 2 and page.inspector is not None, "the next board built the engine again"
+    assert len(engine.builds) == 2 and page.cycle.engine is not None, "the next board built the engine again"
 
 
 def test_req_insp_005_a_board_model_change_stops_the_run(

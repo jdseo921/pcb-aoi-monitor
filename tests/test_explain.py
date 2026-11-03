@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QFormLayout, QLabel
 from pytestqt.qtbot import QtBot
 
 from aoi.core import explain as ex
+from aoi.core.cycle import Outcome
 from aoi.core.inspector import (
     AI_OFF_NOTE,
     NG,
@@ -297,7 +298,7 @@ def test_req_cmp_004_the_sentences_reach_the_screens(qtbot: QtBot, ctx: AppConte
     page._show_result(res)
     assert page.why.toPlainText().split("\n") == ["Why this board is NG:", *(f"• {s.text()}" for s in ex.explain(res))]
     assert page.why.toPlainText().endswith("Note: <b>1 & 2</b>"), "a value is shown as text, never as markup"
-    inspection._on_result((tmp_path / "b.png", res, None, None, None))
+    inspection._on_result(Outcome("b", tmp_path / "b.png", res, None, None, None, 0, False))  # type: ignore[arg-type]
     assert inspection.summary.text().split("\n")[1:] == [NOTE_TEXTS[1], "Note: <b>1 & 2</b>"]
     korean = "AI 점수가 {value}로 임계값 {threshold} 이상입니다."
     tree = ET.parse(TS_FILE)
