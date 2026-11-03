@@ -172,6 +172,14 @@ class InspectionCycle:
         """AOI-INSP-012: a run stopped because the board model changed (#172)."""
         return self._alarm(BOARD_MODEL_CHANGED.fill(old=old or NO_VALUE, new=new or NO_VALUE), "AOI-INSP-012")
 
+    def _waiting(self, board_model: str) -> dict[str, Any] | None:
+        """The version trained but not active, as `AppContext.inactive_model`; none when it cannot be read (logged)."""
+        try:
+            return self.ctx.inactive_model(board_model)
+        except Exception:
+            self.ctx.log.warning("models.not_read", exc_info=True)
+            return None
+
     def _alarm(self, msg: Phrase, code: str) -> Phrase:
         """A WARN alarm with its phrase; never raises: one the database refuses is logged; the run goes on (#179)."""
         from .services import BUSY_ALARM_WAIT_MS  # services imports this module
@@ -184,12 +192,13 @@ class InspectionCycle:
 
     def run(self, board_model: str, source: FrameSource) -> Iterator[Outcome]:
         """Every frame of `source` as one run, with its alarms, until none is left or a record is not saved (the last
-        outcome then)."""
+        outcome then). As on the page, no board is taken while the shift check stops it (AOI-INSP-016, REQ-INSP-017),
+        and each record names the context's user."""
         self.start_run()
-        while (got := source.grab()) is not None:
+        while self.ctx.require_shift_check(board_model) and (got := source.grab()) is not None:
             out = self.settle(self.board(board_model, got[1], got[0])(), board_model, in_run=True)
             if out.no_ai_model:
-                self.no_ai_model_alarm(out, self.ctx.inactive_model(board_model))
+                self.no_ai_model_alarm(out, self._waiting(board_model))
             self.moved_alarm(out)
             yield out
             if out.save_error is not None:
