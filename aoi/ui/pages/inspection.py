@@ -201,6 +201,9 @@ class InspectionPage(Page):
         # Alarm log
         self.alarms = QListWidget()
         self.alarms.setMaximumHeight(110)
+        # each alarm is one line (no word wrap), so the list is laid out without measuring each of its up to
+        # ALARM_LIMIT rows: the page's first opening keeps to its 300 ms (REQ-SET-020)
+        self.alarms.setUniformItemSizes(True)
         self.newest_alarm: int | None = None  # the newest alarm the list shows, by its ID
         self.root.addWidget(self.alarms)
         self._update_buttons()
@@ -654,8 +657,7 @@ class InspectionPage(Page):
             return
         self.newest_alarm = rows[0]["id"] if rows else None
         self.alarms.clear()
-        for a in rows:
-            self.alarms.addItem(alarm_line(a["time"], a["level"], a["code"], alarm_text(a)))
+        self.alarms.addItems([alarm_line(a["time"], a["level"], a["code"], alarm_text(a)) for a in rows])
 
     def _alarms_if_new(self) -> None:
         """After a saved board: show the alarms again when one was stored since the list was shown, reading only the
