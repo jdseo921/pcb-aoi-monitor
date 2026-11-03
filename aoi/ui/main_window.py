@@ -75,6 +75,7 @@ from .pages.profile3d import Profile3DPage
 from .pages.recipe_editor import RecipeEditorPage
 from .pages.settings import SettingsPage
 from .pages.training import TrainingPage
+from .recovery_code_dialog import RecoveryCodeDialog
 from .sign_in_dialog import SignInDialog
 from .widgets.empty_state import EmptyState
 from .widgets.image_view import ImageView
@@ -733,7 +734,7 @@ class MainWindow(QMainWindow):
         self.about = _GivesWayButton(self.tr("About"))  # for every role (REQ-SET-011)
         self.about.clicked.connect(self.show_about)
         layout.addWidget(self.about)
-        switch = button(self.tr("Switch User"), slot=self.switch_user)
+        switch = button(self.tr("Switch User"), slot=lambda: self.switch_user())
         layout.addWidget(switch)
         for control in (self.bm_combo, self.btn_new, self.training_link, self.exit_presenter, self.about, switch):
             size_class(control, "T")  # header controls are operator targets (frame sketch, size class T)
@@ -815,13 +816,17 @@ class MainWindow(QMainWindow):
             cur.on_show()
 
     # --- users / roles (spec 8) -------------------------------------------------------
-    def switch_user(self) -> None:
-        """Pick a user; an Engineer or Admin signs in with their password (`SignInDialog`, REQ-USR-002)."""
-        dialog = SignInDialog(self)
+    def switch_user(self, name: str | None = None) -> None:
+        """Pick a user, `name` first if given; an Engineer or Admin signs in with their password (`SignInDialog`,
+        REQ-USR-002). A first Admin then sees their recovery code once (`RecoveryCodeDialog`, REQ-USR-005)."""
+        dialog = SignInDialog(self, name)
         dialog.exec()
         dialog.deleteLater()  # with its fields, cleared on closing
         if dialog.signed_in is not None:
             self.set_user(dialog.signed_in)
+        if (code := self.ctx.take_recovery_code()) is not None:
+            (shown := RecoveryCodeDialog(self, code)).exec()
+            shown.deleteLater()
 
     def check_idle(self) -> bool:
         """End an Engineer's or Admin's session after `idle_minutes` without input, back to the shift's operator

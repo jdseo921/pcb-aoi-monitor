@@ -28,7 +28,7 @@ from .paths import resolve, to_stored
 IN_CHUNK = 500  # ids per IN (…) query, under SQLite's 999 bound variables on older builds
 NOT_REVIEWED = "NOT_REVIEWED"  # the history filter's review: an NG or WARN record no one has reviewed (REQ-LOG-009)
 WAIT_MS = 5000  # how long a write waits for another program's lock on the database before SQLite refuses it
-USER_COLUMNS = "id, uuid, name, role, status, failed_attempts, locked_until"  # never secret_hash (REQ-USR-002)
+USER_COLUMNS = "id, uuid, name, role, status, failed_attempts, locked_until"  # never a hash (REQ-USR-002, -005)
 DbError = sqlite3.Error  # what a Database call raises when SQLite refuses it, for callers that do not import sqlite3
 SAMPLES = (  # a sample with its current label, the one label row no other has superseded (migration 0014), and the
     # second user's check of that row, if any (migration 0015)
@@ -1076,16 +1076,26 @@ class Database:
 
     def set_user_secret(self, uuid: str, secret_hash: str | None) -> None:
         """Store the user's new hash, which clears their failed attempts and lock: a password chosen makes an Engineer
-        or Admin in set-up active. None drops it (a reset) and puts an active Engineer or Admin back in set-up, never
-        active with no password; a disabled user stays disabled."""
+        or Admin in set-up active. None drops it (a reset), with any recovery code, and puts an active Engineer or Admin
+        back in set-up, never active with no password; a disabled user stays disabled."""
         status = (
             "CASE WHEN status='disabled' THEN status WHEN ? IS NOT NULL THEN 'active' "
             "WHEN role='Operator' THEN status ELSE 'setup' END"
         )
         self.execute(
-            f"UPDATE users SET secret_hash=?, status={status}, failed_attempts=0, locked_until=NULL WHERE uuid=?",
-            (secret_hash, secret_hash, uuid),
+            f"UPDATE users SET secret_hash=?, status={status}, failed_attempts=0, locked_until=NULL,"
+            " recovery_hash=CASE WHEN ? IS NULL THEN NULL ELSE recovery_hash END WHERE uuid=?",
+            (secret_hash, secret_hash, secret_hash, uuid),
         )
+
+    def recovery_hash(self, uuid: str) -> str | None:
+        """The Argon2id hash of the Admin's recovery code; None for a user who has none (REQ-USR-005)."""
+        r = self.query("SELECT recovery_hash FROM users WHERE uuid=?", (uuid,))
+        return str(r[0]["recovery_hash"]) if r and r[0]["recovery_hash"] else None
+
+    def set_recovery_hash(self, uuid: str, recovery_hash: str) -> None:
+        """Store the hash of the Admin's new recovery code, which replaces any code before it (REQ-USR-005)."""
+        self.execute("UPDATE users SET recovery_hash=? WHERE uuid=?", (recovery_hash, uuid))
 
     def count_failure(self, uuid: str, lock_after: int, until: str, limit: int, for_good: str) -> str | None:
         """Count a wrong password: every `lock_after`th since the last right one locks the account until `until`, and
@@ -1192,11 +1202,12 @@ class Database:
     def add_user(self, name: str, role: str) -> None:
         """Add a user, an Engineer or Admin in set-up until they choose a password, or change a user's role. A move
         between Operator and a role above drops the secret, a PIN being no password, and starts set-up again; a
-        disabled user stays disabled."""
+        disabled user stays disabled. A role change away from Admin drops the Admin's recovery code (REQ-USR-005)."""
         same = "(role='Operator') = (excluded.role='Operator')"
         self.execute(
             "INSERT INTO users(uuid, name, role, status) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET "
             f"secret_hash = CASE WHEN {same} THEN secret_hash END, "
+            "recovery_hash = CASE WHEN role='Admin' AND excluded.role='Admin' THEN recovery_hash END, "
             f"status = CASE WHEN status='disabled' OR {same} THEN status ELSE excluded.status END, role=excluded.role",
             (new_uuid(), name, role, "active" if role == "Operator" else "setup"),
         )

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class SignInDialog(QDialog):
     """`signed_in` names the user signed in once the dialog is accepted."""
 
-    def __init__(self, shell: MainWindow) -> None:
+    def __init__(self, shell: MainWindow, name: str | None = None) -> None:
         super().__init__(shell)
         self.shell, self.ctx = shell, shell.ctx
         self.setWindowTitle(self.tr("Switch user"))
@@ -34,7 +34,8 @@ class SignInDialog(QDialog):
         self.user = size_class(QComboBox(), "T")
         for u in self.users:
             self.user.addItem(self.tr("{user} ({role})").format(user=u["name"], role=role_text(u["role"])))
-        self.user.setCurrentIndex(next((i for i, u in enumerate(self.users) if u["name"] == self.ctx.user), 0))
+        picked = name or self.ctx.user  # the first Admin, from the first-run guide; else who is signed in
+        self.user.setCurrentIndex(next((i for i, u in enumerate(self.users) if u["name"] == picked), 0))
         self.user.currentIndexChanged.connect(self._sync)
         lay.addWidget(self.user)
         self.hint = QLabel()  # what the fields below ask for this user

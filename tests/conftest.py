@@ -42,6 +42,7 @@ from aoi.hal import drives  # noqa: E402
 from aoi.ui import theme, workers  # noqa: E402
 from aoi.ui.board_model_dialog import NewBoardModelDialog  # noqa: E402
 from aoi.ui.errors import AlreadyOpenBox, ErrorBox  # noqa: E402
+from aoi.ui.recovery_code_dialog import RecoveryCodeDialog  # noqa: E402
 from aoi.ui.sign_in_dialog import SignInDialog  # noqa: E402
 from aoi.ui.theme import QSS  # noqa: E402
 from tests.run_pinned import PINNED_DRIVE  # noqa: E402
@@ -224,7 +225,8 @@ PASSPHRASE = "seven tired owls over Busan"  # a test's password for every Engine
 
 def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str) -> list[str]:
     """Switch User answered with `name` and Sign In, in place of the dialog's event loop: an Engineer or Admin types
-    PASSPHRASE (twice at their first sign-in, which sets it); "" cancels. Returns the titles of the dialogs opened."""
+    PASSPHRASE (twice at their first sign-in, which sets it); "" cancels. The station's first Admin's recovery code is
+    taken as saved. Returns the titles of the dialogs opened."""
     titles: list[str] = []
 
     def exec_(dialog: SignInDialog) -> int:
@@ -236,7 +238,13 @@ def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str) -> list[str]:
             dialog.sign_in()
         return dialog.result()
 
+    def kept(dialog: RecoveryCodeDialog) -> int:  # the first Admin's recovery code, as if saved, then Done
+        titles.append(dialog.windowTitle())
+        dialog.btn_done.setEnabled(True)
+        return int(dialog.accept() or dialog.result())
+
     monkeypatch.setattr(SignInDialog, "exec", exec_)
+    monkeypatch.setattr(RecoveryCodeDialog, "exec", kept)
     return titles
 
 

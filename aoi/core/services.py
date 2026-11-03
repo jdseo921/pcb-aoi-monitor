@@ -543,6 +543,7 @@ class AppContext:
                 self.log.warning("sweep.skipped", extra={"path": rel, "reason": reason})
             extra = {"workspace": str(self.settings.root), "device": self.device, "swept": swept}
             self.log.info("app.start", extra=extra)
+            self._recovery_code: tuple[str, str] | None = None  # (Admin's UUID, code) until shown (REQ-USR-005)
             self.set_user(self.start_user())  # the role the users table holds, never one written here (#197)
             # the system's own start-up writes: on a drive too full for them they wait for the next start (REQ-LOG-006)
             self._unless_full("retention.not_archived", self._archive_old)
@@ -765,9 +766,17 @@ class AppContext:
             refused = passwords.pin_refusal(password or "") if pin else passwords.refusal(password or "", names)
             if refused is not None:
                 raise AoiError("AOI-USR-008" if pin else "AOI-USR-005", name=name, reason=refused)
+            first = (  # the station's first Admin; never in the demo, whose workspace is reset (REQ-USR-005)
+                user["role"] == "Admin"
+                and not demo.is_demo(self.settings.root)
+                and not any(u["role"] == "Admin" and u["status"] == "active" for u in self.db.users())
+            )
             with self.db.transaction():
                 self.db.set_user_secret(uuid, passwords.hash_secret(password or ""))
                 self.audit("user.pin_set" if pin else "user.password_set", "user", uuid, None, {"user": name})
+                code = self._new_code(uuid, name) if first else None  # the first Admin's, shown once (REQ-USR-005)
+            if code is not None:  # held only once stored
+                self._recovery_code = (uuid, code)
             return
         if (minutes := passwords.locked_minutes(user.get("locked_until"))) and not start:
             self.audit("user.sign_in_failed", "user", uuid, None, {"user": name, "start": False, "locked": True})
@@ -792,6 +801,40 @@ class AppContext:
             self.db.set_user_secret(uuid, passwords.hash_secret(password))  # which clears the count too
         elif user.get("failed_attempts") or user.get("locked_until"):
             self.db.unlock_user(uuid)
+
+    def _new_code(self, uuid: str, name: str) -> str:
+        """A new one-time recovery code for the Admin, stored as its hash and audited `user.recovery_code_made`, never
+        with the code; returned for the caller to hold once its transaction is committed (`take_recovery_code`)."""
+        code = passwords.recovery_code()
+        self.db.set_recovery_hash(uuid, passwords.hash_secret(passwords.code_text(code)))
+        self.audit("user.recovery_code_made", "user", uuid, None, {"user": name})
+        return code
+
+    def take_recovery_code(self) -> str | None:
+        """The recovery code made for the user signed in now, once: the screen that shows it takes it. None with none,
+        or when someone else is signed in, as when the sign-in after the code was refused; the code is dropped then."""
+        held, self._recovery_code = self._recovery_code, None
+        return held[1] if held is not None and held[0] == self._actor.uuid else None
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Saving a recovery code"))
+    def save_code_sheet(self, text: str, dest: str | Path) -> Path:
+        """Save to File… of the Admin's recovery code while it is shown, once: `text`, as the screen words it, written
+        to `dest` whole or not at all and audited `user.code_saved` with where it went, never the code; AOI-LOG-002 as
+        for a store's recovery key (`_refuse_key_copy`)."""
+        after = self._refuse_key_copy(dest, CODE_COPY)
+        with _export_write(dest), atomic.staged(dest, text.encode("utf-8")) as move_in:
+            with self.db.transaction():
+                self.audit("user.code_saved", "user", self.user_uuid, None, after)
+                move_in()
+        return Path(dest)
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Printing a recovery code"))
+    @transactional
+    def print_code_sheet(self, printer: str, file: str | Path | None = None) -> None:
+        """Print… of the Admin's recovery code, audited before it prints as `user.code_printed` with the printer and
+        any file it prints to, never the code; AOI-LOG-002 for a file in the workspace or a OneDrive folder."""
+        after = {"printer": printer} | (self._refuse_key_copy(file, CODE_COPY) if file is not None else {})
+        self.audit("user.code_printed", "user", self.user_uuid, None, after)
 
     def _may_set_up(self) -> bool:
         """Whether an Engineer or Admin in set-up may choose their password now: an Admin with a password is signed in
@@ -3670,14 +3713,14 @@ class AppContext:
         store = next(s for s in self.stores() if s["uuid"] == store_uuid)
         return {"board_model": board_model, "store": store, "sheet": made["sheet"] if made is not None else None}
 
-    def _refuse_key_copy(self, dest: str | Path) -> dict[str, str]:
+    def _refuse_key_copy(self, dest: str | Path, workspace_why: str | None = None) -> dict[str, str]:
         """AOI-LOG-002 for a recovery key's copy to a file in the workspace, whose copies and backups hold the files the
         key opens, or in a folder OneDrive copies off the station (its roots named by Windows' OneDrive environment
         variables); else the audit entry's `path`, stored as the workspace stores a path."""
         where = Path(dest).absolute()
         why = None
         if inside(where.resolve(), self.settings.root.resolve()):
-            why = QT_TRANSLATE_NOOP(
+            why = workspace_why or QT_TRANSLATE_NOOP(
                 "Errors", "a recovery key is never saved in the workspace, whose copies hold the files it opens"
             )
         elif any(inside(where.resolve(), Path(r).resolve()) for r in workspace_guard.one_drive_roots()):
@@ -4757,6 +4800,11 @@ class AppContext:
             own = {p.resolve() for p in sources or []}
             _remove([f for f in files if f.resolve() not in own])
             raise
+
+
+CODE_COPY = QT_TRANSLATE_NOOP(  # an Admin's recovery code in the workspace: its copies go wherever the database goes
+    "Errors", "a recovery code is never saved in the workspace, whose copies and backups travel with the station's data"
+)
 
 
 @contextlib.contextmanager

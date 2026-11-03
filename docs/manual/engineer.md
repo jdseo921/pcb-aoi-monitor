@@ -76,7 +76,15 @@ at their next sign-in), and turns a user off or on again with **Disable / Enable
 (AOI-USR-010) and keeps their name on past records. An Engineer's or Admin's first password is chosen only while an
 Admin is signed in to hand the account over (AOI-USR-009): the Admin signs in, then picks the user under Switch User,
 who types the new password twice. No Admin disables or resets their own account (AOI-USR-011), and the station always
-keeps an Admin with a password (AOI-USR-013) and an enabled Operator for a start (AOI-USR-014). A lock never stops the Operator view; where Operators have PINs, wrong ones lock only that Operator's name. `lock_after` and `lock_minutes` in `settings.json` set
+keeps an Admin with a password (AOI-USR-013) and an enabled Operator for a start (AOI-USR-014).
+
+**The first Admin and the recovery code.** On a new station the first-run guide on Home asks first for the Admin's
+password: **Choose the Admin's Password…** opens Switch User with the Admin picked. Once it is chosen, a recovery
+code of 25 letters and digits shows once, with **Save to File…** and **Print…**; **Done** waits until it is saved or
+printed. Keep the sheet apart from the station: the next build signs the Admin in with it after a lost password.
+Until then, another Admin resets a lost password.
+
+A lock never stops the Operator view; where Operators have PINs, wrong ones lock only that Operator's name. `lock_after` and `lock_minutes` in `settings.json` set
 the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, key or touch, an
 Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited `user.idle_end`; never
 while a board is being inspected (a run under way stops after its board, as at any sign-in), never in the demo

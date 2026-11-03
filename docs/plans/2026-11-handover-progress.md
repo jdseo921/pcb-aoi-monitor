@@ -47,7 +47,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | 1.9 | Release kit, `verify.ps1`, `inventory.ps1`, release runbook | REQ-SET-027 | merged 2026-11-02 (#438) |
 | D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | in review: D.1a the hash, its rules and migration 0029 (#439); D.1b sign-in with a password and the dialog (`feat/REQ-USR-002-passwords`) |
 | D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | in review: D.2a lockout and Unlock User (#441); D.2b the PIN and the idle end (`feat/REQ-USR-003-pin-idle`) |
-| D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (`feat/REQ-USR-006-user-admin`); D.3b the first Admin, its recovery code and the demo Admin, planned |
+| D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin |
 | E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | issue (to open) | planned |
 | E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | planned |
 | E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | planned |
@@ -159,6 +159,7 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   came to about 620 lines, so it is two: D.1a the Argon2id hash (argon2-cffi 25.1.0, MIT), its rules and migration
   0029, with no change in behaviour; D.1b sign-in with a password and its dialog, where the seeded Engineer and Admin
   choose their password at their first sign-in until D.3 brings the first-run Admin.
+- 2026-11-02: #442's CI timed out on an event filter per window, now one per app. D.3 is three PRs (about 950 lines).
 - 2026-11-02: after train D, Jay said "Keep going"; Prompt 6 waits for train D's merge and the factory's file-naming
   contract. `ci/REQ-SET-020-windows-test-time`: the Windows test job may run 120 minutes (Linux keeps 75), as the 75-minute
   limit stopped the Windows jobs of #442 to #445 with no test failed (#444's suite at 91 % after 73 minutes).

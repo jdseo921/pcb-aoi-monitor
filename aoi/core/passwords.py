@@ -11,6 +11,7 @@ Not yet (ADR 0002, decision 3): the bundled list of common passwords, which wait
 from __future__ import annotations
 
 import math
+import secrets
 import unicodedata
 from collections.abc import Iterable
 from datetime import UTC, datetime
@@ -86,6 +87,20 @@ def pin_refusal(pin: str) -> Phrase | None:
     """Why `pin` cannot be an Operator's PIN, or None when it can."""
     text = normal(pin)
     return None if text.isascii() and text.isdigit() and len(text) in PIN_DIGITS else NOT_A_PIN
+
+
+CODE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # 32, none read as another (no I, O, 0 or 1): 5 bits each
+
+
+def recovery_code() -> str:
+    """A new one-time recovery code: 25 random letters and digits (125 bits) in five groups of five (REQ-USR-005)."""
+    letters = "".join(secrets.choice(CODE_LETTERS) for _ in range(25))
+    return " ".join(letters[i : i + 5] for i in range(0, 25, 5))
+
+
+def code_text(code: str) -> str:
+    """A recovery code as it is hashed: its letters and digits in capitals, whatever spaces or dashes were typed."""
+    return "".join(c for c in normal(code).upper() if c.isalnum())
 
 
 UNTIL_UNLOCKED = "9999-12-31T00:00:00+00:00"  # a lock only an Admin ends: after GUESS_LIMIT wrong passwords
