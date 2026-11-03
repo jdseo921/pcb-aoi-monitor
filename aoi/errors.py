@@ -379,6 +379,21 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-019",
+            QT_TRANSLATE_NOOP("Errors", "Result files not written"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} was judged and its record saved, but its result files could not be written to the output"
+                " folder {folder}: {reason}. The line's systems will not see this board's result from that folder.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check that the output folder exists, that its drive is connected and has space, and that the station"
+                " may write to it. The record is kept: export it from Logs & Export. Boards after this one are written"
+                " again as soon as the folder takes them.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(

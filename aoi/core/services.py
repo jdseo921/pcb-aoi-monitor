@@ -42,7 +42,7 @@ from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock, holder, in_use
-from ..errors import FULL, QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
+from ..errors import CODES, FULL, QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
 from ..hal import VIEWS, drives
 from ..times import local_date, now_utc
 from . import (
@@ -61,6 +61,7 @@ from . import (
     model_card,
     passwords,
     report,
+    result_files,
     retention,
     run_progress,
     stats,
@@ -2107,6 +2108,7 @@ class AppContext:
             _remove(files)
             raise
         # The row has committed: its files are named now and stay, whatever the log lines below meet.
+        self._write_result_files(board_model, path, res, insp, uid, "none" if skip else "jpeg" if light else "png", day)
         if alarm is not None:
             self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
             self._alert(alarm[0], alarm[2], alarm[1])
@@ -2139,6 +2141,26 @@ class AppContext:
         self.db.alarm(level, message, code, wait_ms)
         self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": log_text or message})
         self._alert(level, code, log_text or message)
+
+    def _write_result_files(
+        self, board_model: str, path: str, res: InspectionResult, insp: Inspector, uid: str, evidence: str, day: str
+    ) -> None:
+        """After a board is saved, its result files in `Settings.output_folder` when one is set (REQ-INSP-021). Never
+        raises: files not written are alarmed (WARN, AOI-INSP-019) and logged, and the board stays saved."""
+        folder = self.settings.output_folder
+        if not folder:
+            return
+        try:
+            doc = result_files.document(board_model, path, res, insp, uid, evidence, now_utc())
+            result_files.write(Path(folder), doc, day, _stem(path))
+        except Exception as e:
+            self.log.warning("result_file.not_written", exc_info=True, extra={"board_model": board_model})
+            what = Phrase("Errors", CODES["AOI-INSP-019"].what)  # marked for translation where the code is listed
+            text = what.fill(file=Path(path).name, folder=folder, reason=system_reason(e, True))
+            try:
+                self.alarm("WARN", text, "AOI-INSP-019", wait_ms=BUSY_ALARM_WAIT_MS)
+            except Exception:
+                self.log.warning("alarm.not_stored", exc_info=True, extra={"code": "AOI-INSP-019"})
 
     def _watch_drift(self, board_model: str, view: str | None) -> None:
         """After a board is saved: alarm (WARN, AOI-INSP-018) on each drift measure of its board model and view that

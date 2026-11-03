@@ -95,6 +95,10 @@ The inspection cycle (#447), `aoi/core/cycle.py`'s `InspectionCycle` from `AppCo
 from its frame to its saved record with the engine it keeps while current, and stores the run's operational alarms.
 The Inspection page runs `board()` on the pool thread and `settle()` on the UI thread; a driver with no screen calls
 `run(board_model, source)` with a frame source whose `grab()` gives `(frame, FrameMeta)` or None.
+Each saved board's result files (REQ-INSP-021), `aoi/core/result_files.py`, are written by `log_result` after its row
+commits, into `Settings.output_folder` when one is set: `<board ID>_<record UUID>.json` and `.csv`, and a line in
+`shift_<local date>.csv`, each replaced whole (`aoi/data/atomic.py`); `docs/schemas/result-file.schema.json` gives the
+fields.
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
 and `aoi/hal` too, and since S56 on `aoi/selftest.py`, with no flag relaxed (`pyproject.toml`). PySide6 enums are

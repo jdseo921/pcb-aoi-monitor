@@ -933,7 +933,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+194"/>
+        <location filename="../core/services.py" line="+195"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1018,12 +1018,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2494"/>
+        <location line="+2515"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2463"/>
+        <location line="-2484"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1053,7 +1053,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+169"/>
+        <location line="+190"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
@@ -1275,14 +1275,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4726"/>
-        <location line="+3430"/>
+        <location line="-4747"/>
+        <location line="+3451"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3519"/>
+        <location line="-3540"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1392,7 +1392,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1045"/>
+        <location line="+1066"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4181"/>
+        <location line="-4202"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1639,7 +1639,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1464"/>
+        <location line="+1485"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1751,7 +1751,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4608"/>
+        <location line="-4629"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2098,7 +2098,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+42"/>
+        <location line="+57"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2304,7 +2304,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-298"/>
+        <location line="-313"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2466,6 +2466,21 @@
     <message>
         <location line="+5"/>
         <source>Look at the boards and the station: the lighting, the camera and its focus, the board revision and the parts supplier. Review the calls on Logs &amp; Export; if one of these changed, retrain the AI model or tune the recipe and validate it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Result files not written</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} was judged and its record saved, but its result files could not be written to the output folder {folder}: {reason}. The line&apos;s systems will not see this board&apos;s result from that folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Check that the output folder exists, that its drive is connected and has space, and that the station may write to it. The record is kept: export it from Logs &amp; Export. Boards after this one are written again as soon as the folder takes them.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3991,7 +4006,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1486"/>
+        <location line="-1501"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4006,7 +4021,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+83"/>
+        <location line="+98"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4522,7 +4537,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3672"/>
+        <location filename="../core/services.py" line="+3693"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -9663,7 +9678,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3756"/>
+        <location filename="../core/services.py" line="-3777"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
