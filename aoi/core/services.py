@@ -752,12 +752,48 @@ class AppContext:
                 self.db.set_user_secret(uuid, passwords.hash_secret(password or ""))
                 self.audit("user.password_set", "user", uuid, None, {"user": name})
             return
+        if (minutes := passwords.locked_minutes(user.get("locked_until"))) and not start:
+            self.audit("user.sign_in_failed", "user", uuid, None, {"user": name, "start": False, "locked": True})
+            raise self._locked(name, minutes)  # no check while locked: a try counts no guess, but is on record
         stored = self.db.user_secret(uuid)
         if start or password is None or not passwords.verify(stored, password):
-            self.audit("user.sign_in_failed", "user", uuid, None, {"user": name, "start": start})
+            with self.db.transaction():  # a start is no guess: only a person's wrong password counts (REQ-USR-004)
+                until = (datetime.now(UTC) + timedelta(minutes=self.settings.lock_minutes)).isoformat(
+                    timespec="seconds"
+                )
+                end = None
+                if not start:
+                    limits = (self.settings.lock_after, until, passwords.GUESS_LIMIT, passwords.UNTIL_UNLOCKED)
+                    end = self.db.count_failure(uuid, *limits)
+                self.audit("user.sign_in_failed", "user", uuid, None, {"user": name, "start": start})
+                if end:
+                    self.audit("user.lock", "user", uuid, None, {"user": name, "until": end})
+            if end:
+                raise self._locked(name, passwords.locked_minutes(end))
             raise AoiError("AOI-USR-004", name=name)
         if stored is not None and passwords.stale(stored):
-            self.db.set_user_secret(uuid, passwords.hash_secret(password))
+            self.db.set_user_secret(uuid, passwords.hash_secret(password))  # which clears the count too
+        elif user.get("failed_attempts") or user.get("locked_until"):
+            self.db.unlock_user(uuid)
+
+    @staticmethod
+    def _locked(name: str, minutes: int) -> AoiError:
+        """AOI-USR-006 for a timed lock, AOI-USR-007 for one only an Admin ends."""
+        if minutes > passwords.FOR_GOOD:
+            return AoiError("AOI-USR-007", name=name)
+        return AoiError("AOI-USR-006", name=name, minutes=minutes)
+
+    @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Unlocking a user"))
+    def unlock_user(self, name: str) -> None:
+        """An Admin ends a user's lock before its time and clears their wrong-password count, audited `user.unlock`
+        with the lock it ended (REQ-USR-004)."""
+        user = next((u for u in self.db.users() if u["name"] == name), None)
+        if user is None:
+            raise AoiError("AOI-USR-003", name=name)
+        with self.db.transaction():
+            self.db.unlock_user(str(user["uuid"]))
+            before = {"locked_until": user["locked_until"], "failed_attempts": user["failed_attempts"]}
+            self.audit("user.unlock", "user", str(user["uuid"]), before, {"user": name})
 
     def last_signed_in(self) -> str | None:
         """The name of the user who signed in last on this station with Switch User (the newest `user.sign_in` entry),
@@ -2655,8 +2691,9 @@ class AppContext:
         return {"state": state, "check": check, "until": until, "hours": hours}
 
     def users(self) -> list[dict[str, Any]]:
-        """Users (uuid, name, role), oldest first."""
-        return self.db.users()
+        """Users, oldest first, as `Database.users` lists them (never a hash), each with `locked_minutes`: the minutes
+        left of their lock, 0 when none (REQ-USR-004)."""
+        return [u | {"locked_minutes": passwords.locked_minutes(u["locked_until"])} for u in self.db.users()]
 
     def board_status(self, board_model: str) -> BoardStatus:
         """Sample counts, active model, recipe revision, last test metrics and inspection counts of a board model."""

@@ -10,8 +10,10 @@ Not yet (ADR 0002, decision 3): the bundled list of common passwords, which wait
 
 from __future__ import annotations
 
+import math
 import unicodedata
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from functools import cache
 
 from argon2 import PasswordHasher, profiles
@@ -84,3 +86,21 @@ def pin_refusal(pin: str) -> Phrase | None:
     """Why `pin` cannot be an Operator's PIN, or None when it can."""
     text = normal(pin)
     return None if text.isascii() and text.isdigit() and len(text) in PIN_DIGITS else NOT_A_PIN
+
+
+UNTIL_UNLOCKED = "9999-12-31T00:00:00+00:00"  # a lock only an Admin ends: after GUESS_LIMIT wrong passwords
+GUESS_LIMIT = 100  # wrong passwords before that, not reset by a timed lock (NIST SP 800-63B-4, rate limiting)
+FOR_GOOD = 60 * 24 * 365  # minutes beyond which a lock reads as until an Admin unlocks it
+
+
+def locked_minutes(until: str | None) -> int:
+    """The whole minutes left, rounded up, of a lock ending at `until` (UTC ISO 8601; with no offset, read as UTC);
+    0 with none or once it ended. A time that cannot be read is a lock until an Admin unlocks it, never an error."""
+    if not until:
+        return 0
+    try:
+        end = datetime.fromisoformat(until)
+    except ValueError:
+        return FOR_GOOD + 1
+    left = ((end if end.tzinfo else end.replace(tzinfo=UTC)) - datetime.now(UTC)).total_seconds()
+    return max(0, math.ceil(left / 60))

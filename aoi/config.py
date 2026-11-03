@@ -81,9 +81,12 @@ _LEAST = {  # the smallest whole number a count setting takes; a map retention o
     "map_retention_days_ok": 0,
     "test_run_days": 1,
     "demo_pace_s": 1,
+    "lock_after": 3,
+    "lock_minutes": 1,
     "shift_check_hours": 0,  # 0: no shift check is asked for (REQ-INSP-017)
 }
-_MOST = {"demo_pace_s": 10, "shift_check_hours": 24}  # the largest whole number a setting takes, where there is one
+# the largest whole number a setting takes, where there is one
+_MOST = {"demo_pace_s": 10, "shift_check_hours": 24, "lock_after": 20, "lock_minutes": 60}
 
 
 SHIFT_CHECK_HOURS = 12  # the default: a shift of up to 12 h (ADR 0014); tests/conftest.py sets 0 for tests not about it
@@ -127,6 +130,8 @@ class Settings:
     presenter_theme: bool = False  # REQ-SET-008: the light presenter theme, switched by an Admin on Settings
     # REQ-INSP-017: the hours a passed shift check lets boards be inspected, 0 to ask for none (ADR 0014)
     shift_check_hours: int = field(default_factory=lambda: SHIFT_CHECK_HOURS)
+    lock_after: int = 5  # REQ-USR-004 (ADR 0002, decision 4): wrong passwords in a row that lock an account,
+    lock_minutes: int = 5  # for this long, or until an Admin unlocks it
 
     # --- paths derived from workspace ------------------------------------
     @property
