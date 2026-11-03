@@ -4484,13 +4484,16 @@ class AppContext:
         def files() -> None:
             root, found["missing_files"] = str(self.settings.root), 0
             # 100,000 records: seconds of work, so it rests most of the time and the window the user just opened gets
-            # the processor: its page switches keep to 300 ms meanwhile (REQ-SET-020)
-            until = time.monotonic() + CHECK_WORK_S
+            # the processor: its page switches keep to 300 ms meanwhile (REQ-SET-020). perf_counter, not monotonic,
+            # which ticks every 15.6 ms on Windows; a closing context stops it at its next rest.
+            until = time.perf_counter() + CHECK_WORK_S
             for name in self.db.evidence_stored():
                 found["missing_files"] += not os.path.isfile(os.path.join(root, name))
-                if time.monotonic() >= until:
-                    time.sleep(CHECK_REST_S)
-                    until = time.monotonic() + CHECK_WORK_S
+                if time.perf_counter() >= until:
+                    if self._stopping.wait(CHECK_REST_S):
+                        found["stopped"] = True
+                        return
+                    until = time.perf_counter() + CHECK_WORK_S
             if found["missing_files"]:
                 self._check_alarm("WARN", "AOI-SET-022", count=found["missing_files"])
             found["temp_files_left"] = self._temp_left
