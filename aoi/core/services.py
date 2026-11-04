@@ -42,7 +42,7 @@ from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock, holder, in_use
-from ..errors import FULL, QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
+from ..errors import CODES, FULL, QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
 from ..hal import VIEWS, drives
 from ..times import local_date, now_utc
 from . import (
@@ -61,6 +61,7 @@ from . import (
     model_card,
     passwords,
     report,
+    result_files,
     retention,
     run_progress,
     stats,
@@ -579,6 +580,7 @@ class AppContext:
         self._closed = False
         self._stopping = threading.Event()  # the timers: threads of the context's own, not Qt's
         self.pulse, self._started = heartbeat.Pulse(), time.monotonic()  # the boards the heartbeat counts (REQ-SET-024)
+        self._result_files_failing = False  # AOI-INSP-019 was raised and no board's files were written since
         self._retention = threading.Thread(target=self._retain, name="retention", daemon=True)  # REQ-LOG-010
         self._beating = threading.Thread(target=self._beat, name="heartbeat", daemon=True)
         self._retention.start()
@@ -2111,6 +2113,7 @@ class AppContext:
         if alarm is not None:
             self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
             self._alert(alarm[0], alarm[2], alarm[1])
+        self._write_result_files(iid, board_model, path, res, insp, "none" if skip else "jpeg" if light else "png", day)
         last = {"board_model": board_model, "ai_model": insp.model_version, "recipe_rev": insp.recipe_rev}
         self.pulse.add(res.verdict, res.elapsed_ms, last)  # what the heartbeat counts (REQ-SET-024)
         self._watch_drift(board_model, res.view)
@@ -2140,6 +2143,33 @@ class AppContext:
         self.db.alarm(level, message, code, wait_ms)
         self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": log_text or message})
         self._alert(level, code, log_text or message)
+
+    def _write_result_files(
+        self, iid: int, board_model: str, path: str, res: InspectionResult, insp: Inspector, evidence: str, day: str
+    ) -> None:
+        """After a board is saved and its NG alarm raised, its result files in `Settings.output_folder` when one is set
+        (REQ-INSP-021), with the record's own time. Never raises: files not written are logged, and alarmed (WARN,
+        AOI-INSP-019) once until a board's files are written again, so a folder gone does not fill the alarm list; the
+        board stays saved, and its files are not written later."""
+        folder = self.settings.output_folder
+        if not folder:
+            return
+        try:
+            record = self.db.inspection(iid) or {}
+            doc = result_files.document(board_model, path, res, insp, record.get("uuid", ""), evidence, record["time"])
+            result_files.write(Path(folder), doc, day, _stem(path))
+            self._result_files_failing = False
+        except Exception as e:
+            self.log.warning("result_file.not_written", exc_info=True, extra={"board_model": board_model})
+            if self._result_files_failing:
+                return
+            self._result_files_failing = True
+            what = Phrase("Errors", CODES["AOI-INSP-019"].what)  # marked for translation where the code is listed
+            text = what.fill(file=Path(path).name, folder=folder, reason=system_reason(e, True))
+            try:
+                self.alarm("WARN", text, "AOI-INSP-019", wait_ms=BUSY_ALARM_WAIT_MS)
+            except Exception:
+                self.log.warning("alarm.not_stored", exc_info=True, extra={"code": "AOI-INSP-019"})
 
     def _watch_drift(self, board_model: str, view: str | None) -> None:
         """After a board is saved: alarm (WARN, AOI-INSP-018) on each drift measure of its board model and view that

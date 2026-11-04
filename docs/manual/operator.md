@@ -213,6 +213,11 @@ records' defects by type, most first, with a bar for each: the types the line fi
 many records holding each were reviewed as a false call. Only an Admin deletes records, with a reason the audit trail
 keeps.
 
+**Result files.** Where an Admin has set an output folder, the station writes each board's result there as it is saved,
+for the line's systems to read: one JSON file and one CSV line per board, and a shift CSV for the day that lists every
+board under a header. You do nothing for it. If the folder refuses them (a network drive gone, a full disk), the alarm
+list shows AOI-INSP-019: the board is still judged and recorded, so carry on and tell an Engineer or Admin.
+
 **Handing over.** Let the queue run to its end, or press ■ Stop: the board in hand is still judged and recorded. For
 your counts, set **From** and **To** to the days of your shift, pick your name under **Operator**, press **Filter** and
 read the line under the table. **Export CSV** and **Export Image Overlays** are grey for an Operator: an Admin

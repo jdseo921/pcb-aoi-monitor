@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jdseo921/pcb-aoi-monitor/docs/schemas/result-file.schema.json",
+  "title": "AOI result file",
+  "description": "One board's result, written by the AOI PoC Inspector to the output folder within 1 s of its verdict (REQ-INSP-021) as <board ID>_<record UUID>.json, with the same fields as one CSV line in <board ID>_<record UUID>.csv and in shift_<local date>.csv. CSV columns: board_id, view, verdict, time, model_version, recipe_rev, defect_count, defects (each type:severity:x,y,w,h, joined by |), evidence, board_model, record_uuid; an empty cell is null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "board_id", "board_model", "view", "verdict", "time", "model_version", "recipe_rev", "defects", "evidence", "record_uuid"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "board_id": {"type": "string", "minLength": 1, "description": "The board's ID: the image file's name without its extension, until the line's file-naming contract (REQ-INSP-020) says how to read it."},
+    "board_model": {"type": "string", "minLength": 1},
+    "view": {"type": "string", "minLength": 1, "description": "The camera view the image shows, e.g. Top or Side."},
+    "verdict": {"enum": ["OK", "WARN", "NG"]},
+    "time": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[+-]\\d{2}:\\d{2}$", "description": "When the record was saved, UTC, ISO 8601 with an offset."},
+    "model_version": {"type": ["string", "null"], "description": "The AI model version active when the board was judged; null with no AI model."},
+    "recipe_rev": {"type": ["integer", "null"], "description": "The recipe revision that judged the board; null with no recipe saved."},
+    "defects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["no", "type", "severity", "score", "box"],
+        "properties": {
+          "no": {"type": "integer", "minimum": 1},
+          "type": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["Critical", "Major", "Minor"]},
+          "score": {"type": "number", "description": "1.0 is exactly at its threshold."},
+          "box": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["x", "y", "w", "h"],
+            "properties": {
+              "x": {"type": "integer", "minimum": 0},
+              "y": {"type": "integer", "minimum": 0},
+              "w": {"type": "integer", "minimum": 0},
+              "h": {"type": "integer", "minimum": 0}
+            },
+            "description": "In pixels of the inspected image, from its top-left corner."
+          }
+        }
+      }
+    },
+    "evidence": {"enum": ["png", "jpeg", "none"], "description": "What the station kept of the board: its overlay and maps as PNG, an OK board's overlay as JPEG (D1), or none, for an OK board saved at a full disk (REQ-LOG-006)."},
+    "record_uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", "description": "The station's record of the board, as Logs & Export and its CSV export name it."}
+  }
+}

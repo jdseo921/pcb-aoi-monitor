@@ -128,6 +128,7 @@ class Settings:
     language: str = "en"  # en | ko (localization planned for 2H 2027)
     last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
     demo_pace_s: int = 3  # seconds per board of the demo's scripted run, 1 to 10 (REQ-SET-009)
+    output_folder: str = ""  # REQ-INSP-021: where each board's result files go, a full path; empty: none are written
     presenter_theme: bool = False  # REQ-SET-008: the light presenter theme, switched by an Admin on Settings
     # REQ-INSP-017: the hours a passed shift check lets boards be inspected, 0 to ask for none (ADR 0014)
     shift_check_hours: int = field(default_factory=lambda: SHIFT_CHECK_HOURS)
@@ -211,15 +212,16 @@ class Settings:
     def check(cls, name: str, value: object) -> None:
         """Refuse a value of the wrong JSON type for a known setting, an image limit, a log retention, an image size or
         an epoch count below 1, a map retention below 0, a demo pace outside 1 to 10 s, an `ok_evidence` other than jpeg
-        or full (D1), and a workspace that is not an absolute path (empty, spaces only or relative: Path("") is the
-        folder the app was started in), with
+        or full (D1), and a workspace or an output folder (REQ-INSP-021; empty is none) that is not an absolute path
+        (empty, spaces only or relative: Path("") is the folder the app was started in), with
         AOI-SET-008: at start-up, and on the Settings page before it saves (REQ-INSP-001, S23c: a typo there used to
         fail every image load with AOI-SET-007; #170: a log retention of 0 or below archived every record at start-up).
         An unknown key is still ignored, so an old or a newer settings.json loads."""
         want = type(getattr(cls(), name))
         least = _LEAST.get(name)
         typed = isinstance(value, want) and not (want is int and isinstance(value, bool))
-        if name == "workspace" and typed and not Path(str(value)).is_absolute():
+        folder = name == "workspace" or (name == "output_folder" and value != "")  # empty: no result files
+        if folder and typed and not Path(str(value)).is_absolute():
             raise AoiError("AOI-SET-008", name=name, value=json.dumps(value), expected=FULL_PATH)
         if name == "ok_evidence" and value not in OK_EVIDENCE:
             expected = ONE_OF.fill(values=", ".join(OK_EVIDENCE))

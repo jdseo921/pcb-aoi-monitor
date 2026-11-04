@@ -50,7 +50,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin (`feat/REQ-USR-005-recovery-sign-in`) |
 | E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | #447 (two PRs) | in review |
 | E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | planned |
-| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | planned |
+| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | in review |
 | F.1 | Korean for the operator: `QTranslator`, `.qm` shipped, operator path translated | REQ-SET-006 (operator scope) | planned |
 | F.2 | Offline licence key and the EULA page | REQ-SET-010, REQ-SET-022 | planned |
 | F.3 | Station hardening: autostart with restart on failure, kiosk guidance, self-check alarms | REQ-SET-024 | planned |
@@ -168,6 +168,8 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   contract. E.1
   is two PRs (#447): E.1a `refactor/447-inspection-cycle`, `aoi/core/cycle.py`'s `InspectionCycle` with a headless test
   against the page's records; E.1b `refactor/447-inspection-page`, the Inspection page as its driver.
+- 2026-11-03: Jay chose "Build E.3 now" (decision card): E.3 `feat/REQ-INSP-021-result-files`, stacked on E.1b, writes
+  the result files with the image's file stem as the board ID until the naming contract; E.2 still waits for it.
 - 2026-11-03: #448's Windows check twice put Inspection's first opening at the 300 ms budget (REQ-SET-020), as on
   `main`; Jay chose to fix it first: `perf/REQ-SET-020-inspection-first-open` rests the start-up self-check and fills
   the alarm list in one step, the 2026-11-04 train, before train E is merged.
