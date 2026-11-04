@@ -248,9 +248,11 @@ def parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     from tools.proxy_sets import SETS as DRIVERS  # imports PySide6 and PyTorch, which the counting does not need
 
-    result = run(parser().parse_args(argv), DRIVERS)
+    args = parser().parse_args(argv)
+    result = run(args, DRIVERS)
     print(json.dumps({k: v for k, v in result.items() if k != "runs"}, indent=1, default=str)[:4000])
-    return 1 if result.get("sources_unchanged") is False or "error" in result else 0
+    unchecked = args.set != "pku" and result.get("sources_unchanged") is not True  # every other set hashes its sources
+    return 1 if unchecked or '"error": ' in json.dumps(result, default=str) else 0  # an error in any run, at any depth
 
 
 if __name__ == "__main__":
