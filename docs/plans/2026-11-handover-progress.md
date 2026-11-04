@@ -170,3 +170,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   against the page's records; E.1b `refactor/447-inspection-page`, the Inspection page as its driver.
 - 2026-11-03: Jay chose "Build E.3 now" (decision card): E.3 `feat/REQ-INSP-021-result-files`, stacked on E.1b, writes
   the result files with the image's file stem as the board ID until the naming contract; E.2 still waits for it.
+- 2026-11-03: #448's Windows check twice put Inspection's first opening at the 300 ms budget (REQ-SET-020), as on
+  `main`; Jay chose to fix it first: `perf/REQ-SET-020-inspection-first-open` rests the start-up self-check and fills
+  the alarm list in one step, the 2026-11-04 train, before train E is merged.
