@@ -116,6 +116,7 @@ DRIFT_TEXT = {
     ),
 }
 BUSY_ALARM_WAIT_MS = 200  # how long the alarm of a locked database's error, or an Inspection alarm, waits, not 5 s
+CHECK_WORK_S, CHECK_REST_S = 0.002, 0.008  # the start-up self-check's file step: 2 ms of work, then 8 ms of rest
 ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the reference board")  # a progress line (#199)
 # what a training run does now, as its progress names it (REQ-TRN-008)
 READING = QT_TRANSLATE_NOOP("Training", "Aligning image {n} of {count}")
@@ -4482,10 +4483,17 @@ class AppContext:
 
         def files() -> None:
             root, found["missing_files"] = str(self.settings.root), 0
-            for n, name in enumerate(self.db.evidence_stored()):  # 100,000 records: seconds, so the UI gets turns
+            # 100,000 records: seconds of work, so it rests most of the time and the window the user just opened gets
+            # the processor: its page switches keep to 300 ms meanwhile (REQ-SET-020). perf_counter, not monotonic,
+            # which ticks every 15.6 ms on Windows; a closing context stops it at its next rest.
+            until = time.perf_counter() + CHECK_WORK_S
+            for name in self.db.evidence_stored():
                 found["missing_files"] += not os.path.isfile(os.path.join(root, name))
-                if n % 100 == 99:
-                    time.sleep(0.002)
+                if time.perf_counter() >= until:
+                    if self._stopping.wait(CHECK_REST_S):
+                        found["stopped"] = True
+                        return
+                    until = time.perf_counter() + CHECK_WORK_S
             if found["missing_files"]:
                 self._check_alarm("WARN", "AOI-SET-022", count=found["missing_files"])
             found["temp_files_left"] = self._temp_left
