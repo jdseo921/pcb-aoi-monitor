@@ -933,7 +933,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+193"/>
+        <location filename="../core/services.py" line="+194"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1018,12 +1018,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2489"/>
+        <location line="+2494"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2458"/>
+        <location line="-2463"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1048,7 +1048,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+84"/>
+        <location line="+89"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1275,14 +1275,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4721"/>
-        <location line="+3425"/>
+        <location line="-4726"/>
+        <location line="+3430"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3514"/>
+        <location line="-3519"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1392,7 +1392,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1040"/>
+        <location line="+1045"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4176"/>
+        <location line="-4181"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1639,7 +1639,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1459"/>
+        <location line="+1464"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1751,7 +1751,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4603"/>
+        <location line="-4608"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4522,7 +4522,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3667"/>
+        <location filename="../core/services.py" line="+3672"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -7862,6 +7862,41 @@
         <source>Draw ROIs on the Golden board · zoom with the wheel · double-click to fit</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location filename="../core/cycle.py" line="+26"/>
+        <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI model {version} of {board_model} is not active: only the Golden board comparison runs. An Engineer activates it with Activate {version}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>The AI model, recipe, scale or Golden board changed during this run: {file} was judged with AI model {version}, recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>The recipe, scale or Golden board changed during this run: {file} was judged with the AI check off, recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>no scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>a scale of {scale:.2f} px/mm</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>Profile3DPage</name>
@@ -9663,7 +9698,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3751"/>
+        <location filename="../core/services.py" line="-3756"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

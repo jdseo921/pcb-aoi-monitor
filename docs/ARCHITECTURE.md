@@ -91,6 +91,11 @@ no Qt import under `aoi/core` or `aoi/data`, and under `aoi/ui` no `sqlite3`, `a
 second test fails a screen module that holds one of them once imported (#202). `aoi/times.py`, `aoi/errors.py`,
 `aoi/config.py` and `aoi/defects.py` are shared by every layer.
 
+The inspection cycle (#447), `aoi/core/cycle.py`'s `InspectionCycle` from `AppContext.inspection_cycle()`, takes a board
+from its frame to its saved record with the engine it keeps while current, and stores the run's operational alarms.
+A screen runs `board()` on the pool thread and `settle()` on the UI thread; a driver with no screen calls
+`run(board_model, source)` with a frame source whose `grab()` gives `(frame, FrameMeta)` or None.
+
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
 and `aoi/hal` too, and since S56 on `aoi/selftest.py`, with no flag relaxed (`pyproject.toml`). PySide6 enums are
 written in full (`Qt.AlignmentFlag.AlignCenter`), pages take `QT_TRANSLATE_NOOP` from `aoi/ui/pages/base.py` (Qt's is

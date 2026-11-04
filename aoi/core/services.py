@@ -69,6 +69,7 @@ from . import (
     tuning,
 )
 from .compare import Region, changed_regions
+from .cycle import InspectionCycle
 from .imaging import (
     align_to_reference,
     encode_image,
@@ -2004,6 +2005,11 @@ class AppContext:
         latest = self.db.latest_recipe(board_model)
         model, recipe = str(active["uuid"]) if active else None, latest[2] if latest else None
         return model, recipe, self.db.reference(board_model), self.db.scale(board_model)
+
+    def inspection_cycle(self) -> InspectionCycle:
+        """A new inspection cycle on this context (#447): how the Inspection page, or a driver with no screen, takes a
+        board from its frame to its saved record, keeping the engine while it is what is active."""
+        return InspectionCycle(self)
 
     def inspect(
         self,

@@ -48,7 +48,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | in review: D.1a the hash, its rules and migration 0029 (#439); D.1b sign-in with a password and the dialog (`feat/REQ-USR-002-passwords`) |
 | D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | in review: D.2a lockout and Unlock User (#441); D.2b the PIN and the idle end (`feat/REQ-USR-003-pin-idle`) |
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin (`feat/REQ-USR-005-recovery-sign-in`) |
-| E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | issue (to open) | planned |
+| E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | #447 | in review |
 | E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | planned |
 | E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | planned |
 | F.1 | Korean for the operator: `QTranslator`, `.qm` shipped, operator path translated | REQ-SET-006 (operator scope) | planned |
@@ -163,6 +163,11 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-02: after train D, Jay said "Keep going"; Prompt 6 waits for train D's merge and the factory's file-naming
   contract. `ci/REQ-SET-020-windows-test-time`: the Windows test job may run 120 minutes (Linux keeps 75), as the 75-minute
   limit stopped the Windows jobs of #442 to #445 with no test failed (#444's suite at 91 % after 73 minutes).
+- 2026-11-03: Jay said "Merge and proceed": #446, then #439 to #445, merged (`main` merged up the stack for the progress
+  file). Prompt 6 started: Jay confirmed D9 and D10 as written (ADR 0024); E.2 waits for the factory's file-naming
+  contract. E.1
+  is two PRs (#447): E.1a `refactor/447-inspection-cycle`, `aoi/core/cycle.py`'s `InspectionCycle` with a headless test
+  against the page's records; E.1b `refactor/447-inspection-page`, the Inspection page as its driver.
 - 2026-11-03: #448's Windows check twice put Inspection's first opening at the 300 ms budget (REQ-SET-020), as on
   `main`; Jay chose to fix it first: `perf/REQ-SET-020-inspection-first-open` rests the start-up self-check and fills
   the alarm list in one step, the 2026-11-04 train, before train E is merged.
