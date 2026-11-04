@@ -17,12 +17,13 @@ from pathlib import Path
 import pytest
 from pytestqt.qtbot import QtBot
 
+from aoi.core.cycle import Outcome
 from aoi.core.inspector import InspectionResult
 from aoi.core.jobs import Jobs
 from aoi.core.services import AppContext
 from aoi.ui.pages import model_test
 from aoi.ui.pages.compare import ComparePage
-from aoi.ui.pages.inspection import InspectionPage, Outcome
+from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.workers import Worker, _live
 from tests.conftest import collector_off
@@ -109,7 +110,7 @@ def test_issue_132_inspection_keeps_only_the_board_it_shows(
     show = page._on_result
 
     def spy(out: Outcome) -> None:
-        seen.append(weakref.ref(out[1]))
+        seen.append(weakref.ref(out.result))
         show(out)
 
     monkeypatch.setattr(page, "_on_result", spy)

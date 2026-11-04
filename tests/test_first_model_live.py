@@ -207,7 +207,7 @@ def test_req_trn_010_inspection_names_a_version_that_is_not_active_and_offers_ac
     entry = ctx.audit_entries(action="model.activate")[0]
     assert (entry["object_uuid"], entry["role"], entry["reason"]) == (uid, "Engineer", None)
     judge(oks[1])
-    assert page.inspector is not None and page.inspector.model_version == "v1.1"
+    assert page.cycle.engine is not None and page.cycle.engine.model_version == "v1.1"
 
 
 def test_req_trn_010_home_ai_model_test_and_compare_name_a_version_that_is_not_active(
