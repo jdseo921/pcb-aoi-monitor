@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 from aoi.config import Settings
-from aoi.core import heartbeat
+from aoi.core import heartbeat, services
 from aoi.core.services import AppContext
 from aoi.data import atomic, credentials
 from aoi.data.db import Database
@@ -98,4 +99,32 @@ def test_req_set_024_a_check_that_fails_is_logged_and_the_others_still_run(
         assert found["failed"] == ["database"] and found["missing_files"] == 0 and found["free_bytes"] > 0
         assert "self_check.step_failed" in [r["event"] for r in log_rows(ws / "logs")]
     finally:
+        ctx.close()
+
+
+def test_req_set_020_the_file_step_rests_between_slices_and_stops_on_close(
+    tmp_path: Path, tiny_model: TrainedModel, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The self-check's file step rests CHECK_REST_S after each CHECK_WORK_S of work, so a window just opened keeps its
+    page switches to 300 ms (REQ-SET-020); a context closing meanwhile stops it at its next rest."""
+    ws = restored(tiny_model, tmp_path / "ws")
+    before, ctx = done(ws), AppContext(Settings(workspace=str(ws), device="cpu"))
+    read: list[str] = []
+
+    def names() -> Iterator[str]:
+        for n in range(1000):
+            read.append(f"gone/{n}.png")
+            yield read[-1]
+
+    try:
+        started(ctx, before)
+        monkeypatch.setattr(ctx.db, "evidence_stored", names)
+        monkeypatch.setattr(services, "CHECK_WORK_S", 0.0)  # a rest after every file
+        rests: list[float] = []
+        monkeypatch.setattr(ctx._stopping, "wait", lambda s: rests.append(s) or len(rests) == 3)  # closing at the third
+        found = ctx.self_check()
+        assert rests == [services.CHECK_REST_S] * 3 and len(read) == 3 and found["stopped"]
+        assert "files" not in found["failed"] and checks(ctx) == []  # stopped is no failure, and no alarm
+    finally:
+        monkeypatch.undo()
         ctx.close()

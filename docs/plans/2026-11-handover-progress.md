@@ -168,3 +168,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   contract. E.1
   is two PRs (#447): E.1a `refactor/447-inspection-cycle`, `aoi/core/cycle.py`'s `InspectionCycle` with a headless test
   against the page's records; E.1b `refactor/447-inspection-page`, the Inspection page as its driver.
+- 2026-11-03: #448's Windows check twice put Inspection's first opening at the 300 ms budget (REQ-SET-020), as on
+  `main`; Jay chose to fix it first: `perf/REQ-SET-020-inspection-first-open` rests the start-up self-check and fills
+  the alarm list in one step, the 2026-11-04 train, before train E is merged.
