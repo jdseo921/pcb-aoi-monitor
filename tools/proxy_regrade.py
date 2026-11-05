@@ -22,8 +22,14 @@ if str(ROOT) not in sys.path:  # run as a script: the repository root holds the 
 FLAGS = ("NG", "WARN")
 
 
+NO_CHECKS = "no checks"  # a record with no stored check: the engine never gives a verdict on none (AOI-INSP-010)
+
+
 def by_checks(results: list[str]) -> str:
-    """The verdict the checks alone give: NG on any NG, else WARN on any WARN, else OK (an INFO check is neither)."""
+    """The verdict the checks alone give, as step 5 of `Inspector` before its region rule: NG on any NG, else WARN on
+    any WARN, else OK (an INFO check is neither); NO_CHECKS for none, which is never counted as OK."""
+    if not results:
+        return NO_CHECKS
     return "NG" if "NG" in results else "WARN" if "WARN" in results else "OK"
 
 
@@ -36,7 +42,8 @@ def label_of(image_path: str) -> str:
 
 def quantiles(values: list[float]) -> dict[str, float | None]:
     v = sorted(values)
-    return {f"p{q}": (v[int(q / 100 * (len(v) - 1) + 0.5)] if v else None) for q in (5, 50, 95)}  # nearest rank
+    # the value at the rounded position q/100·(n−1), not interpolated: each quantile is a score a board had
+    return {f"p{q}": (v[int(q / 100 * (len(v) - 1) + 0.5)] if v else None) for q in (5, 50, 95)}
 
 
 def regrade(records: list[dict[str, Any]], checks: dict[int, list[dict[str, Any]]]) -> dict[str, Any]:
@@ -49,7 +56,7 @@ def regrade(records: list[dict[str, Any]], checks: dict[int, list[dict[str, Any]
         results = [c["result"] for c in checks.get(r["id"], [])]
         got["stored"][r["result"]] += 1
         got["by_checks"][by_checks(results)] += 1
-        got["warn_by_regions_alone"] += r["result"] == "WARN" and not any(x in FLAGS for x in results)
+        got["warn_by_regions_alone"] += r["result"] == "WARN" and bool(results) and not any(x in FLAGS for x in results)
         got["ai"] += [float(c["value"]) for c in checks.get(r["id"], []) if c["metric"] == "AI anomaly score"]
     for model in out.values():
         for g in model.values():
