@@ -178,3 +178,10 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   and the regression set is unchanged. Two program defects opened, not fixed: #453 (on VisA photos the default
   golden-board comparison calls every good board NG and the shift check stops the line) and #454 (the AI image
   threshold follows the highest calibration OK score). Four PRs, one train, stacked on `main`.
+- 2026-11-05: #459 (REQ-TST-008, test only, Jay's request, phase 2 of #452): eleven industry scenarios on VisA, each on
+  a station as shipped and as commissioned with the app's own features, recorded in
+  `docs/tests/2026-11-05-stage1-industry-scenarios.md`, with `tools/proxy_scenarios.py`; nothing under `aoi/` changed
+  and the regression set is unchanged. Neither configuration could replace inspectors: as commissioned, the rule that
+  a non-Minor difference region makes a board WARN still flags every good board. Opened, not fixed: #460 to #462 (the
+  three ranked changes), #463 to #467 (defects), #468 (commissioning steps the app lacks, for Jay). Nine PRs, one
+  train, stacked on `test/452-proxy-record`.
