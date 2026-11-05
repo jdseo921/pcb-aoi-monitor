@@ -8,7 +8,8 @@ byte-identical to `b5bf413`.
 
 **Jay's approval, verbatim:** "Jay approved on 2026-11-04 the use of the public datasets named in this record for
 internal Stage 1 testing only. No image, box, mask or trained model from them enters the repository or ships, and no
-result from them is quoted as accuracy." Jay's request of 2026-11-05 says this approval covers phase 2.
+result from them is quoted as accuracy." Jay's request of 2026-11-05, verbatim: "Same rules as phase 1: my approval of
+2026-11-04 covers this."
 
 Every number below is a count from an internal test on someone else's boards, never an accuracy claim. Each bound is
 the one-sided 95 % Clopper-Pearson upper bound (`upper_95` in `tools/dataset_check.py`). Where boards repeat (a
@@ -22,9 +23,10 @@ per-arrival bound would claim more evidence than there is.
   board every 10 s, and first-pass yield is 0. It also stops before the first board: the shift check fails on its
   known-OK master sample (#453). Being NG on every defective board says nothing when every board is NG.
 - **As commissioned, could it?** No, though for a different reason. Commissioning fixed most of the comparison's
-  limits; graded again from the stored checks, 864 of 1,000 good boards pass every check. But the engine makes any
-  board with a difference region that is not Minor WARN (REQ-INSP-015, `aoi/core/inspector.py` step 5), so 0 of
-  1,000 were OK (941 WARN, 59 NG). The shift check still fails, now with its OK master sample WARN.
+  limits; graded again from the stored checks (a what-if, not verdicts the app gave), 864 of 1,000 good boards pass
+  every check. But the engine makes any board with a difference region that is not Minor WARN (REQ-INSP-015,
+  `aoi/core/inspector.py` step 5), so 0 of 1,000 were OK (941 WARN, 59 NG). The shift check still fails, now with its OK
+  master sample WARN.
 - **Which scenarios fail, and why?**
 
   | Scenario | Shipped | Commissioned |
@@ -36,10 +38,10 @@ per-arrival bound would claim more evidence than there is.
   | S5 legitimate variation | Fails: 250 of 250 flagged | Fails: 250 of 250 flagged; no don't-care regions |
   | S6 few NG samples | The threshold never moves (18.50) | The threshold never moves (17.69); 3 NG gave 2 good OK |
   | S7 repeatability | Holds: 0 of 60 boards flip | 3 of 30 good and 11 of 30 defective flip NG/WARN |
-  | S8 changeover | Holds: wrong model never OK; 1,256 s to a new model | Holds; 499 s; 24 actions on 4 screens either way |
+  | S8 changeover | Holds: wrong model never OK; 1,256 s to a new model; 1 of 30 revision defects off its mask | Holds: wrong model never OK; 499 s; 2 of 30 revision defects off their masks |
   | S9 line rate | Keeps up; one record and file each; 1.5 GB of evidence an hour, an alert a board | Keeps up; the same disk use; the burst queues up to 2 s |
-  | S10 faults | Result files lost for an outage (#465); orphaned evidence after a kill (#466) | A board stored twice after a kill (#466) |
-  | S11 review loop | False calls do not fall; the gate accepts a worse model | The same |
+  | S10 faults | Result files lost for an outage (#465); orphaned evidence after a kill (#466) | Result files lost for an outage (#465); a board stored twice after a kill (#466) |
+  | S11 review loop | False calls do not fall; a model trained with 5 defects labelled good goes live, as the gate is not built | The same |
 
 - **Are #453 and #454 in the defaults or in the engine?** Both lie in the engine.
   - #453: commissioning, with the app's own tools, moves the comparison's checks to OK on most good boards, but the
@@ -49,8 +51,9 @@ per-arrival bound would claim more evidence than there is.
     boards (S6). The only way round it is to type another threshold into the recipe, from scores no screen shows.
 - **The three code changes that would do most, ranked by expected effect:**
   1. **#460:** judge each difference region against good-board variation, behind an image-quality gate, instead of
-     "any non-Minor region is WARN". The regrade shows it is the step between 0 and 864 of 1,000 good boards OK on a
-     commissioned station; alone it would pass 20 of 120 defective boards, hence per-region tolerance and the gate.
+     "any non-Minor region is WARN". What-if: with the rule removed outright, 864 of 1,000 good boards on a
+     commissioned station would be OK instead of 0, an upper estimate of what #460 could gain; but 20 of 120 defective
+     boards would then pass, hence a per-region tolerance and the gate rather than no rule.
   2. **#461:** a statistical Golden board (per-pixel mean and tolerance from many good boards) instead of one image.
      A good board's SSIM against the chosen Golden board is 0.47 at the median on pcb1, below an empty conveyor's 0.54.
   3. **#462:** the AI threshold from the held-out scores, shown with what it passes and flags. The calibrated one
@@ -116,14 +119,16 @@ each pool used up before a board comes again; a third run judged the 1 % shift b
 
 In the line's terms, the 1 % shift on pcb1, both configurations: 0 escapes of 20 defective arrivals (distinct boards:
 0 of 20, upper 13.9 %), 1,980 false calls of 1,980 good arrivals (distinct: 250 of 250), first-pass yield 0, and 360
-re-checks an hour at one board every 10 s. The 0.2 % shift is the same with 4 defective (upper 52.7 %). On pcb4 as
-commissioned, 1 of 20 defective arrivals escaped (distinct upper 21.6 %). pcb2 and pcb3 gave the same line counts as
+re-checks an hour at one board every 10 s. In parts per million: 0 escapes, upper 1,497 ppm per arrival (an
+optimistic bound, as the 20 defective arrivals are only 20 boards). The 0.2 % shift is the same with 4 defective
+(upper 52.7 %). On pcb4 as commissioned, 1 of 20 defective arrivals escaped at 1 % (500 ppm, upper 2,370 ppm; distinct
+upper 21.6 %) and 1 of 4 at 0.2 % (upper 75.1 %). pcb2 and pcb3 gave the same line counts as
 pcb1. The board-by-board run gave the same verdict as the batch run on 2,000 of 2,000 arrivals. 1,730 arrivals reuse
 a board already seen.
 
 Regrade, commissioned (what-if): 234, 183, 221 and 226 of 250 good boards would be OK on the checks alone, and 12, 1,
-6 and 1 of 30 defective boards would pass. Where the commissioned good boards are NG, the AI check is the cause in
-3 of 4 (pcb1), 27 of 31 (pcb2), 9 of 13 (pcb3) and 10 of 11 (pcb4).
+6 and 1 of 30 defective boards would pass. Where the commissioned good boards are NG, the AI check is NG in 3 of 4
+(pcb1), 27 of 31 (pcb2), 9 of 13 (pcb3) and 10 of 11 (pcb4), and the only NG check in 2, 27, 8 and 10 of them.
 
 ## S2 A shift's slow drift
 
@@ -134,8 +139,10 @@ The 1 % pcb1 shift again, while the camera drifts in smooth ramps to its worst a
 - **The drift monitor (REQ-INSP-019):** shipped, 0 alarms in 2,000 boards. Commissioned, 1 alarm, at board 1,544
   ("10 of the last 50 boards called NG; 5.4 % of the 500 before"), from 97 NG among 1,980 good boards; the WARN rate
   never alarmed at 1,883 of 1,980, and the OK-score measure had no OK board to watch (#464).
-- **The shift check** at board 0 (the 12 h check, at the start) and at board 1,440 (4 h at 10 s) failed on both
-  stations, as it fails before any drift. It judges stored files (ADR 0014), so it could not see camera drift anyway.
+- **The shift check** was off (hours 0), as on every scenario. Its master samples were judged at board 0 (the 12 h
+  check, at the start), 1,440 (4 h at 10 s) and 2,000: each time the OK sample came out NG (shipped) or WARN
+  (commissioned), so the check would have failed at every point, before any drift. It judges stored files (ADR 0014),
+  so it could not see camera drift anyway.
 - Regrade, commissioned: 1,821 of 1,980 good arrivals OK on the checks alone, 12 of 20 defective arrivals passing.
 
 ## S3 Board placement
@@ -149,8 +156,9 @@ The 1 % pcb1 shift again, while the camera drifts in smooth ramps to its worst a
 | Alignment failures / OK | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | Inliers (min to max) | 176 to 282 | 161 to 281 | 258 to 287 | 262 to 297 |
 
-No backwards board was OK. The alignment's homography turns a backwards board round, so it is judged like a placed
-one and nothing says it was turned; whether a backwards board should be refused instead is the line's decision.
+No backwards board was OK (0 of 33; upper 8.7 %), and 0 of 10 backwards defective boards escaped (upper 25.9 %).
+The alignment's homography turns a backwards board round, so it is judged like a placed one and nothing says it was
+turned; whether a backwards board should be refused instead is the line's decision.
 1 of 30 placed defective boards was an escape in both (flagged, but not on its defect; upper 14.9 %).
 
 ## S4 Bad images, fail-safe
@@ -166,7 +174,8 @@ Five of each case, mixed into a pcb1 run. **No case came out OK in either config
 | Truncated file | refused, AOI-INSP-006 | refused, AOI-INSP-006 |
 | Zero-byte file | refused, AOI-INSP-004 | refused, AOI-INSP-004 |
 
-The empty conveyor and the much smaller image had 0 inliers, yet were judged and stored as NG boards with their
+Each case is 5 arrivals, some of fewer distinct images (the five empty-conveyor frames are one image), so no bound is
+quoted. The empty conveyor and the much smaller image had 0 inliers, yet were judged and stored as NG boards with their
 defects (#463). On the empty conveyor the commissioned station's SSIM (0.54) and AI checks passed; only changed area
 (90.8 %) made it NG. The blurred frames were WARN only through the region rule: their stored checks are all OK, so
 #460 needs the image-quality gate first.
@@ -186,7 +195,8 @@ code, solder sheen (local brightness), and unchanged.
 
 Every board of every kind was a false call (upper on the OK share 5.8 % per kind). As commissioned these must stay OK;
 they cannot, since even the unchanged boards are WARN, and a label or lot code cannot be left out without
-don't-care regions (#468). Regrade: 156 of 250 would be OK on the checks alone; the label and lot code stay NG.
+don't-care regions (#468). Regrade: 156 of 250 would be OK on the checks alone; the 86 NG boards (50 label, 23 lot
+code, 13 colour) stay NG.
 
 ## S6 Few defect samples
 
@@ -220,7 +230,10 @@ that changes between shots of the same board, and 14 of 60 commissioned boards d
 ## S8 New product and changeover
 
 Mid-shift the line changes from pcb1 to pcb2 and back; then a pcb1 revision (a part added at a fixed place) arrives as
-a new board model with 70 good images.
+a new board model with 70 good and 10 defective images; the guide held out 50 good and 3 defective and trained on 20
+and 7. The boards judged after each changeover were never imported (for PCB1R2: 50 more revised good boards). Escapes
+count a flagged defective board with no flagged region on its defect; under the wrong board model the mask cannot be
+registered onto a meaningful Golden board, so those counts say little.
 
 | Step | Shipped | Commissioned |
 |---|---|---|
@@ -230,8 +243,9 @@ a new board model with 70 good images.
 | Revision boards with PCB1 selected | all NG | all NG |
 | Changed over to PCB1R2 (50 good, 30 defective) | all NG | good 50 WARN; defective 24 WARN, 6 NG |
 | PCB1 boards with PCB1R2 selected by mistake | all NG | good 20 WARN; defective 8 WARN, 2 NG |
+| Escapes of defective boards | 1 of 30 after the changeover to PCB1R2 (upper 14.9 %); 0 of 10 in every other step | 2 of 10 with PCB1 picked for pcb2 (upper 50.7 %); 2 of 30 after the changeover to PCB1R2 (upper 19.5 %); 0 of 10 elsewhere |
 | Time from first image to a working PCB2 / PCB1R2 | 1,256 s / 826 s | 499 s / 293 s |
-| Actions | 24 on 4 screens (the guide's path, `tests/test_guide_click_count.py`) plus the commissioning steps |
+| Actions | 24 on 4 screens (the guide's path, as `tests/test_guide_click_count.py` counts it; not counted in the run) | the same, plus the four commissioning steps above |
 | First verdict after a changeover | 0.6 to 1.2 s | 0.6 to 1.9 s |
 
 The wrong board model was never OK. Most of each time is training on CPU, and the two runs were under different load,
@@ -256,13 +270,15 @@ result files on, the two configurations at once on the 4-core machine (load aver
 | One record, one JSON, one CSV and one shift-file row per board | 1,540 of 1,540, none twice, none without a record | the same |
 | Alerts (`logs/alerts.jsonl`) | AOI-INSP-003 for each of 1,540 NG boards; AOI-LOG-006 once | AOI-INSP-003 32; AOI-LOG-006 once |
 
-- **Time:** both stations kept up with the line at 10 s, but no board met the 1 s verdict budget (REQ-INSP-007) on
-  this loaded CPU. That is a fact about this machine under load, not about the station's PC; it is not a budget test.
+- **Time:** both stations kept up with the line at 10 s. The engine's verdict came within 1 s (REQ-INSP-007) for 492
+  of 1,540 shipped and 117 of 1,540 commissioned boards (fastest 0.21 and 0.50 s); with the save the p50 was 1.41 and
+  2.22 s. That is this machine under load, not the station's PC: it is not a budget test.
 - **Disk is the limit.** With every board flagged, each keeps its full evidence: about 1.5 GB an hour, 6.6 GB in
   4.1 h, so a 24-hour line fills about 37 GB a day. Both stations raised AOI-LOG-006 when the drive (shared with the
   other runs) crossed 95 %. Retention had not been confirmed by an Admin, so its sweep at the end removed nothing; with
   no OK board there were no OK maps to remove anyway. Fixing the false calls (#460) is what makes the disk last.
-- **Heartbeat:** written every minute to the end; its last hour counted 432 boards (431 commissioned) and 0 false
+- **Heartbeat:** current at the end of the run (12:26:26, a second after the last board; the app writes it every 60 s,
+  `heartbeat.BEAT_EVERY_S`); its last hour counted 432 boards (431 commissioned) and 0 false
   calls, as no one reviewed. Its `ng` counts NG only (13 commissioned), so a station that flags every board WARN looks
   healthy there.
 - **Alerts:** shipped, one NG alert a board, 1,540 in 4.1 h: an alarm list an operator would stop reading.
@@ -286,7 +302,9 @@ Run on its own pcb1 station rather than during S9, so that S9's times stay clean
   | Commissioned | 31 | 0 | 1 (the 0.2 s kill) | 0 | 1.4 to 1.8 s / 2.9 to 4.1 s |
 
   The operator is not told which board was saved last, so re-presenting the board in hand stores it twice when it
-  had been saved (#466). The heartbeat's unclean-start marker is only logged.
+  had been saved (#466). The unclean start is only logged (`app.not_closed_cleanly`, `aoi/core/services.py`,
+  `_mark_running`); after the restart the alarm list showed only the usual ones: AOI-LOG-005 or -006 for the drive and
+  AOI-INSP-003 for each flagged board.
 
 ## S11 The operator's review loop
 
@@ -297,13 +315,15 @@ other 15 defective boards.
 
 | Version | Locked-set AI Model Test | False calls | Escapes, shipped | Escapes, commissioned |
 |---|---|---|---|---|
-| v1.0 (before) | TP 30, FN 0, FP 50, TN 0 | 100 of 100 | 0 of 15 | 0 of 15 |
+| v1.0 (before) | TP 30, FN 0, FP 50, TN 0 | 100 of 100 | 0 of 15 (upper 18.1 %) | 0 of 15 (upper 18.1 %) |
 | v1.1 (+100 false calls as good) | the same | 100 of 100 | 0 of 15 | 1 of 15 (upper 27.9 %) |
 | v1.2 (+5 defects as good) | the same | 100 of 100 | 1 of 15 (upper 27.9 %) | 1 of 15 |
 
 False calls did not fall, since the comparison and the region rule flag every good board whatever the AI model learns.
-Both new versions were activated: the go-live gate's comparison with the live version is not built yet (REQ-TRN-012,
-Partial, release 1.0), and the AI Model Test cannot tell the versions apart when every good board is NG.
+Both new versions were activated, including the one trained with 5 defects labelled good: the go-live gate's
+comparison with the live version is not built yet (REQ-TRN-012, Partial, release 1.0), and the AI Model Test cannot
+tell the versions apart when every good board is NG. 1 of 15 against 0 of 15 escapes cannot show whether either new
+version is worse; on the commissioned station the escape came already with v1.1, which added only false calls.
 
 ## Reproduce
 
