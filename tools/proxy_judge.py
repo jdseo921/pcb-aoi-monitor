@@ -1,7 +1,8 @@
 """Boards put through a station of tools/proxy_station.py the way the line does it, for the scenarios of #459:
 `judge` hands frames, read from file or changed in memory (tools/proxy_frames.py), to `InspectionCycle.run`, one row
-per board with its verdict, whether a defect box lies on its defect, its checks and its times. A refusal ends a run on
-the page, so the next frame starts a new run; a refusal before any frame is taken refuses every board left.
+per board with its verdict, whether a defect box lies on its defect, its checks and its times. The mask is registered
+onto the Golden board again, the way the engine registers a board, from the frame the tool holds. A refusal ends a run
+on the page, so the next frame starts a new run; a refusal before any frame is taken refuses every board left.
 """
 
 from __future__ import annotations
@@ -53,37 +54,56 @@ def judge(
     src: Frames | None = None,
 ) -> list[dict[str, Any]]:
     """Each item through `InspectionCycle.run`, one row per item in order: its verdict, whether a defect box lies on
-    its defect (moved onto the Golden board as the engine aligned it), the AI score, times, and the refusal that
-    ended a run, if one did, after which the next item starts a new run. A `cycle` given is the page's own, kept
-    across board models as a changeover keeps it; a `src` given replaces the frames made from `items`."""
+    its defect (the mask registered onto the Golden board the way the engine registers a board), the AI score, times,
+    and the refusal that ended a run, if one did, after which the next item starts a new run. Only the cycle's own
+    refusal is caught: an error in the tool's bookkeeping or in `on_board` stops the run loudly. A `cycle` given is
+    the page's own, kept across board models as a changeover keeps it; a `src` given replaces the frames made from
+    `items`."""
     src, rows = src or Frames(items), list[dict[str, Any]]()
     cycle = cycle or ctx.inspection_cycle()
     while src.todo:
-        try:
-            for out in cycle.run(bm, src):
-                rows.append(row(out, src.given.pop(0)))
-                if on_board is not None:
-                    on_board(len(rows) - 1, rows[-1])
-        except AoiError as e:  # a save that failed ends the run without one, as on the page
-            if not src.given:  # refused before a frame was taken (AOI-INSP-016): no board goes, each is a row
-                rows += [refused(b, tag, e, taken=False) for b, _, tag in src.todo]
+        run = cycle.run(bm, src)
+        while True:
+            try:
+                out = next(run, None)
+            except AoiError as e:  # a refused frame (AOI-INSP-006, -010, -011 …) ends the run, as on the page
+                if not src.given:  # refused before a frame was taken (AOI-INSP-016): no board goes, each is a row
+                    rows += [refused(b, tag, e, taken=False) for b, _, tag in src.todo]
+                    src.todo.clear()
+                else:
+                    (b, _, tag), *_ = src.given.pop(0)
+                    rows.append(refused(b, tag, e))
                 break
-            (b, _, tag), *_ = src.given.pop(0)
-            rows.append(refused(b, tag, e))
+            if out is None:  # the run ended: no frame left, or a failed save ended it as the page does
+                break
+            rows.append(row(out, src.given.pop(0)))
+            if on_board is not None:
+                on_board(len(rows) - 1, rows[-1])
     return rows
 
 
 def refused(b: Board, tag: str, e: AoiError, taken: bool = True) -> dict[str, Any]:
-    """The row of a board refused with `e`: no verdict, so never OK and no escape; `taken` False when no frame was."""
-    return {"board": b.path.name, "tag": tag, "label": b.label, "verdict": None, "refused": code_of(e), "taken": taken}
+    """The row of a board refused with `e`: no verdict, so never OK and no escape; `taken` False when no frame was.
+    It has every key a judged row has, so a reader never meets a missing one."""
+    out = dict.fromkeys(("kind", "found", "ai", "checks", "ms", "wall_ms", "record_id", "save_error"))
+    return out | {
+        "board": b.path.name,
+        "tag": tag,
+        "label": b.label,
+        "verdict": None,
+        "refused": code_of(e),
+        "taken": taken,
+    }
 
 
 def row(out: Any, given: tuple[Item, np.ndarray | None, np.ndarray | None, float]) -> dict[str, Any]:
     wall = time.perf_counter()
     (b, _, tag), img, mask, t0 = given
     res, ref = out.result, out.engine.reference
-    hit = True
-    if mask is not None and ref is not None:
+    hit = True  # no mask (a good board, or a file only the app can read): nothing to find
+    if mask is not None and ref is None:  # no Golden board: the engine judges the image as it came
+        hit = found([(d.x, d.y, d.w, d.h) for d in res.defects], mask > 127)
+    elif mask is not None and ref is not None:
         h, _ = registration(img, ref, fine=out.engine.recipe.fine_alignment is True)
         size = (ref.shape[1], ref.shape[0])
         moved = (
@@ -106,4 +126,6 @@ def row(out: Any, given: tuple[Item, np.ndarray | None, np.ndarray | None, float
         "wall_ms": round((wall - t0) * 1000, 1),
         "record_id": out.record_id,
         "save_error": str(out.save_error) if out.save_error else None,
+        "refused": None,
+        "taken": True,
     }
