@@ -28,7 +28,8 @@ role its step needs. The Export card names where the PDF reports are: on AI Mode
 
 **Grey buttons.** A button your role may not use stays in its place, greyed. Point at it, or press it on a touch
 screen, and the tooltip or the status bar at the bottom says which role it needs; a page with nothing listed yet also
-says what your role cannot do there.
+says what your role cannot do there. A button greyed because there is nothing for it
+yet, such as Real defect before an NG board or Stop before a run, says the same way what turns it on.
 
 **The board model.** The **Board model** box at the left of the header names the board model the boards are judged as,
 on every page. When the app starts it shows the first board model by name, so pick the one of the boards on the line

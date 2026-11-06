@@ -41,6 +41,7 @@ from ..widgets.image_view import ImageView
 from ..workers import Worker, start
 from .base import (
     QT_TRANSLATE_NOOP,
+    OffSays,
     Page,
     WrappedLine,
     button,
@@ -209,6 +210,7 @@ class LogsPage(Page):
         self.btn_train = size_class(button(self.tr("Add to Training as OK"), slot=self.add_to_training), "T")
         line.addWidget(self.btn_train)
         self.btn_compare = size_class(button(self.tr("Open in Compare ›"), slot=self.open_in_compare), "T")
+        OffSays(self.btn_compare, self.tr("Select a record in the table first."), shell.status)  # usability sweep, M1
         line.addWidget(self.btn_compare)
         self.root.addLayout(line)
         b = FlowLayout(gap=theme.ROW_GAP, right=True)  # at the page's right, on two lines where it is narrow (#104)

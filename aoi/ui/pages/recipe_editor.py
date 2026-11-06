@@ -41,7 +41,7 @@ from ..widgets.busy import BusyOverlay
 from ..widgets.empty_state import EmptyState
 from ..widgets.reflow import SideSplit
 from ..widgets.scale import CalibrationSheet, DefectSizeField
-from .base import QT_TRANSLATE_NOOP, Page, action_button, button, fill_table, make_table, scrolled
+from .base import QT_TRANSLATE_NOOP, OffSays, Page, action_button, button, fill_table, make_table, scrolled
 from .compare import check_rows
 from .recipe_learn import LearnSheet
 from .recipe_save import COPPER_SHOWN, RevisionPane, SaveSheet
@@ -177,6 +177,9 @@ class RecipeEditorPage(Page):
         self.delete_btn = button(self.tr("Delete"), "danger", self.delete_roi)  # red, last, never the default; off too
         row.addWidget(self.delete_btn)
         f.addRow(row)
+        pick = self.tr("Select an ROI in the table, or draw one with Draw ROI.")
+        for off in (self.apply_btn, self.delete_btn):  # greyed with what turns them on (usability sweep, M1)
+            OffSays(off, pick, shell.status)
         rl.addWidget(g)
         self._select_roi()  # none yet: the empty form, as after a Delete
         tabs.addTab(roi_tab, self.tr("ROIs"))
@@ -507,6 +510,10 @@ class RecipeEditorPage(Page):
         i = self._sel_index()
         self.apply_btn.setEnabled(i >= 0)
         self.delete_btn.setEnabled(i >= 0)
+        spins = (self.r_hmin, self.r_hmax, self.r_vmin, self.r_vmax)
+        fields = (self.r_name, self.r_type, self.r_ai, *spins, self.r_enabled)
+        for w in fields:
+            w.setEnabled(i >= 0)  # none selected: nothing to edit, so no field takes a value Apply never uses (M4)
         rois = self.edited_recipe.rois if i >= 0 else []
         x = rois[i] if i >= 0 else ROI("", "", ai_score=0, enabled=False)  # none selected: an empty form, no stale ROI
         self.r_name.setText(x.name)

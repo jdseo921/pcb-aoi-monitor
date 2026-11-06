@@ -185,3 +185,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   a non-Minor difference region makes a board WARN still flags every good board. Opened, not fixed: #460 to #462 (the
   three ranked changes), #463 to #467 (defects), #468 (commissioning steps the app lacks, for Jay). Nine PRs, one
   train, stacked on `test/452-proxy-record`.
+- 2026-11-06: usability sweep (project report `reports/2026-11-06-usability-sweep.md`); Jay chose "Yes, one small
+  fix PR" for its five low-risk findings: `fix/usability-sweep-low-risk` (greyed buttons say why, Switch User hints,
+  the Recipe Editor's ROI form, the status line of a refused page). Its high findings wait for Jay's decisions.

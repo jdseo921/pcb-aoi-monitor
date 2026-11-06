@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QLineEdit
 from ..core import passwords
 from ..errors import AoiError
 from . import theme
-from .errors import show_error
+from .errors import phrase_text, show_error
 from .pages.base import button, role_text, size_class
 
 if TYPE_CHECKING:
@@ -92,10 +92,12 @@ class SignInDialog(QDialog):
         user, needs = self.chosen(), self.needs()
         pin = user["role"] == "Operator"
         setup = needs and (user["name"] not in self.pins if pin else user["status"] == "setup" or self.recovering)
+        # an account in set-up whose password only an Admin's sign-in hands over: said now, not after typing (M3)
+        held = setup and not pin and not self.recovering and not self.ctx.may_set_up()
         self.btn_recover.setVisible(user["role"] == "Admin" and user["status"] == "active" and not self.recovering)
         self.code.setVisible(self.recovering)
-        self.password.setVisible(needs)
-        self.again.setVisible(setup)
+        self.password.setVisible(needs and not held)
+        self.again.setVisible(setup and not held)
         if pin:
             self.password.setPlaceholderText(self.tr("New PIN") if setup else self.tr("PIN"))
             self.again.setPlaceholderText(self.tr("Type the new PIN again"))
@@ -106,7 +108,10 @@ class SignInDialog(QDialog):
         else:
             self.password.setPlaceholderText(self.tr("New password") if setup else self.tr("Password"))
             self.again.setPlaceholderText(self.tr("Type the new password again"))
-            if self.recovering:
+            if held:
+                refused = AoiError("AOI-USR-009", name=user["name"])
+                self.hint.setText(" ".join([phrase_text(refused.what), phrase_text(refused.action)]))
+            elif self.recovering:
                 hint = self.tr("Type the recovery code of {user}, then choose a new password and type it again.")
                 self.hint.setText(hint.format(user=user["name"]))
             elif setup:
@@ -117,8 +122,15 @@ class SignInDialog(QDialog):
             else:
                 self.hint.setText(self.tr("Type the password of {user}.").format(user=user["name"]))
         self.hint.setVisible(needs)
-        typed = self.password.text()
-        ready = not needs or (bool(typed) and (not setup or typed == self.again.text()))
+        typed, again = self.password.text(), self.again.text()
+        short = not pin and len(passwords.normal(typed)) < passwords.MIN_LENGTH  # counted as the service counts
+        if setup and not held and typed:  # a new secret: what still stops Sign In, as it is typed (M2)
+            if short:
+                said = self.tr("{count} of at least {low} characters.")
+                self.hint.setText(said.format(count=len(passwords.normal(typed)), low=passwords.MIN_LENGTH))
+            elif again and typed != again:
+                self.hint.setText(self.tr("The two PINs differ.") if pin else self.tr("The two passwords differ."))
+        ready = not held and (not needs or (bool(typed) and (not setup or (typed == again and not short))))
         self.btn_sign_in.setEnabled(ready and (not self.recovering or bool(self.code.text().strip())))
 
     def done(self, result: int) -> None:
