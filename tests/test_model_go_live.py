@@ -69,6 +69,26 @@ def test_req_trn_010_roll_back_on_training_names_its_version(
     assert page.btn_rollback.text() == "Roll Back to v9.0" and dialogs == []
 
 
+def test_req_trn_010_a_refused_roll_back_shows_its_dialog(
+    qtbot: QtBot, trained_ctx: AppContext, dialogs: list[tuple[str, str]]
+) -> None:
+    """Roll Back to a version whose AI model file does not load is refused with AOI-TRN-048 (review TRN-5), and the
+    page's Roll Back had no handler for a refusal, so it reached the excepthook as an unhandled error, with no dialog.
+    Now it shows the coded dialog, as Activate Selected does; the version in use and the button stay."""
+    ctx = trained_ctx
+    win = _window(qtbot, ctx, "Engineer")
+    page = cast(TrainingPage, win.pages["Training"])
+    assert win.navigate("Training")
+    first = cast(dict[str, Any], ctx.active_model(BOARD))
+    ctx.activate_model(another_version(ctx, BOARD, "v9.0"))
+    page.refresh()
+    Path(first["path"]).write_bytes(b"not an AI model file")  # the version Roll Back goes to
+    qtbot.mouseClick(page.btn_rollback, Qt.MouseButton.LeftButton)
+    assert [title.split()[0] for title, _ in dialogs] == ["AOI-TRN-048"]
+    assert cast(dict[str, Any], ctx.active_model(BOARD))["version"] == "v9.0"
+    assert page.btn_rollback.text() == f"Roll Back to {first['version']}"
+
+
 def test_req_trn_011_card_shown_on_training(qtbot: QtBot, trained_ctx: AppContext) -> None:
     """AI Model Card shows the selected version's card under the list, its first line saying it is not yet tested."""
     ctx = trained_ctx

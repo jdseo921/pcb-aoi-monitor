@@ -658,7 +658,10 @@ boards, untick Use the self-trained AI model in the Recipe Editor and save the r
 with another Golden board, choose an OK sample with Set Reference (section 3). Test a first version on AI Model Test, on
 the locked validation set, before you rely on its verdicts (section 6). Every activation and rollback is in the audit
 trail with the version and Golden board before and after. A version without an AI model card cannot be made active
-(AOI-TRN-049), nor one whose Golden board cannot be read (AOI-TRN-048); the version in use stays.
+(AOI-TRN-049), nor one whose AI model file is missing, damaged or another AI model's, nor one whose Golden board cannot
+be read (AOI-TRN-048, naming the file and why); the version in use stays, and a refused Roll Back shows its message as
+Activate Selected does. Activate Selected on the version already active changes nothing and writes nothing, so Roll
+Back keeps the version it goes back to.
 
 **AI model card.** Select a version and press AI Model Card to read its card under the list: what it is and what it
 was trained on (dataset version, customer, seed, code, settings, who trained it and when), the set-up, its thresholds,

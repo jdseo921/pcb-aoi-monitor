@@ -137,6 +137,7 @@ GUIDE_IMAGES = ("ok", "ng", "ng_boxed")  # the lines of What is missing the guid
 # Why an AI model version was not made active (AOI-TRN-048, REQ-TRN-010), as phrases shown translated (#198)
 NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
 NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
+NO_WEIGHTS = QT_TRANSLATE_NOOP("Errors", "its AI model file {file} cannot be loaded ({reason})")  # review TRN-5
 SWITCHES = ("model.train", "model.activate", "model.rollback")
 # The audit reason of a training that made its version active: a board model's first AI model goes live when its
 # training ends, as no version is in use to keep (business-readiness decision D3); each later one installs inactive
@@ -1731,16 +1732,23 @@ class AppContext:
         cached = self._model_cache.get(board_model)
         if cached and cached[0] == device and cached[1][0] == rec["version"]:
             return cached[1]
+        loaded = (rec["version"], self._weights(rec, device), str(rec["uuid"]))
+        if self.device == device:
+            self._model_cache[board_model] = (device, loaded)
+        return loaded
+
+    def _weights(self, rec: dict[str, Any], device: str) -> anomaly.AnomalyModel:
+        """The AI model file of a registry row `rec`, loaded as weights only on `device` (`AnomalyModel.load`,
+        REQ-TRN-014): AOI-TRN-001 for a file that load refuses (missing, cut short, damaged or not this app's), and for
+        one whose UUID is not the row's, another AI model's file in its place, such as one written over it. `load_model`
+        loads the active version with it, and `_switch_to` every version before it goes live (review TRN-5)."""
         m = anomaly.AnomalyModel.load(rec["path"], device)
-        if m.meta.get("uuid") != rec["uuid"]:  # another AI model's file in its place, such as one written over it
+        if m.meta.get("uuid") != rec["uuid"]:
             why = QT_TRANSLATE_NOOP("Errors", "its UUID {found} is not {uuid}, as in the AI model registry").fill(
                 found=m.meta.get("uuid") or QT_TRANSLATE_NOOP("Errors", "(none)"), uuid=rec["uuid"]
             )
             raise anomaly.ModelFileError("AOI-TRN-001", path=rec["path"], reason=why)
-        loaded = (rec["version"], m, str(rec["uuid"]))
-        if self.device == device:
-            self._model_cache[board_model] = (device, loaded)
-        return loaded
+        return m
 
     # --- recipe --------------------------------------------------------------
     def recipe(self, board_model: str) -> tuple[int, Recipe]:
@@ -4325,7 +4333,9 @@ class AppContext:
     def previous_model(self, board_model: str) -> dict[str, Any] | None:
         """The version that was active before the active one, which Roll Back makes active again, from the audit trail
         (the newest training, activation or rollback that made the active version active names the one before it); None
-        when there is none, such as after a board model's first training."""
+        when there is none, such as after a board model's first training. An entry whose version before is the one
+        after switched no version, such as Activate Selected on the active one before it changed nothing (review TRN-1)
+        or one that put its Golden board back after Set Reference, so the walk passes it and Roll Back keeps its way."""
         active = self.db.active_model(board_model)
         if active is None:
             return None
@@ -4338,9 +4348,8 @@ class AppContext:
             if not after.get("activated", True):  # a training that installed its version inactive (S43) switched none
                 continue
             made = after.get("active_version", after.get("version"))  # an earlier model.train activated its version
-            if made == active["version"]:
-                previous = before.get("active_version")
-                return by_version.get(previous) if previous and previous != made else None
+            if made == active["version"] and (previous := before.get("active_version")) != made:
+                return by_version.get(previous) if previous else None
         return None
 
     def _first_live(self, board_model: str, model_id: int) -> Exception | None:
@@ -4388,36 +4397,45 @@ class AppContext:
 
     def _switch_to(self, target: dict[str, Any], action: str, reason: str | None = None) -> None:
         """Make `target` its board model's active version and its Golden board the board model's, together, with an
-        audit entry naming both before and after, and `reason` (REQ-TRN-010). An AI model of a Trial version goes live
-        only while no Validated one has (`validated_live`); after that the go-live gate refuses it with AOI-TRN-052,
-        naming that version's board model and view for Start the Checks (ADR 0020, decision 4). A version that records
-        no Golden board (trained before it was recorded) keeps the board model's. A recorded Golden board that cannot be
-        read is refused with AOI-TRN-048 before anything changes: inspections would otherwise judge with another
-        version's board."""
-        board_model = target["board_model"]
-        previous = self.db.active_model(board_model)
+        audit entry naming both before and after, and `reason` (REQ-TRN-010). The version active already, with its
+        Golden board the board model's, changes nothing and writes nothing, as there is nothing to switch: an entry from
+        v1.1 to v1.1 named no version for Roll Back to go back to (review TRN-1). An AI model of a Trial version goes
+        live only while no Validated one has (`validated_live`); after that the go-live gate refuses it with
+        AOI-TRN-052, naming that version's board model and view for Start the Checks (ADR 0020, decision 4). A version
+        that records no Golden board (trained before it was recorded) keeps the board model's. Refused with AOI-TRN-048
+        before anything changes: a version whose AI model file does not load as `load_model` loads it (`_weights`, on
+        the CPU, which reads the same file), naming the file and why, so no version goes live to refuse every board
+        (review TRN-5); and one whose recorded Golden board cannot be read, as inspections would otherwise judge with
+        another version's board."""
+        board_model, root = target["board_model"], self.settings.root
+        previous, before_ref = self.db.active_model(board_model), self.db.reference(board_model)
+        stored = json.loads(target["metrics"] or "{}").get("golden_image")
+        path = resolve(stored, root) if stored else None
+        ref = str(path) if path is not None else before_ref
+
+        def kept(p: str | None) -> str | None:
+            return to_stored(Path(p), root) if p else None
+
+        if previous is not None and previous["id"] == target["id"] and kept(ref) == kept(before_ref):
+            return
         if (trial := self.trial_version(target)) is not None and self.validated_live(board_model) is not None:
             name, view = trial["name"], trial["view"]
             raise AoiError("AOI-TRN-052", version=target["version"], board=board_model, dataset=name, view=view)
         if not self.card_files(int(target["id"]))[1].is_file():  # no AI model goes live without its card (REQ-TRN-011)
             raise AoiError("AOI-TRN-049", version=target["version"], board=board_model)
-        before_ref = self.db.reference(board_model)
-        stored = json.loads(target["metrics"] or "{}").get("golden_image")
-        ref = before_ref
-        if stored:
-            path = resolve(stored, self.settings.root)
+        try:
+            self._weights(target, "cpu")  # not the AI device: a check of the file, before inspections load it there
+        except anomaly.ModelFileError as e:  # its reason is the app's own phrase, never the system's words (#198)
+            why = NO_WEIGHTS.fill(file=kept(target["path"]), reason=e.params["reason"])
+            raise AoiError("AOI-TRN-048", version=target["version"], board=board_model, reason=why) from e
+        if path is not None:
             try:
                 self.load_image(str(path))
             except AoiError as e:
-                why = NO_GOLDEN.fill(file=to_stored(path, self.settings.root), error=e.code)
+                why = NO_GOLDEN.fill(file=to_stored(path, root), error=e.code)
                 raise AoiError("AOI-TRN-048", version=target["version"], board=board_model, reason=why) from e
             self.db.set_reference(board_model, str(path))
-            ref = str(path)
         self.db.activate_model(int(target["id"]))
-
-        def kept(p: str | None) -> str | None:
-            return to_stored(Path(p), self.settings.root) if p else None
-
         old = {"active_version": previous["version"] if previous else None, "reference": kept(before_ref)}
         after = {"active_version": target["version"], "reference": kept(ref)}
         self.audit(action, "model", target["uuid"], old, after, reason)
