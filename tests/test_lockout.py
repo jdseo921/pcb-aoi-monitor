@@ -13,7 +13,7 @@ from aoi.config import Settings
 from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
-from tests.conftest import PASSPHRASE
+from tests.conftest import PASSPHRASE, handed_over
 
 WRONG = "not the passphrase, but long"
 
@@ -28,6 +28,7 @@ def test_req_usr_004_five_wrong_passwords_lock_the_account_for_five_minutes(ctx:
     """The 5th wrong password in a row locks it (AOI-USR-006), audited user.lock with its end; while locked even the
     right password is not checked; once the lock ends the right one signs in and the count starts again. A right
     password between wrong ones starts the count again, and a start's refusal is no guess."""
+    handed_over(ctx)
     ctx.sign_in("engineer", password=PASSPHRASE)
     ctx.set_user("operator")
     assert [_refused(ctx) for _ in range(4)] == ["AOI-USR-004"] * 4
@@ -53,6 +54,7 @@ def test_req_usr_004_five_wrong_passwords_lock_the_account_for_five_minutes(ctx:
 def test_req_usr_004_the_100th_wrong_password_or_an_unreadable_lock_waits_for_an_admin(ctx: AppContext) -> None:
     """A timed lock does not reset the count, so a guesser gets no endless rounds: the 100th wrong password since the
     last right one locks until an Admin unlocks (AOI-USR-007), and so does a lock time that cannot be read."""
+    handed_over(ctx)
     ctx.sign_in("engineer", password=PASSPHRASE)
     ctx.set_user("operator")
     ctx.db.execute("UPDATE users SET failed_attempts=98 WHERE name='engineer'")
@@ -65,6 +67,7 @@ def test_req_usr_004_the_100th_wrong_password_or_an_unreadable_lock_waits_for_an
 
 
 def test_req_usr_004_an_admin_unlocks_and_only_an_admin(ctx: AppContext) -> None:
+    handed_over(ctx)
     ctx.sign_in("engineer", password=PASSPHRASE)
     ctx.set_user("operator")
     for _ in range(5):
@@ -92,6 +95,7 @@ def test_req_usr_004_settings_shows_the_lock_and_unlocks_it(
     qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     ctx.ensure_board_model("B")
+    handed_over(ctx)
     ctx.sign_in("engineer", password=PASSPHRASE)
     ctx.set_user("operator")
     for _ in range(5):

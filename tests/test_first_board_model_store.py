@@ -26,13 +26,15 @@ from aoi.ui.board_model_dialog import NewBoardModelDialog
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.recovery_key import RecoveryKeyDialog
 from aoi.ui.pages.settings import SettingsPage
-from tests.conftest import log_rows
+from tests.conftest import handed_over, log_rows
 from tests.test_dataset_stores import as_admin, refusal
 
 BETA = "Beta Boards"
 
 
 def shell(qtbot: QtBot, ctx: AppContext, role: str = "admin") -> MainWindow:
+    """The window shown at 1600×900 with `role` signed in; the Admin has chosen their password (ADR 0024 D24)."""
+    handed_over(ctx, "admin")
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.resize(1600, 900)

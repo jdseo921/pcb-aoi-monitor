@@ -378,8 +378,8 @@ def test_req_trn_021_the_other_buttons_and_roles(
     qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Draw Boxes › puts the first NG image of the view with no box in the label editor; Activate AI Model activates
-    the version the list names. An Operator sees the list on Home with every button greyed, its tooltip naming the role
-    the step needs. With no board model the list is gone, and another board model's list is of its own kind."""
+    the version the list names. An Operator's Home shows no list (ADR 0024 D25). With no board model the list is gone,
+    and another board model's list is of its own kind."""
     calibration_workspace(ctx, tmp_path / "boards")  # 80 OK and 20 NG, no box drawn
     win = _window(qtbot, ctx, CAL)
     home = cast(HomePage, win.pages["Home"])
@@ -411,10 +411,7 @@ def test_req_trn_021_the_other_buttons_and_roles(
 
     win.set_user("operator")
     assert win.navigate("Home")
-    buttons = [w.fix for w in home.missing_list.lines.values() if w.fix.isVisibleTo(home.missing_list)]
-    assert len(buttons) >= 5  # every line not met, Freeze Dataset… to Activate AI Model among them
-    for b in buttons:
-        assert not b.isEnabled() and "needs the Engineer or Admin role" in b.toolTip(), b.text()
+    assert home.missing_list.isHidden()  # an Operator's Home is the cards alone (ADR 0024 D25)
     win._on_board_model("")
     assert not home.missing_list.isVisible()
 

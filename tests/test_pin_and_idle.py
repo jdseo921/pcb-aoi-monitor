@@ -18,7 +18,7 @@ from aoi.core.services import AppContext
 from aoi.errors import AoiError
 from aoi.ui.main_window import MainWindow
 from aoi.ui.sign_in_dialog import SignInDialog
-from tests.conftest import PASSPHRASE
+from tests.conftest import PASSPHRASE, handed_over
 
 
 def test_req_usr_003_a_station_may_ask_operators_for_a_pin(ctx: AppContext) -> None:
@@ -78,6 +78,7 @@ def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator_never_mid
     ctx.add_user("kim", "Operator")
     win = MainWindow(ctx)
     qtbot.addWidget(win)
+    handed_over(ctx)
     ctx.sign_in("kim")
     ctx.sign_in("engineer", password=PASSPHRASE)
     win.set_user("engineer")

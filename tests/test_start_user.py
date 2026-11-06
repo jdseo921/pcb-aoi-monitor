@@ -29,7 +29,7 @@ from aoi.ui.demo_workspace import open_demo
 from aoi.ui.errors import open_workspace
 from aoi.ui.main_window import MainWindow, build_window
 from tests.budgets import LONG_TRIES, judged
-from tests.conftest import PASSPHRASE, answer_sign_in
+from tests.conftest import PASSPHRASE, answer_sign_in, handed_over
 
 ROOT = Path(__file__).resolve().parents[1]
 START_BUDGET_S = 5.0  # REQ-SET-020: usable within 5 s of starting
@@ -49,7 +49,8 @@ def test_req_usr_003_a_start_signs_in_who_signed_in_last_on_the_station(ctx: App
     ctx.ensure_board_model("B")  # set up: no longer the first start's Admin
     ctx.set_user("operator")
     assert ctx.start_user() == "operator" and ctx.last_signed_in() is None
-    ctx.sign_in("engineer", password=PASSPHRASE)  # their first: it sets their password
+    handed_over(ctx)  # an Admin handed the Engineer over (ADR 0024 D24)
+    ctx.sign_in("engineer", password=PASSPHRASE)
     assert ctx.user == "engineer" and ctx.last_signed_in() == "engineer"
     (entry,) = ctx.audit_entries(action="user.sign_in")
     assert (entry["object_type"], entry["object_uuid"]) == ("user", ctx.db.user_uuid("engineer"))

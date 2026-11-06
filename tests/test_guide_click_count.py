@@ -25,6 +25,7 @@ from aoi.ui import theme
 from aoi.ui.main_window import HomePage, MainWindow
 from aoi.ui.pages.base import Page
 from aoi.ui.pages.inspection import InspectionPage
+from tests.conftest import PASSPHRASE
 from tests.test_guide_images import BM, drawn
 from tests.test_usb_drives import plugged
 from tools.make_synthetic_dataset import capture, draw_board
@@ -105,6 +106,9 @@ def test_req_trn_021_from_an_empty_workspace_to_the_first_verdict_in_24_actions_
     qtbot.waitExposed(win)
     win.activateWindow()
     qtbot.waitUntil(lambda: QApplication.activeWindow() is win)
+    ctx.sign_in("admin", password=PASSPHRASE)  # the station's set-up, before the guide and outside its 24 actions:
+    ctx.take_recovery_code()  # the first Admin chooses their password (ADR 0024 D24)
+    win.set_user("admin")
     home = cast(HomePage, win.pages["Home"])
     guide, inspection = home.guide, cast(InspectionPage, win.pages["Inspection"])
     count = Count(win)

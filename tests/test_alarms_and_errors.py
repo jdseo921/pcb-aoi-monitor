@@ -142,7 +142,7 @@ def test_req_log_005_reopens_on_the_last_page(qtbot: QtBot, trained_ctx: AppCont
         settings = Settings.load()
         settings.last_page = last_page
         settings.save()
-        assert reopened() == "Home"
+        assert reopened() == "Inspection"  # an Operator's start opens Inspection whatever was last (ADR 0024 D25)
 
 
 def test_req_log_005_the_app_keeps_hand_edits_to_settings_json(

@@ -132,16 +132,18 @@ def test_req_usr_006_a_role_change_that_drops_the_password_says_so(ctx: AppConte
 
 
 def test_req_usr_002_a_first_sign_in_chooses_the_password_and_later_ones_need_it(ctx: AppContext) -> None:
-    """In set-up, a password breaking a rule is refused (AOI-USR-005); one keeping them is stored, audited naming the
-    person, not the secret. Then a missing or wrong one is refused (AOI-USR-004), audited as user.sign_in_failed."""
+    """In set-up, with the Admin signed in who hands it over (ADR 0024 D24), a password breaking a rule is refused
+    (AOI-USR-005); one keeping them is stored, audited naming the person, not the secret. Then a missing or wrong one
+    is refused (AOI-USR-004), audited as user.sign_in_failed."""
     uuid = str(ctx.db.user_uuid("engineer"))
-    ctx.set_user("operator")
+    ctx.sign_in("admin", password=PASSPHRASE + " too")  # the station's first Admin chooses theirs
+    ctx.take_recovery_code()
     with pytest.raises(AoiError, match="AOI-USR-005"):
         ctx.sign_in("engineer", password="short")
-    assert ctx.db.user_secret(uuid) is None and ctx.user == "operator"
+    assert ctx.db.user_secret(uuid) is None and ctx.user == "admin"
     ctx.sign_in("engineer", password=PASSPHRASE)
     assert ctx.user == "engineer" and passwords.verify(ctx.db.user_secret(uuid), PASSPHRASE)
-    (chose,) = ctx.audit_entries(action="user.password_set")
+    chose = ctx.audit_entries(action="user.password_set")[0]  # newest first: the Admin's came before
     assert (chose["object_uuid"], chose["after"]) == (uuid, {"user": "engineer"})
     ctx.sign_in("operator")
     for wrong in (None, "seven tired owls over Seoul"):
@@ -175,8 +177,11 @@ def test_req_usr_002_the_dialog_asks_each_role_for_what_it_needs(
     """An Operator: no field. In set-up: the password twice, Sign In once they agree. With one: one field; a wrong one
     shows AOI-USR-004 and keeps the dialog open, its fields cleared, as Cancel clears them."""
     ctx.ensure_board_model("B")
+    ctx.sign_in("admin", password=PASSPHRASE + " too")  # the first Admin chooses theirs
+    ctx.take_recovery_code()
     win = MainWindow(ctx)
     qtbot.addWidget(win)
+    win.set_user("admin")  # the Admin signed in hands the Engineer over (ADR 0024 D24)
     box = SignInDialog(win)
     box.show()
 
