@@ -173,6 +173,18 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-03: #448's Windows check twice put Inspection's first opening at the 300 ms budget (REQ-SET-020), as on
   `main`; Jay chose to fix it first: `perf/REQ-SET-020-inspection-first-open` rests the start-up self-check and fills
   the alarm list in one step, the 2026-11-04 train, before train E is merged.
+- 2026-11-04: #452 (REQ-TST-008, test only, Jay's request): the Stage 1 proxy validation on public data, recorded in
+  `docs/tests/2026-11-04-stage1-proxy-validation.md`, with `tools/proxy_validation.py`; nothing under `aoi/` changed
+  and the regression set is unchanged. Two program defects opened, not fixed: #453 (on VisA photos the default
+  golden-board comparison calls every good board NG and the shift check stops the line) and #454 (the AI image
+  threshold follows the highest calibration OK score). Four PRs, one train, stacked on `main`.
+- 2026-11-05: #459 (REQ-TST-008, test only, Jay's request, phase 2 of #452): eleven industry scenarios on VisA, each on
+  a station as shipped and as commissioned with the app's own features, recorded in
+  `docs/tests/2026-11-05-stage1-industry-scenarios.md`, with `tools/proxy_scenarios.py`; nothing under `aoi/` changed
+  and the regression set is unchanged. Neither configuration could replace inspectors: as commissioned, the rule that
+  a non-Minor difference region makes a board WARN still flags every good board. Opened, not fixed: #460 to #462 (the
+  three ranked changes), #463 to #467 (defects), #468 (commissioning steps the app lacks, for Jay). Nine PRs, one
+  train, stacked on `test/452-proxy-record`.
 - 2026-11-06: usability sweep (project report `reports/2026-11-06-usability-sweep.md`); Jay chose "Yes, one small
   fix PR" for its five low-risk findings: `fix/usability-sweep-low-risk` (greyed buttons say why, Switch User hints,
   the Recipe Editor's ROI form, the status line of a refused page). Its high findings wait for Jay's decisions.
