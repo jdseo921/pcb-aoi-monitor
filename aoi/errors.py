@@ -395,6 +395,75 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-020",
+            QT_TRANSLATE_NOOP("Errors", "Input file name not in the contract"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} in the input folder was not inspected: {reason}. It is now in failed/ there.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Name it <board model>_<revision>_<serial>_<view>_<UTC time>.png, as the input-file naming contract"
+                " says, and put it in the input folder again. Ask the imaging station's owner to name every board image"
+                " so.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-INSP-021",
+            QT_TRANSLATE_NOOP("Errors", "Board image already inspected"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} in the input folder was not inspected again: {reason}. It is now in failed/ there; the"
+                " first record stays as it was.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing is lost. If it is another board, the imaging station must give it its own serial and time; to"
+                " inspect the same image again, load it with Load Images….",
+            ),
+        ),
+        ErrorCode(
+            "AOI-INSP-022",
+            QT_TRANSLATE_NOOP("Errors", "Input image cannot be read"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} in the input folder was not inspected: {reason} It is now in failed/ there.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check that the imaging station writes whole image files, under a temporary name it renames once the"
+                " file is complete, then put the image in the input folder again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-INSP-024",
+            QT_TRANSLATE_NOOP("Errors", "Board image of another board model"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} in the input folder is a board of {named}, and the line runs {board_model}. The line is paused;"
+                " the image stays in the input folder.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Pick {named} in the top bar and press Start to inspect it, or move the image out of the input folder"
+                " if it came there by mistake. A line runs one board model at a time.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-INSP-023",
+            QT_TRANSLATE_NOOP("Errors", "Input folder not reachable"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The input folder {folder} cannot be read: {reason}. No board is taken from it until it can; this"
+                " alarm is not repeated meanwhile.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Check that the folder exists, that its drive or share is connected, and that the station may read and"
+                " write it. The line goes on by itself once the folder answers.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(
@@ -1748,6 +1817,20 @@ CODES: dict[str, ErrorCode] = {
             ),
             QT_TRANSLATE_NOOP(
                 "Errors", "Close any program that holds files in the workspace open, or restart the PC, then the app."
+            ),
+        ),
+        ErrorCode(
+            "AOI-SET-025",
+            QT_TRANSLATE_NOOP("Errors", "Line folder not usable"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The {setting} {folder} set on Settings cannot be read and written: it is not there, its drive or share"
+                " is not connected, or the station may not write to it.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Connect its drive or share, or have an Admin set another folder on Settings. Until then the line takes"
+                " no board from an input folder and writes no result file to an output folder.",
             ),
         ),
         ErrorCode(

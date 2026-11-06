@@ -48,9 +48,9 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | D.1 | Accounts: Argon2id passwords, the users migration, sign-in dialog | REQ-USR-002, REQ-USR-007 | in review: D.1a the hash, its rules and migration 0029 (#439); D.1b sign-in with a password and the dialog (`feat/REQ-USR-002-passwords`) |
 | D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | in review: D.2a lockout and Unlock User (#441); D.2b the PIN and the idle end (`feat/REQ-USR-003-pin-idle`) |
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin (`feat/REQ-USR-005-recovery-sign-in`) |
-| E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | #447 (two PRs) | in review |
-| E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | planned |
-| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | in review |
+| E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | #447 (two PRs) | merged 2026-11-04 |
+| E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | in review |
+| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | merged 2026-11-04 |
 | F.1 | Korean for the operator: `QTranslator`, `.qm` shipped, operator path translated | REQ-SET-006 (operator scope) | planned |
 | F.2 | Offline licence key and the EULA page | REQ-SET-010, REQ-SET-022 | planned |
 | F.3 | Station hardening: autostart with restart on failure, kiosk guidance, self-check alarms | REQ-SET-024 | planned |
@@ -191,3 +191,10 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-06: Jay said "Set H1 and H2 rules using industry norms": ADR 0024 D24 (no account claimed at a station) and
   D25 (each role lands on its own work), confirmed, then built in `feat/REQ-USR-005-claim-and-landing`, stacked on
   `fix/usability-sweep-low-risk` (#478), the same day's train.
+- 2026-11-06: Jay: "Factory isnt involved for now", then chose "Define our own contract, build E.2" (decision card):
+  ADR 0024 D26 takes the Engineering standard's capture name as the input-file naming contract
+  (`docs/schemas/input-file-naming.md`). E.2 is four PRs stacked on `main`: E.2a `docs/REQ-INSP-020-naming-contract`
+  (D26, the schema page, AOI-INSP-020 to -024 and AOI-SET-025), E.2b `feat/REQ-INSP-020-folder-watch` (`FolderWatch`),
+  E.2c `feat/REQ-INSP-020-line-cycle` (`InspectionCycle.watched`, the image's SHA-256 in its record, migration 0031,
+  the settings and the self-check) and E.2d `feat/REQ-INSP-020-line-page` (the Inspection page's line, the Settings
+  fields, the manuals).

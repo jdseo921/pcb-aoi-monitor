@@ -65,6 +65,10 @@ ALLOWED_WORDS = {  # (catalogue code or translation context, Not word): why the 
     ("AOI-TRN-010", "error"): APP_ERROR,
     ("AOI-SET-006", "invalid"): "said of the app's migration files, never of a user (the Charter bans 'invalid user')",
     ("AOI-SET-008", "invalid"): "said of a setting's value, never of a user (the Charter bans 'invalid user')",
+    **dict.fromkeys(
+        [("AOI-INSP-020", "fail"), ("AOI-INSP-021", "fail"), ("AOI-INSP-022", "fail")],
+        "the name of the input folder's failed/ folder, which the handover plan names (REQ-INSP-020); never a verdict",
+    ),
     ("ComparePage", "test image"): "the board image compared with the Golden board (its Test Image… button), not the "
     "regression set's images; the Charter has no term for it yet",
 }  # fmt: skip
