@@ -232,8 +232,8 @@ def handed_over(ctx: AppContext, name: str = "engineer") -> None:
 
 def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str, password: str = PASSPHRASE) -> list[str]:
     """Switch User answered with `name` and Sign In, in place of the dialog's event loop: an Engineer or Admin types
-    `password` (twice at their first sign-in, which sets it); "" cancels. The station's first Admin's recovery code is
-    taken as saved. Returns the titles of the dialogs opened."""
+    `password` (twice at their first sign-in, which sets it); "" cancels. An Admin's recovery code is taken as saved.
+    Returns the titles of the dialogs opened."""
     titles: list[str] = []
 
     def exec_(dialog: SignInDialog) -> int:
@@ -245,7 +245,7 @@ def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str, password: str = P
             dialog.sign_in()
         return dialog.result()
 
-    def kept(dialog: RecoveryCodeDialog) -> int:  # the first Admin's recovery code, as if saved, then Done
+    def kept(dialog: RecoveryCodeDialog) -> int:  # an Admin's recovery code, as if saved, then Done
         titles.append(dialog.windowTitle())
         dialog.btn_done.setEnabled(True)
         return int(dialog.accept() or dialog.result())

@@ -1419,7 +1419,11 @@ CODES: dict[str, ErrorCode] = {
             "AOI-USR-007",
             QT_TRANSLATE_NOOP("Errors", "Account locked until unlocked"),
             QT_TRANSLATE_NOOP("Errors", "{name} is locked after 100 wrong passwords, or its lock time cannot be read."),
-            QT_TRANSLATE_NOOP("Errors", "Ask an Admin to unlock it with Unlock User on Settings."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Ask an Admin to unlock it with Unlock User on Settings. An Admin with no other Admin to do it signs "
+                "in with Use Recovery Code… at Switch User.",
+            ),
             personal=("name",),
         ),
         ErrorCode(
@@ -1471,7 +1475,11 @@ CODES: dict[str, ErrorCode] = {
                 "{name} is the last Admin who can sign in with a password, so no one could then manage users or "
                 "settings.",
             ),
-            QT_TRANSLATE_NOOP("Errors", "Add another Admin and hand the account over to them first."),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "First add another Admin and have them sign in once, to choose their password and get their recovery "
+                "code, or unlock a locked Admin.",
+            ),
             personal=("name",),
         ),
         ErrorCode(
