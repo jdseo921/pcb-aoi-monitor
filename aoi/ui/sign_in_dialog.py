@@ -93,7 +93,7 @@ class SignInDialog(QDialog):
         pin = user["role"] == "Operator"
         setup = needs and (user["name"] not in self.pins if pin else user["status"] == "setup" or self.recovering)
         # an account in set-up whose password only an Admin's sign-in hands over: said now, not after typing (M3)
-        held = setup and not pin and not self.recovering and not self.ctx.may_set_up()
+        held = setup and not pin and not self.recovering and not self.ctx.may_set_up(str(user["role"]))
         self.btn_recover.setVisible(user["role"] == "Admin" and user["status"] == "active" and not self.recovering)
         self.code.setVisible(self.recovering)
         self.password.setVisible(needs and not held)

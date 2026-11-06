@@ -118,6 +118,9 @@ if TYPE_CHECKING:
     from aoi.ui.main_window import MainWindow
 
 
+ADMIN_PASSWORD = "seven tired owls over Busan"  # the renders' Admin password, as the tests' (tests/conftest.py)
+
+
 def slug(title: str) -> str:
     """ "Logs & Export" -> "logs-export"."""
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
@@ -206,6 +209,8 @@ def build_workspace(root: Path) -> AppContext:
         keys = credentials.MemoryCredentials()  # the store key trainable makes, never written to the Credential Manager
         settings = Settings(workspace=str(root / "workspace"), device="cpu", shift_check_hours=0)  # no clock in renders
         ctx = AppContext(settings, keys)
+        ctx.sign_in("admin", password=ADMIN_PASSWORD)  # a station in service: its Admin has a password (ADR 0024 D24)
+        ctx.take_recovery_code()
         ctx.set_user("engineer")
         ctx.import_samples(BOARD_MODEL, [str(p) for p in list_images(dataset / "train" / "ok")], "OK")
         for p in list_images(dataset / "train" / "ng"):  # one call each: an NG sample is imported with its type

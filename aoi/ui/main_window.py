@@ -327,7 +327,8 @@ class HomePage(Page):
             self.show_empty(self.empty, self.tr("{board_model} is still being set up").format(board_model=bm), "")
             return
         self.cards.setVisible(bool(bm))
-        self.missing_list.show_for(bm or None)
+        # a set-up checklist for those who set up: an Operator's Home is the cards alone (ADR 0024 D25)
+        self.missing_list.show_for((bm or None) if self.gates.may("import_samples") else None)
         if not bm:
             heading, sentence, link, go = self.no_board_model()
             if not self.gates.may("ensure_board_model"):  # the guide's first screen is an Admin's (B5)
@@ -677,7 +678,7 @@ class MainWindow(QMainWindow):
             )
         # where the last session was (REQ-LOG-005), or Home, where the guide is; the demo after a normal close at Home,
         # where its scripts begin
-        if guided or not self.navigate(ctx.settings.last_page):
+        if guided or not self.navigate(self.landing(ctx.settings.last_page)):
             self.navigate("Home")
         resumed = carried is None and not self.in_demo and bool(ctx.board_models()) and start == ctx.last_signed_in()
         if guided:  # someone else may be at the station now
@@ -784,6 +785,14 @@ class MainWindow(QMainWindow):
             said = self.tr("Board model {name} is in the encrypted dataset store of {customer}.")
             self.status(said.format(name=name, customer=store["customer"]))
 
+    def first_admin_unset(self) -> str | None:
+        """The first Admin, in set-up while no Admin has a password, outside the demo; else None. Until they choose
+        it no board model is made on screen and no other account's password is chosen (ADR 0024 D24)."""
+        users = self.ctx.users()
+        if self.in_demo or any(u["role"] == "Admin" and u["status"] == "active" for u in users):
+            return None
+        return next((str(u["name"]) for u in users if u["role"] == "Admin" and u["status"] == "setup"), None)
+
     def select_board_model(self, name: str) -> None:
         """The header lists the board models again and selects `name`, one the first-run guide made or found."""
         if name == self.board_model:
@@ -825,9 +834,16 @@ class MainWindow(QMainWindow):
         dialog.deleteLater()  # with its fields, cleared on closing
         if dialog.signed_in is not None:
             self.set_user(dialog.signed_in)
+            if self.ctx.role == "Operator":  # to the run screen, wherever the user before left the window (D25)
+                self.navigate(self.landing(""))
         if (code := self.ctx.take_recovery_code()) is not None:
             (shown := RecoveryCodeDialog(self, code)).exec()
             shown.deleteLater()
+
+    def landing(self, last: str) -> str:
+        """The page a start or a sign-in opens: Inspection for an Operator, the run screen of their work; for an
+        Engineer or Admin `last`, the page last shown (REQ-LOG-005; ADR 0024 D25)."""
+        return "Inspection" if self.ctx.role == "Operator" and not self.in_demo else last
 
     def check_idle(self) -> bool:
         """End an Engineer's or Admin's session after `idle_minutes` without input, back to the shift's operator
@@ -891,7 +907,10 @@ class MainWindow(QMainWindow):
             heading.setForeground(QColor(theme.TEXT_MUTED))  # a heading, not a disabled control: 7.4:1 (#239)
             heading.setHidden(all(self.hidden(t) for t in titles))
         self.exit_presenter.setVisible(theme.presenter() and role in SettingsPage.roles)  # where it was switched on
-        self.gates.gate(self.btn_new, "ensure_board_model")  # never hidden: greyed, saying who may (REQ-USR-001)
+        unset = self.first_admin_unset()  # none made before the Admin has a password (ADR 0024 D24)
+        first = self.tr("Choose the Admin's password first, under Switch User: an account without one can be claimed.")
+        self.gates.own_tip(self.btn_new, first if unset else "")
+        self.gates.gate(self.btn_new, "ensure_board_model", unset is None)  # never hidden: greyed, saying why
         self._fit_header()
 
     def _fit_header(self) -> None:

@@ -18,7 +18,8 @@ choose 4 to 6 digits and type them twice, and after that you type your PIN; five
 5 minutes (AOI-USR-006). An Engineer or Admin left without input for 15 minutes is signed out back to you, the operator
 of the shift, but never while a board is being inspected. The sidebar greys the pages your
 role cannot open, and pointing at one names the role it needs: an Operator opens Home, Inspection, Compare and Logs &
-Export. The app opens on the page shown when it was last closed, or on Home when your role cannot open that page.
+Export. The app opens on Inspection for an Operator, at a start and when you sign in with Switch User, as the run
+screen is your work (ADR 0024 D25); Home shows you the six cards, each greyed card naming the role it needs.
 
 **Keys to move around.** Ctrl+1 to Ctrl+9 open the sidebar's pages in its order from any page: Ctrl+1 Home, Ctrl+2
 Inspection, Ctrl+3 Compare, Ctrl+8 Logs & Export (pointing at a sidebar entry shows its key). Press **F1** on any page

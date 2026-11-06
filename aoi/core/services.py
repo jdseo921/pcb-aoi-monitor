@@ -769,7 +769,7 @@ class AppContext:
         if user["status"] == "setup" or (pin and self.db.user_secret(uuid) is None):
             if start:
                 return
-            if not pin and not self._may_set_up():
+            if not pin and not self._may_set_up(str(user["role"])):
                 raise AoiError("AOI-USR-009", name=name)  # an Admin hands the account over (REQ-USR-006)
             names = [str(u["name"]) for u in self.db.users()] + [str(s["customer"]) for s in self.db.stores()]
             refused = passwords.pin_refusal(password or "") if pin else passwords.refusal(password or "", names)
@@ -900,16 +900,20 @@ class AppContext:
                 self.db.set_user_secret(str(admin["uuid"]), passwords.hash_secret(demo.ADMIN_PASSWORD))
                 self.audit("user.password_set", "user", str(admin["uuid"]), None, {"user": admin["name"], "demo": True})
 
-    def may_set_up(self) -> bool:
-        """Whether an Engineer or Admin in set-up may choose their password at a sign-in now (`_may_set_up`), so
-        Switch User says AOI-USR-009 before anyone types one rather than after (usability sweep 2026-11-06, M3)."""
-        return self._may_set_up()
+    def may_set_up(self, role: str) -> bool:
+        """Whether an account of `role` (Engineer or Admin) in set-up may choose its password at a sign-in now
+        (`_may_set_up`), so Switch User says AOI-USR-009 before anyone types one rather than after (usability sweep
+        2026-11-06, M3)."""
+        return self._may_set_up(role)
 
-    def _may_set_up(self) -> bool:
-        """Whether an Engineer or Admin in set-up may choose their password now: an Admin with a password is signed in
-        to hand the account over, or no Admin has one yet (a station's first run, the demo)."""
+    def _may_set_up(self, role: str = "Admin") -> bool:
+        """Whether an account of `role` in set-up may choose its password now: an Admin with a password is signed in
+        to hand the account over, or, while no Admin has one yet (a station's first run, the demo), the account is an
+        Admin's: the first Admin is claimed at the station, an Engineer only ever handed over (ADR 0024 D24)."""
         admins = [u for u in self.db.users() if u["role"] == "Admin" and u["status"] == "active"]
-        return not admins or (self._actor.role == "Admin" and any(u["uuid"] == self._actor.uuid for u in admins))
+        if not admins:
+            return role == "Admin" or demo.is_demo(self.settings.root)
+        return self._actor.role == "Admin" and any(u["uuid"] == self._actor.uuid for u in admins)
 
     @requires("Admin", QT_TRANSLATE_NOOP("Errors", "Disabling a user"))
     @transactional
