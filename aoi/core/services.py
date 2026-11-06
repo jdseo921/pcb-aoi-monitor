@@ -138,6 +138,13 @@ GUIDE_IMAGES = ("ok", "ng", "ng_boxed")  # the lines of What is missing the guid
 NO_EARLIER = QT_TRANSLATE_NOOP("Errors", "no earlier version of this board model was active")
 NO_GOLDEN = QT_TRANSLATE_NOOP("Errors", "its Golden board {file} cannot be read ({error})")
 NO_WEIGHTS = QT_TRANSLATE_NOOP("Errors", "its AI model file {file} cannot be loaded ({reason})")  # review TRN-5
+# Why a run was not trained (AOI-TRN-046), and what a board model of a shredded store was refused (AOI-TRN-058;
+# REQ-TRN-017, review TRN-2), as phrases shown translated (#198)
+SHREDDED = QT_TRANSLATE_NOOP("Errors", "its dataset store was shredded on {date}")
+NOT_JUDGED = QT_TRANSLATE_NOOP("Errors", "no board was judged with AI model {version}")
+NOT_TESTED = QT_TRANSLATE_NOOP("Errors", "the AI Model Test judged no image after it and stored no run")
+NOT_MADE_ACTIVE = QT_TRANSLATE_NOOP("Errors", "AI model {version} was not made active")
+NOT_KEPT = QT_TRANSLATE_NOOP("Errors", "the AI model just trained was not kept as a version")
 SWITCHES = ("model.train", "model.activate", "model.rollback")
 # The audit reason of a training that made its version active: a board model's first AI model goes live when its
 # training ends, as no version is in use to keep (business-readiness decision D3); each later one installs inactive
@@ -1563,7 +1570,11 @@ class AppContext:
         OK images train it and make the Golden board; the NG images only calibrate its threshold; the locked validation
         set is never read. Refused, before any image is read, as `_training_set` gives. A file whose SHA-256, of the
         bytes read, is not the one frozen stops the run with AOI-TRN-045. The run reads the device once, before it loads
-        anything, and keeps it to the end (#201).
+        anything, and keeps it to the end (#201). A store shredded while the run goes on (`shred_store`) refuses it as
+        it registers, with AOI-TRN-058 audited as `training.refused`, and the run removes the files it wrote, and its
+        folder under models/ when no other file is in it; a first version whose go-live a shred refused is raised, not
+        returned, as no version of a shredded store goes live again: nothing learned from images a shred deleted is kept
+        as a version or goes live (REQ-TRN-017; review TRN-2).
 
         Memory (REQ-TRN-007): each image is read, registered onto the board model's reference board (else the first OK
         image) and warped, then kept only as its tensor at the network's input size and its band of the Golden board's
@@ -1705,17 +1716,30 @@ class AppContext:
             # Training (REQ-TRN-010, Engineering "Go-live gate"); boards stay judged by the active version until then.
             # A board model's first version is then made active below, as there is no active version to keep (D3).
             with self.db.transaction():  # the version and its entry together
-                model_id = self.db.register_model(
-                    board_model, version, str(path), summary, activate=False, uid=model_uuid
-                )
-                old = {"active_version": previous["version"] if previous else None}
-                after = {"version": version, "assurance": frozen["assurance"], "activated": False, "metrics": summary}
-                self.audit("model.train", "model", model_uuid, old, after)
+                # its store asked again, in the transaction a shred's record waits for (review TRN-2): a shred recorded
+                # first refuses the version, and one recorded after deletes its files with the rest (`shred_store`)
+                if (late := self._shredded(board_model, NOT_KEPT)) is None:
+                    model_id = self.db.register_model(
+                        board_model, version, str(path), summary, activate=False, uid=model_uuid
+                    )
+                    old = {"active_version": previous["version"] if previous else None}
+                    after = {"version": version, "assurance": frozen["assurance"], "activated": False}
+                    self.audit("model.train", "model", model_uuid, old, after | {"metrics": summary})
+            if late is not None:
+                with self.db.transaction():  # the refusal audited in a transaction of its own, as _training_set's is
+                    after = {"use": use, "customer": frozen["customer"], "code": late.code}
+                    why = str(SHREDDED.fill(date=late.params["date"]))
+                    self.audit("training.refused", "dataset", dataset_uuid, None, after, reason=why)
+                raise late
         except BaseException:
             _remove(files(version))  # not registered: no file is left for a later run to take for its own
+            with contextlib.suppress(OSError):
+                out.rmdir()  # nor its folder, when it holds no other file, as one a shred deleted (review TRN-2)
             raise
         self._model_cache.pop(board_model, None)
         not_live = self._first_live(board_model, model_id) if first else None
+        if isinstance(not_live, AoiError) and not_live.code == "AOI-TRN-058":
+            raise not_live  # said as a refusal, never as a version to activate once the cause is fixed (review TRN-2)
         live = first and not_live is None and (self.db.active_model(board_model) or {}).get("id") == model_id
         self.log.info("training.finished", extra={"board_model": board_model, "model_version": version, "live": live})
         return {**model.meta, "activated": live, "not_live": not_live}
@@ -1724,7 +1748,11 @@ class AppContext:
         """The active model of a board model as (version, model, uuid), the three from one row so a record never names
         one version's UUID with another's weights; the weights are cached by version and device. A load that was
         running when save_settings changed the device returns its model to its caller but does not cache it, and a
-        cached model is used only on the device in use, so no later board runs on the old device (#201)."""
+        cached model is used only on the device in use, so no later board runs on the old device (#201). AOI-TRN-058 for
+        a board model of a shredded dataset store, before its file is read and again once it is, so neither a copy put
+        back nor a load the shred met judges a board; `shred_store` takes the weights held in memory out of the cache
+        once it is recorded, and the check before caching holds the database's lock, so no load caches them after that
+        (REQ-TRN-017; review TRN-2)."""
         rec = self.db.active_model(board_model)
         if not rec:
             return None
@@ -1732,10 +1760,24 @@ class AppContext:
         cached = self._model_cache.get(board_model)
         if cached and cached[0] == device and cached[1][0] == rec["version"]:
             return cached[1]
+        refused = NOT_JUDGED.fill(version=rec["version"])
+        if (shred := self._shredded(board_model, refused)) is not None:
+            raise shred
         loaded = (rec["version"], self._weights(rec, device), str(rec["uuid"]))
-        if self.device == device:
-            self._model_cache[board_model] = (device, loaded)
+        with self.db.locked():  # a shred's record and this check, one before the other
+            if (shred := self._shredded(board_model, refused)) is not None:
+                raise shred
+            if self.device == device:
+                self._model_cache[board_model] = (device, loaded)
         return loaded
+
+    def _shredded(self, board_model: str, refused: Phrase) -> AoiError | None:
+        """AOI-TRN-058 when `board_model`'s dataset store is shredded, naming the day and what was `refused`, else None;
+        from the database alone (REQ-TRN-017; review TRN-2)."""
+        store = self.db.board_model_store(board_model)
+        if store is None or not store["shredded_at"]:
+            return None
+        return AoiError("AOI-TRN-058", board=board_model, date=store["shredded_at"][:10], refused=refused)
 
     def _weights(self, rec: dict[str, Any], device: str) -> anomaly.AnomalyModel:
         """The AI model file of a registry row `rec`, loaded as weights only on `device` (`AnomalyModel.load`,
@@ -2057,6 +2099,17 @@ class AppContext:
         result is current; that page then passes over the AI model for a run judged with the AI check off (#246), and
         the scale for a recipe that holds no size in mm (S29)."""
         return insp.inputs == self._engine_inputs(board_model)
+
+    def engine_may_judge(self, board_model: str, insp: Inspector) -> bool:
+        """Whether `insp`, an engine a driver keeps (`InspectionCycle`), may judge the next board of `board_model`: it
+        is current (`engine_is_current`) and the board model's dataset store is not shredded. A shred changes none of
+        the inputs that compares, yet nothing learned from the store's images judges a board after it, the weights and
+        the Golden board an engine holds included, so the next board builds the engine again, which `load_model` refuses
+        with AOI-TRN-058 (and `inspector` with AOI-INSP-009 when no AI model is active: its Golden board is gone). A
+        stored run's or check's provenance is still `engine_is_current`'s question. From the database alone
+        (REQ-TRN-017; review TRN-2)."""
+        store = self.db.board_model_store(board_model)
+        return self.engine_is_current(board_model, insp) and not (store is not None and store["shredded_at"])
 
     def _engine_inputs(self, board_model: str) -> tuple[str | None, str | None, str | None, float | None]:
         """What `inspector(board_model)` would be built from now, as `Inspector.inputs` gives it, from the database."""
@@ -2448,6 +2501,8 @@ class AppContext:
         metrics keep `targets`, those in force as the run started (a `validation_targets` row; None for the proposed
         defaults), so targets recorded later never change what the run is held to (REQ-TST-008)."""
         for i, (f, gt, defect_type, read) in enumerate(entries, 1):
+            if (shred := self._shredded(board_model, NOT_TESTED)) is not None:
+                raise shred  # a shred meanwhile: no image after it is judged with the store's engine (review TRN-2)
             res = insp.inspect(read())
             pred = NG if res.verdict in (NG, WARN) else OK
             overlay = out / f"{i:04d}.png"
@@ -2474,6 +2529,8 @@ class AppContext:
         model_version = insp.model_version or "-"
         judged = dataclasses.asdict(insp.judged_by)  # what judged every row: recipe, Golden board, scale (REQ-TST-005)
         with self.db.transaction():  # the run and its entry, or neither (#178)
+            if (shred := self._shredded(board_model, NOT_TESTED)) is not None:
+                raise shred  # a shred after the last image's check: the run is not stored either (review TRN-2)
             self.db.add_test_run(
                 board_model, model_version, str(folder), metrics, rows, insp.model_uuid, dataset_uuid,
                 uid=ids["run_uuid"], judged_by=judged,
@@ -3757,8 +3814,7 @@ class AppContext:
         if (store := self.db.board_model_store(version["board_model"])) is None:
             why = QT_TRANSLATE_NOOP("Errors", "its images are in no customer's dataset store; an Admin moves them in")
         elif store["shredded_at"]:
-            why = QT_TRANSLATE_NOOP("Errors", "its dataset store was shredded on {date}")
-            why = why.fill(date=store["shredded_at"][:10])
+            why = SHREDDED.fill(date=store["shredded_at"][:10])
         elif store["customer"] != customer:
             why = QT_TRANSLATE_NOOP("Errors", "its images are in the dataset store of {store}, not of {customer}")
             why = why.fill(store=store["customer"], customer=customer)
@@ -4015,16 +4071,22 @@ class AppContext:
         station's key store first, which alone leaves every copy of its files unreadable, a backup's included, once
         the recovery sheet is destroyed too. Then a row of `store_shreds` and the audit entry `store.shred` record it,
         with the key id and the counts, and the files of its board models are deleted: under images/, each frozen
-        version's folder under datasets/, and their AI models and golden boards under models/. Rows stay (ADR 0009),
-        and a file of the store is refused from then on with AOI-TRN-025. Calling this again finishes a shred stopped
-        part-way, deleting what is left, and is audited too. Returns the counts `files` (images and manifests) and
-        `models`. AOI-TRN-044 for a store the workspace does not hold, a key the key store would not delete (nothing
-        changed) and a file that would not go (the rest went, and the shred stays recorded)."""
+        version's folder under datasets/, and their AI models and golden boards under models/, those listed in the
+        transaction that records the shred, which a training's registering transaction waits for: one registered
+        before it wrote its files before it too, so they are counted and go, and one after it is refused and removes
+        its own (`train`; review TRN-2). The weights of its board models held in memory are dropped once it is
+        recorded. Rows stay (ADR 0009); a file of the store is refused from then on with AOI-TRN-025, and a board model
+        of it judges no board (`engine_may_judge`; `load_model` refuses it with AOI-TRN-058) and no version of it goes
+        live (`_switch_to`, AOI-TRN-058). Calling this again finishes a shred stopped part-way, deleting what is left,
+        and is audited too. Returns the counts `files` (images and manifests) and `models` (the files under models/ it
+        deleted), as its entry records them. AOI-TRN-044 for a store the workspace does not hold, a key the key store
+        would not delete (nothing changed) and a file that would not go (the rest went, and the shred stays
+        recorded)."""
         if (store := self.db.store(store_uuid)) is None:
             why = QT_TRANSLATE_NOOP("Errors", "the workspace holds no such store")
             raise AoiError("AOI-TRN-044", store=store_uuid, reason=why)
         root, models = self.settings.root, self.settings.models_dir
-        boards, files, derived = self._store_files(store)
+        boards, files, _ = self._store_files(store)
         if not store["shredded_at"]:
             try:
                 self.credentials.delete(credentials.STORE_PREFIX + store_uuid)  # first: from here nothing of it opens
@@ -4036,9 +4098,12 @@ class AppContext:
             if not store["shredded_at"]:
                 row = {"uuid": new_uuid(), "store_uuid": store_uuid, "key_id": store["key_id"], "files": len(files)}
                 self.db.add_shred(row | {"shredded_by": self.user_uuid, "shredded_at": now_utc()})
+            derived = self._learned(boards)  # listed once recorded, so a training that registered meanwhile is in it
             after = {"customer": store["customer"], "key_id": store["key_id"], "board_models": store["board_models"]}
             after |= {"files": len(files), "models": len(derived), "resumed": bool(store["shredded_at"])}
             self.audit("store.shred", "dataset_store", store_uuid, None, after)
+        for b, _ in boards:  # weights in memory, learned from the store, judge no board after it (review TRN-2)
+            self._model_cache.pop(b, None)
         folders = [root / stores.IMAGES / b for b, _ in boards] + [models / b for b, _ in boards]
         folders += [root / datasets.FOLDER / name for _, versions in boards for name in versions]
         if left := _deleted(files + derived, folders):
@@ -4063,14 +4128,16 @@ class AppContext:
 
     def _store_files(self, store: dict[str, Any]) -> tuple[list[tuple[str, list[str]]], list[Path], list[Path]]:
         """A store's board models with their frozen versions' names, the files it holds (`stores.files_of`) and the
-        files derived from them under models/."""
-        root, models = self.settings.root, self.settings.models_dir
+        files derived from them under models/ (`_learned`)."""
         boards = [(b, [d["name"] for d in self.db.datasets(b)]) for b in store["board_models"]]
-        files = [f for b, versions in boards for f in stores.files_of(root, b, versions)]
-        derived = [
-            f for b, _ in boards if (models / b).is_dir() for f in sorted((models / b).rglob("*")) if f.is_file()
-        ]
-        return boards, files, derived
+        files = [f for b, versions in boards for f in stores.files_of(self.settings.root, b, versions)]
+        return boards, files, self._learned(boards)
+
+    def _learned(self, boards: list[tuple[str, list[str]]]) -> list[Path]:
+        """The files under models/ of a store's board models, as `_store_files` gives them: their AI models, Golden
+        boards and AI model cards, learned from the store's images."""
+        models = self.settings.models_dir
+        return [f for b, _ in boards if (models / b).is_dir() for f in sorted((models / b).rglob("*")) if f.is_file()]
 
     def stores(self) -> list[dict[str, Any]]:
         """Every dataset store, oldest first: uuid, customer, key_id, created_by, created_at, shredded_at (None while
@@ -4357,8 +4424,8 @@ class AppContext:
         (`_switch_to`), audited as `model.activate` by the Engineer who trained it with FIRST_LIVE as the reason
         (business-readiness decision D3, ADR 0018; REQ-TRN-012). Its own transaction, after the version's: a refusal
         (AOI-TRN-048, AOI-TRN-049) or a failure such as a full disk leaves the version registered and inactive, which is
-        logged and returned, for Training to show, and which Inspection then offers to activate (`inactive_model`).
-        None once it is live."""
+        logged and returned, for Training to show, and which Inspection then offers to activate (`inactive_model`);
+        `train` raises AOI-TRN-058, a store shredded meanwhile, which no step undoes. None once it is live."""
         try:
             with self.db.transaction():  # one made active meanwhile, as by Inspection's Activate, is kept (ADR 0020)
                 if self.db.active_model(board_model) is None:
@@ -4402,10 +4469,12 @@ class AppContext:
         v1.1 to v1.1 named no version for Roll Back to go back to (review TRN-1). An AI model of a Trial version goes
         live only while no Validated one has (`validated_live`); after that the go-live gate refuses it with
         AOI-TRN-052, naming that version's board model and view for Start the Checks (ADR 0020, decision 4). A version
-        that records no Golden board (trained before it was recorded) keeps the board model's. Refused with AOI-TRN-048
-        before anything changes: a version whose AI model file does not load as `load_model` loads it (`_weights`, on
+        that records no Golden board (trained before it was recorded) keeps the board model's. Refused before anything
+        changes: a version of a board model whose dataset store is shredded, with AOI-TRN-058, so nothing learned from
+        images a shred deleted judges boards again, its files put back from a copy included (REQ-TRN-017, review TRN-2);
+        and with AOI-TRN-048: a version whose AI model file does not load as `load_model` loads it (`_weights`, on
         the CPU, which reads the same file), naming the file and why, so no version goes live to refuse every board
-        (review TRN-5); and one whose recorded Golden board cannot be read, as inspections would otherwise judge with
+        (review TRN-5), and one whose recorded Golden board cannot be read, as inspections would otherwise judge with
         another version's board."""
         board_model, root = target["board_model"], self.settings.root
         previous, before_ref = self.db.active_model(board_model), self.db.reference(board_model)
@@ -4418,6 +4487,8 @@ class AppContext:
 
         if previous is not None and previous["id"] == target["id"] and kept(ref) == kept(before_ref):
             return
+        if (shred := self._shredded(board_model, NOT_MADE_ACTIVE.fill(version=target["version"]))) is not None:
+            raise shred
         if (trial := self.trial_version(target)) is not None and self.validated_live(board_model) is not None:
             name, view = trial["name"], trial["view"]
             raise AoiError("AOI-TRN-052", version=target["version"], board=board_model, dataset=name, view=view)

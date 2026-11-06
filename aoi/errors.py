@@ -1125,6 +1125,22 @@ CODES: dict[str, ErrorCode] = {
                 " as they are. Nothing was written.",
             ),
         ),
+        ErrorCode(  # a board model of a shredded dataset store, its images gone for good (REQ-TRN-017; review TRN-2)
+            "AOI-TRN-058",
+            QT_TRANSLATE_NOOP("Errors", "Board model's dataset store shredded"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The dataset store of board model {board} was shredded on {date}, and nothing learned from its images"
+                " judges boards again: {refused}.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing of board model {board} can be trained or made active again. To inspect these boards again, an"
+                " Admin makes a new board model under another name with + New, naming its customer, which puts it in a"
+                " dataset store that is not shredded; an Engineer then imports its images on Training, freezes a"
+                " dataset version, locks its validation set and trains from it.",
+            ),
+        ),
         ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
@@ -1966,6 +1982,11 @@ GUIDE: dict[str, Phrase] = {
         "Errors",
         "Nothing was made: Validated AI model {version} judges {board}'s boards, and Train makes a Trial one, which"
         " never replaces it.",
+    ),
+    "AOI-TRN-058": QT_TRANSLATE_NOOP(  # the Train a shred meets (review TRN-2)
+        "Errors",
+        "The images of {board} were shredded on {date}, so no AI model trained from them judges boards. An Admin makes"
+        " a board model under another name with + New, naming its customer; then add its images.",
     ),
     "AOI-TST-003": QT_TRANSLATE_NOOP(
         "Errors", "Not tested: {reason}. The AI model judges boards; AI Model Test tests it again."

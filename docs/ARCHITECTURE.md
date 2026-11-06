@@ -244,7 +244,8 @@ the page, so the key works wherever the focus is on the page and only while the 
 button and the key never disagree (REQ-INSP-005). The Inspection page answers within the action itself: the banner is
 repainted grey with "Inspecting…" before the pool thread starts, and the verdict is painted before the image and the
 defect table are built from the result (REQ-INSP-002); the engine is built on the pool thread and kept for the next
-boards only while it is current: before each board the job asks `AppContext.engine_is_current`, a database read that
+boards only while it is current: before each board the job asks `AppContext.engine_may_judge`, a database read: no
+shred of its board model's dataset store (REQ-TRN-017), and `engine_is_current`, which
 compares `Inspector.inputs` (the AI model's UUID, the recipe revision's UUID, the Golden board's path, the scale) with
 the active AI model, the latest recipe, the Golden board and the board model's scale, and builds it again when a
 training run, an activation, a saved recipe, a scale or a Golden board set made it stale (S29), so a board that starts
@@ -607,8 +608,18 @@ verify, sized for a box, read for training) decrypts it in memory. A file that d
 SHA-256 stays each file's identity. A board model in no store stays plain, and `freeze_dataset` refuses it, or one in
 another customer's store than the version names (AOI-TRN-027), so a frozen version is one customer's, encrypted.
 `shred_store` ends a store: it deletes the key first, records the shred (`store_shreds`, `store.shred`), then deletes
-the board models' images, their versions' folders and their AI models and golden boards under models/. A file of it is
-AOI-TRN-025 "it was shredded on <day>" from then on, and calling it again finishes a shred stopped part-way;
+the board models' images, their versions' folders and their AI models and golden boards under models/, those listed in
+the transaction that records it, so the entry counts what goes. A file of it is
+AOI-TRN-025 "it was shredded on <day>" from then on, and calling it again finishes a shred stopped part-way. Nothing
+learned from its images judges a board after it (REQ-TRN-017; review TRN-2): the shred drops its board models' weights
+from the cache once recorded, `load_model` refuses them with AOI-TRN-058 before and after it reads the file (the second
+check under the database's lock, so a load the shred met caches nothing), and `engine_may_judge` ends the engine an
+inspection cycle keeps, so the next board builds it again and is refused; an AI Model Test asks before each image and as
+it stores the run. `train` asks for a shred again in the transaction that registers its AI model, which the shred's
+record waits for or follows: a run a shred meets is refused
+there (AOI-TRN-058, audited as `training.refused`) and removes its files, or registered first and loses them to the
+shred, and its first version's go-live, refused, is raised; `_switch_to` makes no version of a shredded store active
+(AOI-TRN-058);
 `store_contents(store)`, a read, names what it would delete now (the customer, the board models, and the file and AI
 model counts, 0 once deleted), for Shred Store… to say before it does. Settings › Dataset stores
 (`aoi/ui/pages/settings_stores.py`, Datasets stage 3 of 4) takes these steps on screen, Admin only, each an inline sheet
@@ -1087,8 +1098,8 @@ The writes, their roles and entries:
 | `create_store`, `restore_store_key` | Admin | `store.create` (customer, key id), `store.restore` (key id); object = store UUID; never the key or its sheet. The key is saved after the row and the entry, in their transaction, so an entry that cannot be written leaves no key, and a key store that refuses the key is `AOI-TRN-044` with nothing written (REQ-TRN-017); a key store that keeps keys in memory only is `AOI-TRN-053` before anything (ADR 0021) |
 | `create_customer_board_model`, `save_recovery_sheet`, `print_recovery_sheet` | Admin | `board_model.create`, `recipe.default` (the system's), `store.create` for a customer with no store and `store.move_in`, all or none, the new key deleted whenever they do not commit; `store.sheet_saved` (where the file went, stored as exports are) and `store.sheet_printed` (the printer, and the file Qt prints to, if any), never the key, a file in the workspace or a OneDrive folder refused with AOI-LOG-002; object = board model name or store UUID (ADR 0021) |
 | `move_in` | Admin | `store.move_in` (board model, files to move, resumed); object = store UUID. The row and the entry are written before any file is encrypted, so a move that stops is finished by calling it again, audited again (REQ-TRN-017) |
-| `shred_store` | Admin | `store.shred` (customer, key id, board models, file and AI model counts, resumed); object = store UUID. The key is deleted before the row and the entry are written, and the files after them; a shred that stops is finished by calling it again, audited again (REQ-TRN-017) |
-| `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; a board model's first version's own, after its `model.train`, with the reason "the first AI model of its board model, which goes live when its training ends"; `model.train` also the Golden board before, and its metrics name the dataset version, its UUID and the use, S39, and its after the version's assurance, ADR 0020); object = model UUID. A run refused for its customer's store or its use writes `training.refused` (use, customer, code, and why as the entry's reason; object = dataset version UUID) in a transaction of its own, then raises AOI-TRN-046 (REQ-TRN-017). Activating the version active already, with its Golden board, writes nothing (review TRN-1) |
+| `shred_store` | Admin | `store.shred` (customer, key id, board models, file and AI model counts, the AI model files listed in its transaction, resumed); object = store UUID. The key is deleted before the row and the entry are written, and the files after them; a shred that stops is finished by calling it again, audited again (REQ-TRN-017) |
+| `train`, `activate_model` | Engineer | `model.train`, `model.activate` (active version; an older one is a rollback; a board model's first version's own, after its `model.train`, with the reason "the first AI model of its board model, which goes live when its training ends"; `model.train` also the Golden board before, and its metrics name the dataset version, its UUID and the use, S39, and its after the version's assurance, ADR 0020); object = model UUID. A run refused for its customer's store or its use writes `training.refused` (use, customer, code, and why as the entry's reason; object = dataset version UUID) in a transaction of its own, then raises AOI-TRN-046 (REQ-TRN-017), before it reads an image, or AOI-TRN-058 as it registers, for a store shredded meanwhile (review TRN-2). Activating the version active already, with its Golden board, writes nothing (review TRN-1) |
 | `guide_train`, `start_guide_train` | Engineer | none of their own: each part of the first-run guide's Train writes the entries of the call it makes, as on the Engineering pages (`dataset.freeze`, `dataset.lock`, `model.train`, `model.activate`, `test.run`, `inspection.shift_check`), and a part done before writes nothing again (REQ-TRN-021, B5) |
 | `save_recipe` | Engineer | `recipe.save` (the latest revision's body before, the new one after, and the reason typed on Save Recipe's sheet, REQ-RCP-004 and REQ-RCP-005); object = recipe UUID. A revision that sets, changes or clears the AI score threshold's override is also audited as `recipe.ai_threshold` (revision, override, the threshold that judges, the active AI model's version and calibrated value); object = board model name (REQ-TRN-015). A size in mm the engine cannot apply is `AOI-RCP-011`, and any recipe while the board model's scale cannot be read `AOI-RCP-012`, nothing written (S29) |
 | `batch_test` | Engineer | `test.run` (folder, model version, metrics); object = board model name |
