@@ -726,6 +726,13 @@ removes the selected ROI without asking, since Ctrl+Z undoes each change to the 
 (drawing, moving, resizing, Apply, Delete) and Ctrl+Y does it again. The wheel zooms at the pointer; a drag on the
 board away from an ROI pans, as does a middle-button drag or a drag with Space held (in Draw ROI too); Home or a
 double-click fits the board. Save Recipe stores each ROI where it is shown, its box in mm under a scale (section 2).
+An enabled ROI must lie wholly on the Golden board: Save Recipe refuses one that does not (AOI-RCP-014), and a board
+judged with one gets no verdict (AOI-INSP-021), since part of its place would go unjudged. Calibrate Scale… refuses a
+scale that would leave an enabled ROI held in mm past the board's edge (AOI-RCP-015, naming the ROI and the size it must
+fit), so that no board stops on it. Set Reference and an AI model made active, which brings its own Golden board, check
+no ROI: after a camera change, set the new Golden board, then calibrate the scale on it (section 2) before judging
+boards; until then a board with an ROI off the image says so (AOI-INSP-021). ROIs are judged on the AI model's map: with
+the AI check off, or no AI model active, no ROI is judged, and each board's result says so.
 
 **Try Recipe…** (Ctrl+T) judges a board with the recipe as it stands on screen, changes not saved included, and
 stores nothing: no result and no file. The file dialog opens on the board last inspected under this board model, so
@@ -736,7 +743,8 @@ threshold, rule and result), with the inspection time against the 1 s budget.
 
 **AOI checks** tab. The 10 mandatory AOI checks of the defect classification table, each marked by how the recipe
 on screen covers it: ✓ ROI R1 for Missing Component, Polarity Error and Solder Bridge when an enabled ROI of the
-matching type (Presence, Polarity, Solder Bridge) covers it; • whole board for Misalignment, Tombstone and Cold Joint
+matching type (Presence, Polarity, Solder Bridge) covers it while the AI check is on; • whole board for Misalignment,
+Tombstone and Cold Joint
 while the AI check or the Golden board comparison is on; ○ not covered; and ◌ needs Stage 2 for the 4 checks a 3D or
 side camera makes. The marks follow each edit before it is saved.
 
