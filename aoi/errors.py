@@ -1827,6 +1827,21 @@ CODES: dict[str, ErrorCode] = {
                 'guide, "Where the workspace goes"); at start, choose it in the window that opens next.',
             ),
         ),
+        ErrorCode(
+            "AOI-SET-025",
+            QT_TRANSLATE_NOOP("Errors", "Workspace drive full"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The workspace folder {path} could not be opened: its drive is full, with no room for the database's"
+                " working files.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Restore no backup: the database is not damaged, only out of room. Free space on that drive, for"
+                " example by moving old exports off it, and start the app again. Or choose another workspace folder"
+                " in the window that opens next; Cancel there closes the app.",
+            ),
+        ),
     )
 }
 

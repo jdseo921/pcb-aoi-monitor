@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import csv
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -27,6 +28,8 @@ from aoi.core.imaging import list_images
 from aoi.core.inspector import InspectionResult, Inspector
 from aoi.core.services import AppContext
 from aoi.data.db import Database
+from aoi.data.errors import WorkspaceError
+from aoi.ui import errors as ui_errors
 from aoi.ui import theme
 from tests.conftest import TrainedModel, engineer, listed, log_rows, restored
 from tests.test_req_done_in_v01 import BOARD, _window
@@ -153,11 +156,81 @@ def test_req_log_006_a_drive_the_system_cannot_measure_stops_no_save(
     assert ctx.disk is None and Path(ctx.inspections()[0]["overlay_path"]).is_file() and disk_alarms(ctx) == []
 
 
+def test_req_log_006_a_start_after_a_clean_close_on_a_drive_with_no_byte_free_says_the_drive_is_full(
+    drive: Path, tiny_model: TrainedModel
+) -> None:
+    """Senior review 2026-11-06, DAT-1: closed cleanly, the database leaves no -shm file, and with no byte free SQLite
+    cannot make one, so it does not open (a disk I/O error). Before, AOI-SET-011 said the drive could not be read or
+    written and pointed at restoring a backup, which loses the records since it; now AOI-SET-025 says the drive is
+    full and to restore no backup. Nothing is changed, and once space is freed the workspace opens as it was."""
+    if not os.path.ismount(drive):
+        pytest.skip("needs a tmpfs the test may mount (root on Linux); the next test fakes it on CI's runner")
+    ws = restored(tiny_model, drive / "workspace")
+    first = AppContext(Settings(workspace=str(ws), device="cpu"))
+    held = [s["uuid"] for b in first.db.board_models() for s in first.samples(b)]
+    first.close()
+    assert not (ws / "aoi.sqlite-shm").exists(), "a clean close leaves no shared-memory file"
+    with (drive / "filler.bin").open("ab", buffering=0) as f, contextlib.suppress(OSError):
+        while True:
+            f.write(bytes(2**16))
+    with contextlib.suppress(OSError):
+        while True:  # the last bytes, a block at a time
+            with (drive / "filler.bin").open("ab", buffering=0) as f:
+                f.write(bytes(512))
+    with pytest.raises(WorkspaceError) as refused:
+        AppContext(Settings(workspace=str(ws), device="cpu"))
+    assert isinstance(refused.value.__cause__, sqlite3.Error), "refused by the database, not by a file written first"
+    assert refused.value.code == "AOI-SET-025" and "its drive is full" in str(refused.value.what)
+    assert "Restore no backup" in str(refused.value.action) and "AOI-SET-025" in ui_errors.ANOTHER_WORKSPACE
+    (drive / "filler.bin").unlink()
+    again = AppContext(Settings(workspace=str(ws), device="cpu"))
+    try:
+        assert held and [s["uuid"] for b in again.db.board_models() for s in again.samples(b)] == held
+    finally:
+        again.close()
+
+
+@pytest.mark.parametrize(
+    ("error", "free", "code", "said"),
+    [
+        ("disk I/O error", 2**20 - 1, "AOI-SET-025", "its drive is full"),  # under 1 MiB
+        ("disk I/O error", 2**20, "AOI-SET-011", "the drive could not be read or written"),
+        ("disk I/O error", None, "AOI-SET-011", "the drive could not be read or written"),  # a drive not measured
+        ("file is not a database", 0, "AOI-SET-011", "the database file is damaged"),
+        ("attempt to write a readonly database", 0, "AOI-SET-011", "set to read-only"),
+        ("database or disk is full", None, "AOI-SET-025", "its drive is full"),  # SQLite says so: no measuring
+    ],
+    ids=["io-full", "io-room", "io-unmeasured", "damaged-full", "read-only-full", "full"],
+)
+def test_req_log_006_a_database_that_does_not_open_on_a_full_drive_says_the_drive_is_full(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: str, free: int | None, code: str, said: str
+) -> None:
+    """The same refusal where no tmpfs can be mounted: a disk I/O error at open on a drive with under 1 MiB free is
+    AOI-SET-025; with room, or a drive that cannot be measured, AOI-SET-011 as before. A full drive does not make
+    SQLite misread a file (review of the fix), so a damaged or read-only database keeps its own reason."""
+    from aoi.data import db as db_module
+
+    def refused_open(conn: sqlite3.Connection) -> None:
+        raise sqlite3.OperationalError(error)
+
+    monkeypatch.setattr(db_module, "migrate", refused_open)
+    measured = (
+        mock.Mock(side_effect=OSError("not ready")) if free is None else mock.Mock(return_value=mock.Mock(free=free))
+    )
+    monkeypatch.setattr(shutil, "disk_usage", measured)
+    with pytest.raises(WorkspaceError) as refused:
+        Database(tmp_path / "aoi.sqlite")
+    assert refused.value.code == code and said in str(refused.value.what), str(refused.value.what)
+    assert code in ui_errors.ANOTHER_WORKSPACE  # the folder chooser follows either refusal
+
+
 def test_req_log_006_a_start_on_a_drive_with_no_byte_free_opens(
     drive: Path, tiny_model: TrainedModel, synthetic_dataset: Path
 ) -> None:
     """The diagnosis's day 31 on a real filesystem: every start-up write meets a full drive, an OK record and its maps
-    past their retention among them; the app opens, and alarms AOI-LOG-006 if the alarm fits."""
+    past their retention among them; the app opens, and alarms AOI-LOG-006 if the alarm fits. The database's -shm and
+    -wal files are there, as the connection below keeps them, and as a run that did not close leaves them; after a clean
+    close they are not, and the test of a start after a clean close holds that start."""
     if not os.path.ismount(drive):
         pytest.skip("needs a tmpfs the test may mount (root on Linux); CI's runner fakes SQLITE_FULL above")
     ws = restored(tiny_model, drive / "workspace")
