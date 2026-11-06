@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import base64
 import html
 import re
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QBuffer, QIODevice, QMarginsF, Qt
-from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
+from PySide6.QtCore import QBuffer, QEventLoop, QIODevice, QMarginsF, Qt, QUrl
+from PySide6.QtGui import QImage, QPageLayout, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -29,6 +31,7 @@ from ...core import report as reporting
 from ...core import stats
 from ...core.imaging import PREVIEW_PX
 from ...core.inspector import InspectionResult, JudgedBy
+from ...core.jobs import JobCancelled
 from ...core.recipe import scale_digits
 from ...core.services import AppContext
 from ...errors import AoiError, Phrase
@@ -43,6 +46,7 @@ from ..workers import Worker, start
 from .base import (
     QT_TRANSLATE_NOOP,
     Page,
+    PressSays,
     WrappedLine,
     breakable,
     button,
@@ -71,6 +75,54 @@ GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "Golden board {file}")
 NO_GOLDEN_BOARD = QT_TRANSLATE_NOOP("Errors", "no Golden board")
 SCALE = QT_TRANSLATE_NOOP("Errors", "a scale of {scale:.{digits}f} px/mm")  # the board model's, which sizes in mm use
 NO_SCALE = QT_TRANSLATE_NOOP("Errors", "no scale")
+PNG_URI = re.compile(r"(?<=<img src=')data:image/png;base64,([A-Za-z0-9+/=]*)(?=')")  # the report's own overlays
+
+
+def render_pdf(html_text: str) -> bytes:
+    """The report `html_text` as an A4 portrait PDF with 15 mm margins, rendered in memory on the calling thread: a pool
+    thread for Export Report and Validation Report… (UI-3). QTextDocument lays a long document out in steps on a timer,
+    which needs an event dispatcher: a pool thread has none until a QEventLoop is made on it (else Qt warns
+    "QBasicTimer::start: …" at each step), and keeps it for its life, so a QTimer a later job started there would never
+    fire (none does). Each embedded overlay goes to the document as an image of its own, so the HTML it is handed stays
+    a few KB: 44 MB of HTML at 50 overlays held Python's lock, and the window, up to 0.8 s (3.6 s at 200; review of
+    UI-3). The bytes are those the UI thread rendered before, but for the time and document ID every PDF carries
+    (`test_req_tst_004_export_report_renders_off_the_ui_thread`)."""
+    QEventLoop()  # makes the thread's event dispatcher, which the thread keeps; the loop itself never runs
+    doc, parts, at = QTextDocument(), list[str](), 0
+    for i, m in enumerate(PNG_URI.finditer(html_text)):
+        url = QUrl(f"aoi-overlay:{i}")
+        doc.addResource(QTextDocument.ResourceType.ImageResource, url, QImage.fromData(base64.b64decode(m[1])))
+        parts += (html_text[at : m.start()], url.toString())
+        at = m.end()
+    doc.setHtml("".join(parts) + html_text[at:])
+    buf = QBuffer()  # rendered in memory, then written whole or not at all by the service layer (#180)
+    buf.open(QIODevice.OpenModeFlag.WriteOnly)
+    w = QPdfWriter(buf)
+    margins = QMarginsF(15, 15, 15, 15)
+    w.setPageLayout(QPageLayout(QPageSize(QPageSize.PageSizeId.A4), QPageLayout.Orientation.Portrait, margins))
+    doc.print_(w)
+    del w  # its end writes the last of the PDF into the buffer
+    return bytes(buf.data().data())
+
+
+def write_pdf(
+    ctx: AppContext,
+    path: str,
+    html_text: str,
+    board_model: str,
+    run_uuid: str | None,
+    model_version: str | None,
+    progress: Callable[..., None],
+    should_stop: Callable[[], bool],
+) -> None:
+    """A report's job on the pool (UI-3, REQ-SET-021): `html_text` rendered (`render_pdf`), then written to `path` whole
+    or not at all and audited under the run by `AppContext.export_report`, which raises AOI-LOG-002 for a file that
+    cannot be written and AOI-USR-001 for a role that may not export. Stopped while it renders, as when the window
+    closes, it writes nothing (JobCancelled): no report is left half written or written unaudited."""
+    pdf = render_pdf(html_text)
+    if should_stop():
+        raise JobCancelled(f"report {path}")
+    ctx.export_report(path, pdf, board_model, run_uuid, model_version)
 
 
 class MetricTile(QLabel):
@@ -117,6 +169,7 @@ class ModelTestPage(Page):
         self.run_folder = ""  # the folder the rows and metrics came from, which the report names (#174)
         self.run_board_model: str | None = None  # and the board model they were run for, while shown (#180)
         self.run_judged: JudgedBy | None = None  # and what judged them: AI model, recipe revision, Golden board (#250)
+        self.writing: str | None = None  # the file a report is being written to, while one is (UI-3)
 
         self.tabs = QTabWidget()  # Run, and History: every stored run, reopened in Run (REQ-TST-005)
         run_tab = QWidget()
@@ -207,6 +260,8 @@ class ModelTestPage(Page):
         self.tabs.addTab(self._history_tab(), self.tr("History"))
         self.tabs.currentChanged.connect(lambda i: self._fill_history() if i == 1 else None)
         self.root.addWidget(self.tabs, 1)
+        for b in (self.btn_report, self.btn_validation):  # a press while greyed says why: a touch shows no tooltip
+            PressSays(b, self._report_off, self.shell.status)
 
     def _history_tab(self) -> QWidget:
         """Every stored run of the board model, newest first: its time, AI model, dataset version or folder, what
@@ -271,11 +326,12 @@ class ModelTestPage(Page):
         self.tabs.setCurrentIndex(0)
 
     def validation_report(self) -> None:
-        """The customer validation report of the run selected on History (REQ-TST-008): its data read on the pool,
-        then the PDF rendered here and written, whole and audited, by the service layer. A run on a folder, or a board
-        model with no labeller agreement check, is refused with AOI-TST-007."""
+        """The customer validation report of the run selected on History (REQ-TST-008): its data read and the PDF
+        rendered and written, whole and audited, by the service layer, on the pool (`_write_pdf`, UI-3). A run on a
+        folder, or a board model with no labeller agreement check, is refused with AOI-TST-007. While a report is being
+        written, a press does nothing."""
         sel = self.history.selectionModel().selectedRows()
-        if not sel or (bm := self.board_model) is None:
+        if self.writing is not None or not sel or (bm := self.board_model) is None:
             return
         run_uuid = self._runs[sel[0].row()]["uuid"]
         f, _ = QFileDialog.getSaveFileName(
@@ -286,27 +342,78 @@ class ModelTestPage(Page):
         )
         if not f:
             return
-        self.run_in_background(
-            self.ctx.validation_report_data, run_uuid, on_result=lambda data: self._write_validation(f, bm, data)
-        )
 
-    def _write_validation(self, f: str, board_model: str, data: dict[str, Any]) -> None:
-        doc = QTextDocument()
-        doc.setHtml(self._validation_html(data))
-        buf = QBuffer()
-        buf.open(QIODevice.OpenModeFlag.WriteOnly)
-        w = QPdfWriter(buf)
-        margins = QMarginsF(15, 15, 15, 15)
-        w.setPageLayout(QPageLayout(QPageSize(QPageSize.PageSizeId.A4), QPageLayout.Orientation.Portrait, margins))
-        doc.print_(w)
-        del w
-        run = data["run"]
-        try:
-            self.ctx.export_report(f, bytes(buf.data().data()), board_model, run["uuid"], run["model_version"])
-        except AoiError as e:
-            self.error(e)
-            return
-        self.shell.status(self.tr("Validation report saved: {file}").format(file=f))
+        def build(data: dict[str, Any]) -> tuple[str, str | None, str | None]:
+            return self._validation_html(data), data["run"]["uuid"], data["run"]["model_version"]
+
+        saved = self.tr("Validation report saved: {file}").format(file=f)
+        self._write_pdf(f, bm, saved, build, self.ctx.validation_report_data, run_uuid)
+
+    def _write_pdf(
+        self,
+        f: str,
+        board_model: str,
+        saved: str,
+        build: Callable[[Any], tuple[str, str | None, str | None] | None],
+        read: Callable[..., Any],
+        *args: Any,
+    ) -> None:
+        """Write a report to `f`, rendered off the UI thread (UI-3; Engineering, "No freezes"): `read(*args)` reads its
+        data on the pool, `build` makes its HTML here from it, with the run's UUID and AI model version (Export Report's
+        reads the AI model card here; None: the run is no longer shown, said, and nothing is written), and `write_pdf`
+        renders it and has the service layer write and audit it, on the pool. Until then Export Report and Validation
+        Report… are greyed, saying why, and the status bar says the report is being written; then it says `saved`, or
+        the coded error shows as before (AOI-LOG-002, AOI-USR-001, AOI-TST-007). The two jobs are the page's own, as
+        Run Test's is, not `run_in_background`'s, which a row's preview would stop."""
+        self._writing(f)
+
+        def failed(exc: BaseException) -> None:
+            self._writing(None)
+            self.error(exc)
+
+        def built(value: Any) -> None:
+            try:
+                made = build(value)
+            except Exception as e:  # an AI model card that cannot be read: said, and the buttons on again
+                failed(e)
+                return
+            if made is None:
+                self._writing(None)
+                self.shell.status(self.tr("Report not written to {file}: the run is no longer shown").format(file=f))
+                return
+            w = Worker(write_pdf, self.ctx, f, made[0], board_model, made[1], made[2], with_progress=True)
+            w.signals.result.connect(lambda _: self.shell.status(saved))
+            w.signals.error.connect(self.error)
+            w.signals.finished.connect(lambda: self._writing(None))
+            start(w, self.ctx.jobs)
+
+        w = Worker(read, *args)
+        w.signals.result.connect(built)
+        w.signals.error.connect(failed)
+        start(w, self.ctx.jobs)
+
+    def _writing(self, f: str | None) -> None:
+        """A report starts being written to `f`, or ends (None): the status bar's line while it is written, taken off at
+        the end unless the end has put its own there, and the report buttons greyed meanwhile (`_show_exports`)."""
+        said = self.tr("Writing the report to {file}…")
+        if f is None and self.writing is not None:
+            if self.shell.statusBar().currentMessage() == said.format(file=self.writing):
+                self.shell.statusBar().clearMessage()
+        self.writing = f
+        if f is not None:
+            self.shell.status(said.format(file=f), ms=0)
+        self._show_exports()
+
+    def _report_off(self) -> str:
+        """Why the two report buttons are greyed, said on a press: the role they need (both make `export_report`), or
+        a report being written."""
+        return self.gates.why.get(self.btn_report) or self._writing_tip()
+
+    def _writing_tip(self) -> str:
+        """Why Export Report and Validation Report… are greyed while a report is being written; "" while none is."""
+        if self.writing is None:
+            return ""
+        return self.tr("A report is being written to {file}; wait until it is saved.").format(file=self.writing)
 
     def _validation_html(self, data: dict[str, Any]) -> str:
         """The customer validation report: data, targets agreed before testing beside the results, the locked set,
@@ -810,14 +917,18 @@ class ModelTestPage(Page):
 
     def _show_exports(self) -> None:
         """Customer results leave the station only by an Admin (Q58, #151): the exports greyed for another role, never
-        hidden, saying who may (REQ-USR-001)."""
-        for b, call in (
-            (self.btn_csv, "export_csv"),
-            (self.btn_img, "export_test_overlays"),
-            (self.btn_report, "export_report"),
-            (self.btn_validation, "export_report"),
+        hidden, saying who may (REQ-USR-001); the two reports greyed too while one is being written, saying so, as a
+        second would only stand in line behind it (UI-3)."""
+        idle = self.writing is None
+        for b in (self.btn_report, self.btn_validation):
+            self.gates.own_tip(b, self._writing_tip())
+        for b, call, on in (
+            (self.btn_csv, "export_csv", True),
+            (self.btn_img, "export_test_overlays", True),
+            (self.btn_report, "export_report", idle),
+            (self.btn_validation, "export_report", idle),
         ):
-            self.role_gate(b, call)
+            self.role_gate(b, call, on)
 
     def on_show(self) -> None:
         self._show_exports()
@@ -899,7 +1010,10 @@ class ModelTestPage(Page):
         )  # fmt: skip
 
     def export_report(self) -> None:
-        if not self.rows:
+        """The run's validation report as a PDF (REQ-TST-004), after a question naming its images, missed defects and
+        false calls, into a file picked then: the overlays read and the PDF rendered and written, whole and audited, by
+        the service layer, on the pool (`_write_pdf`, UI-3). While a report is being written, a press does nothing."""
+        if self.writing is not None or not self.rows:
             return
         f, _ = QFileDialog.getSaveFileName(
             self,
@@ -918,34 +1032,13 @@ class ModelTestPage(Page):
         if QMessageBox.question(self, self.tr("Export report"), ask, buttons) != QMessageBox.StandardButton.Yes:
             return
         rows = list(self.rows)  # the overlays are read on the pool: no file work on the UI thread (REQ-SET-021)
-        self.run_in_background(
-            self.ctx.report_images, rows, on_result=lambda images: self._write_report(f, bm, rows, images)
-        )
 
-    def _write_report(self, f: str, board_model: str, rows: list[dict[str, Any]], images: dict[str, str]) -> None:
-        """Render the report of `rows` with their overlays and hand it to the service layer to write and audit."""
-        if board_model != self.run_board_model or rows != self.rows:  # another run or board model shown since (#180)
-            return
-        doc = QTextDocument()
-        doc.setHtml(self._report_html(images))
-        buf = QBuffer()  # rendered in memory, then written whole or not at all by the service layer (#180)
-        buf.open(QIODevice.OpenModeFlag.WriteOnly)
-        w = QPdfWriter(buf)
-        page = QPageLayout(
-            QPageSize(QPageSize.PageSizeId.A4), QPageLayout.Orientation.Portrait, QMarginsF(15, 15, 15, 15)
-        )
-        w.setPageLayout(page)
-        doc.print_(w)
-        del w
-        run = self.rows[0]
-        try:
-            self.ctx.export_report(
-                f, bytes(buf.data().data()), self.run_board_model, run.get("run_uuid"), run.get("model_version")
-            )
-        except AoiError as e:  # AOI-LOG-002 (not written) or AOI-USR-001 (role): no "Report saved"
-            self.error(e)
-            return
-        self.shell.status(self.tr("Report saved: {file}").format(file=f))
+        def build(images: dict[str, str]) -> tuple[str, str | None, str | None] | None:
+            if bm != self.run_board_model or rows != self.rows:  # another run or board model shown since (#180)
+                return None
+            return self._report_html(images), rows[0].get("run_uuid"), rows[0].get("model_version")
+
+        self._write_pdf(f, bm, self.tr("Report saved: {file}").format(file=f), build, self.ctx.report_images, rows)
 
     def _report_html(self, images: dict[str, str] | None = None) -> str:
         """The validation report: every sentence through tr(), the markup and the numbers from the code; `images`, the

@@ -21,6 +21,7 @@ from aoi.errors import AoiError
 from aoi.ui.pages.model_test import ModelTestPage
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_test_dataset import held_out
+from tests.test_validation_report import renders_off_the_ui_thread
 
 SECTIONS = ("1. Data", "2. Targets", "3. Locked validation set", "4. Results",
             "5. AI model card", "6. Known limits", "7. Sign-off")  # fmt: skip
@@ -129,6 +130,23 @@ def test_req_tst_008_report_written_and_audited(
     out = tmp_path / "validation.pdf"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "PDF (*.pdf)")))
     page.validation_report()
-    qtbot.waitUntil(lambda: page._bg is None and out.exists(), timeout=30000)
+    qtbot.waitUntil(lambda: page.writing is None, timeout=30000)
     assert out.read_bytes().startswith(b"%PDF")
     assert trained_ctx.audit_entries(action="export.report")[0]["after"]["run_uuid"] == run_uuid
+
+
+def test_req_tst_008_validation_report_renders_off_the_ui_thread(
+    qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path, dialogs: list[tuple[str, str]]
+) -> None:
+    """UI-3: Validation Report… rendered its PDF on the UI thread, which froze the window 6 s for 50 overlays; now its
+    data is read and the PDF rendered and written on the pool, the page saying so and taking no second press meanwhile
+    (`renders_off_the_ui_thread`)."""
+    validated(trained_ctx)
+    win = _window(qtbot, trained_ctx, "Admin")  # only an Admin exports (Q58, #151)
+    assert win.navigate("AI Model Test")
+    page = cast(ModelTestPage, win.pages["AI Model Test"])
+    page.tabs.setCurrentIndex(1)
+    page.history.selectRow(0)
+    saved = "Validation report saved: {file}"
+    renders_off_the_ui_thread(qtbot, page, page.validation_report, page.btn_validation, tmp_path, saved)
+    assert dialogs == []
