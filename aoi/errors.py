@@ -100,6 +100,7 @@ DB_NOT_OPENED = QT_TRANSLATE_NOOP("Errors", "the database file could not be open
 DB_READ_ONLY = QT_TRANSLATE_NOOP("Errors", "the database file or its folder is set to read-only")
 DB_REFUSED = QT_TRANSLATE_NOOP("Errors", "the database refused it")
 REFUSED = QT_TRANSLATE_NOOP("Errors", "the system refused it")
+NOT_UTF8 = QT_TRANSLATE_NOOP("Errors", "it is no longer UTF-8 text, as when a spreadsheet has saved over it")  # a CSV
 _BY_ERRNO = {  # by name: a system without one of these numbers leaves it out
     getattr(errno, name): reason
     for names, reason in (
@@ -392,6 +393,25 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Check that the output folder exists, that its drive or share is connected and has space, and that the"
                 " station may write to it. The records are kept: export the boards missed from Logs & Export.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-INSP-020",
+            QT_TRANSLATE_NOOP("Errors", "Shift file not updated"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} was judged and its record saved, and its own result files were written to the output folder"
+                " {folder}, but its line could not be added to the shift file {shift}: {reason}. The line, and any"
+                " after it, is kept and added once the file takes it again, with the next board or within a minute,"
+                " while the app stays open; this alarm is not repeated meanwhile.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Close the shift file in any app that has it open, such as a spreadsheet. If a spreadsheet saved over"
+                " it, move that copy out of the output folder: the station starts the file again with the lines it"
+                " kept, and the boards before them are in the copy and in Logs & Export. For any other reason, an Admin"
+                " makes the output folder take files again. Lines still kept when the app closes are not added; every"
+                " record is in Logs & Export.",
             ),
         ),
         ErrorCode(
