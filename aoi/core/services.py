@@ -42,7 +42,7 @@ from ..data.db import Database, DbError, is_busy, new_uuid
 from ..data.errors import WorkspaceError
 from ..data.paths import inside, one_folder_name, resolve, to_stored
 from ..data.workspace_lock import WorkspaceLock, holder, in_use
-from ..errors import CODES, FULL, QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
+from ..errors import CODES, FULL, NOT_UTF8, QT_TRANSLATE_NOOP, AoiError, Phrase, joined, system_detail, system_reason
 from ..hal import VIEWS, drives
 from ..times import local_date, now_utc
 from . import (
@@ -581,6 +581,7 @@ class AppContext:
         self._stopping = threading.Event()  # the timers: threads of the context's own, not Qt's
         self.pulse, self._started = heartbeat.Pulse(), time.monotonic()  # the boards the heartbeat counts (REQ-SET-024)
         self._result_files_failing = False  # AOI-INSP-019 was raised and no board's files were written since
+        self._shift_lines: result_files.Held = {}  # lines a shift CSV refused, added once it takes them (AOI-INSP-020)
         self._retention = threading.Thread(target=self._retain, name="retention", daemon=True)  # REQ-LOG-010
         self._beating = threading.Thread(target=self._beat, name="heartbeat", daemon=True)
         self._retention.start()
@@ -640,6 +641,11 @@ class AppContext:
         self._retention.join()  # a sweep under way ends before the database closes
         self._beating.join()
         self.jobs.shutdown()  # a running job may still read the database or write a file
+        try:  # the shift CSV lines kept back, a last time (AOI-INSP-020)
+            self._add_shift_lines(closing=True)
+        except Exception:
+            lines = sum(len(v) for v in self._shift_lines.values())
+            self.log.warning("result_file.shift_lines_lost", exc_info=True, extra={"lines": lines})
         self.log.info("app.close", extra={"uptime_s": round(time.monotonic() - self._started)})  # a clean exit
         with contextlib.suppress(OSError):  # a drive gone: the next start says this run did not close cleanly
             heartbeat.closed(self.settings.root)
@@ -2161,15 +2167,29 @@ class AppContext:
         """After a board is saved and its NG alarm raised, its result files in `Settings.output_folder` when one is set
         (REQ-INSP-021), with the record's own time. Never raises: files not written are logged, and alarmed (WARN,
         AOI-INSP-019) once until a board's files are written again, so a folder gone does not fill the alarm list; the
-        board stays saved, and its files are not written later."""
+        board stays saved, and its files are not written later. A shift CSV that refuses its line while the board's own
+        files are written is alarmed apart (WARN, AOI-INSP-020), once until no line is kept back: the lines are kept
+        and added by the next board's write, or within a minute by the heartbeat's timer (`_add_shift_lines`)."""
         folder = self.settings.output_folder
         if not folder:
             return
         try:
             record = self.db.inspection(iid) or {}
             doc = result_files.document(board_model, path, res, insp, record.get("uuid", ""), evidence, record["time"])
-            result_files.write(Path(folder), doc, day, _stem(path))
+            result_files.write(Path(folder), doc, day, _stem(path), self._shift_lines)
             self._result_files_failing = False
+        except result_files.ShiftNotWritten as e:
+            self._result_files_failing = False
+            self.log.warning("result_file.shift_not_written", exc_info=True, extra={"board_model": board_model})
+            if not e.first:  # alarmed when the first line was kept back: once until none is
+                return
+            what = Phrase("Errors", CODES["AOI-INSP-020"].what)  # marked for translation where the code is listed
+            reason = system_reason(e.cause, True) if isinstance(e.cause, OSError) else NOT_UTF8
+            text = what.fill(file=Path(path).name, shift=e.shift.name, folder=e.shift.parent, reason=reason)
+            try:
+                self.alarm("WARN", text, "AOI-INSP-020", wait_ms=BUSY_ALARM_WAIT_MS)
+            except Exception:
+                self.log.warning("alarm.not_stored", exc_info=True, extra={"code": "AOI-INSP-020"})
         except Exception as e:
             self.log.warning("result_file.not_written", exc_info=True, extra={"board_model": board_model})
             if self._result_files_failing:
@@ -2181,6 +2201,14 @@ class AppContext:
                 self.alarm("WARN", text, "AOI-INSP-019", wait_ms=BUSY_ALARM_WAIT_MS)
             except Exception:
                 self.log.warning("alarm.not_stored", exc_info=True, extra={"code": "AOI-INSP-019"})
+
+    def _add_shift_lines(self, closing: bool = False) -> None:
+        """Add the shift CSV lines kept back (AOI-INSP-020) to the files that take them now, from the heartbeat's timer
+        and at close; at close, any still refused are logged with their records, which Logs & Export keeps."""
+        result_files.flush(self._shift_lines)
+        if closing and self._shift_lines:
+            lost = {str(f): [line.rsplit(",", 1)[-1].strip() for line in v] for f, v in self._shift_lines.items()}
+            self.log.warning("result_file.shift_lines_lost", extra={"records": lost})
 
     def _watch_drift(self, board_model: str, view: str | None) -> None:
         """After a board is saved: alarm (WARN, AOI-INSP-018) on each drift measure of its board model and view that
@@ -4497,6 +4525,10 @@ class AppContext:
                 self.heartbeat()
             except Exception:
                 self.log.warning("heartbeat.failed", exc_info=True)
+            try:
+                self._add_shift_lines()
+            except Exception:
+                self.log.warning("result_file.shift_not_written", exc_info=True)
             if self._stopping.wait(heartbeat.BEAT_EVERY_S):
                 return
 

@@ -53,8 +53,13 @@ local folder or a share the line's systems read), and restart: each board saved 
 until the line's file-naming contract arrives. Empty, the default, writes none. One output folder per station: two
 stations writing to one folder overwrite each other's shift CSV. A folder that is gone or refuses the files raises
 AOI-INSP-019 once (the app never makes the folder again, so files never land on the station's own disk by mistake),
-the boards are still judged and recorded, and the boards missed are not written later: export them from Logs & Export.
-The Settings page and the self-check take the folder in a later release.
+the boards are still judged and recorded, and the boards missed are not written later: export them from Logs & Export. A
+shift CSV that another app holds open (a spreadsheet: Windows will not replace a file open there) raises AOI-INSP-020
+once; each board's own files are still written, and the lines the shift CSV missed are added once it is closed, with the
+next board or within a minute, as long as the app stays open (lines still refused at close are logged as
+`result_file.shift_lines_lost` with their record UUIDs). A shift CSV a spreadsheet saved over in another encoding is
+refused the same way: move it out of the folder and the station starts the file again with the lines it kept. The
+Settings page and the self-check take the folder in a later release.
 
 **Settings and settings.json.** A workspace folder saved on the Settings page is used from the next start; until
 then the app keeps the open workspace, its database, log and folders. The AI device, the default epochs and input

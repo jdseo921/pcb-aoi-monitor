@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+466"/>
+        <location line="+474"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1018,12 +1018,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2522"/>
+        <location line="+2544"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2491"/>
+        <location line="-2513"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1053,7 +1053,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+197"/>
+        <location line="+219"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
@@ -1270,19 +1270,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+1317"/>
+        <location line="+1321"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4771"/>
-        <location line="+3468"/>
+        <location line="-4805"/>
+        <location line="+3498"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3558"/>
+        <location line="-3588"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1610"/>
+        <location line="+1618"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1392,7 +1392,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1073"/>
+        <location line="+1095"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1594,7 +1594,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+452"/>
+        <location line="+456"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1604,12 +1604,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-512"/>
+        <location line="-516"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4219"/>
+        <location line="-4249"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,12 +1634,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1534"/>
+        <location line="+1542"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1492"/>
+        <location line="+1514"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1719,7 +1719,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+201"/>
+        <location line="+205"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,14 +1751,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4653"/>
+        <location line="-4687"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1297"/>
+        <location filename="../ui/main_window.py" line="+1302"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1913,7 +1913,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../errors.py" line="+172"/>
+        <location filename="../errors.py" line="+173"/>
         <source>Image cannot be read</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2108,7 +2108,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+27"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2314,12 +2314,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-314"/>
+        <location line="-333"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-214"/>
+        <location line="-215"/>
         <source>the drive is full</source>
         <translation>드라이브가 가득 찼습니다</translation>
     </message>
@@ -2414,6 +2414,11 @@
         <translation>시스템이 거부했습니다</translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>it is no longer UTF-8 text, as when a spreadsheet has saved over it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+164"/>
         <source>An Engineer sets a Golden board, or trains or activates an AI model, on Training, or turns on the Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.</source>
         <translation type="unfinished"></translation>
@@ -2484,7 +2489,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+56"/>
+        <location line="+16"/>
+        <source>Shift file not updated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} was judged and its record saved, and its own result files were written to the output folder {folder}, but its line could not be added to the shift file {shift}: {reason}. The line, and any after it, is kept and added once the file takes it again, with the next board or within a minute, while the app stays open; this alarm is not repeated meanwhile.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Close the shift file in any app that has it open, such as a spreadsheet. If a spreadsheet saved over it, move that copy out of the output folder: the station starts the file again with the lines it kept, and the boards before them are in the copy and in Logs &amp; Export. For any other reason, an Admin makes the output folder take files again. Lines still kept when the app closes are not added; every record is in Logs &amp; Export.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+51"/>
         <source>Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the thresholds on the new result. The maps of OK results are deleted {days} days after inspection, and not saved at all while the drive is 95 % full; NG and WARN maps are kept.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4001,7 +4021,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1503"/>
+        <location line="-1522"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4016,7 +4036,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+99"/>
+        <location line="+118"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4537,7 +4557,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3710"/>
+        <location filename="../core/services.py" line="+3740"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -5396,7 +5416,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1151"/>
+        <location filename="../ui/main_window.py" line="-1156"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6781,7 +6801,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+65"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6791,12 +6811,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-35"/>
+        <location line="-40"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+178"/>
+        <location line="+183"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7671,7 +7691,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1108"/>
+        <location filename="../ui/main_window.py" line="-1113"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9727,7 +9747,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3794"/>
+        <location filename="../core/services.py" line="-3824"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

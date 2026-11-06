@@ -218,7 +218,9 @@ keeps.
 **Result files.** Where an Admin has set an output folder, the station writes each board's result there as it is saved,
 for the line's systems to read: one JSON file and one CSV line per board, and a shift CSV for the day that lists every
 board under a header. You do nothing for it. If the folder refuses them (a network drive gone, a full disk), the alarm
-list shows AOI-INSP-019: the board is still judged and recorded, so carry on and tell an Engineer or Admin.
+list shows AOI-INSP-019: the board is still judged and recorded, so carry on and tell an Engineer or Admin. AOI-INSP-020
+usually means someone has the day's shift file open, in a spreadsheet say: close it there, and while the app stays open
+the station adds the lines it kept, with the next board or within a minute.
 
 **Handing over.** Let the queue run to its end, or press ■ Stop: the board in hand is still judged and recorded. For
 your counts, set **From** and **To** to the days of your shift, pick your name under **Operator**, press **Filter** and
