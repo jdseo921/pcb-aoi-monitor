@@ -195,6 +195,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   senior dev from a company who is reviewing the whole thing the first time and wants it to work properly"), recorded in
   `docs/reviews/2026-11-06-senior-review.md`: 32 defects (8 P1, 15 P2, 9 P3), and ADR 0024 D26 (the result file's
   checks), D27 (what a retrain aligns to), D28 (role checks on every write) and D29 (work on the window's thread),
-  proposed. One P1, UI-1, waits for #479 (#487) and stops a release until it is fixed. Nine PRs, one train, stacked on
-  `feat/REQ-USR-005-claim-and-landing` (#479), the next working day's: this record first, then the fixes in the record's
-  order. The regression set is unchanged. Tracking issue #488; follow-ups #480 to #487, #489 and #490.
+  proposed. One P1, UI-1, is in #487, the next train now that #479 has merged, and stops a release until it is fixed.
+  Nine PRs, one train, stacked on #479's head, which main holds since it merged: this record first, then the fixes in
+  the record's order. The regression set is unchanged. Tracking issue #488; follow-ups #480 to #487, #489 and #490.

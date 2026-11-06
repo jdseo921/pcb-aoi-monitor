@@ -9,16 +9,16 @@ its own pull request by Claude or an implementer agent and read again by a revie
 
 ## 1. Verdict
 
-The app works as its documents say on the paths a demo takes, and the holds in section 4 are many and real. The
-review found no defect that damages the database, but it found 32 defects (and three found twice): 8 P1, 15 P2 and
-9 P3. Six of the P1 can meet a normal shift: a board ID with a dot (ENG-1), a shift CSV open in Excel (BLD-1), a full
-drive at opening (DAT-1), an ROI off the image (ENG-2), a recipe with the AI check off (ENG-3) and a switch to a
-damaged AI model file (TRN-5); UI-1 and UI-3 are off its path. Seven P1, five P2 and two P3 are fixed in the pull
-requests of section 3. One P1 (UI-1) and five P2 wait for the account pull request #479 (on #478, merged today), which
-changes the same code; they are #487. **UI-1 is an open P1, so a release cannot ship until it is fixed** (Engineering,
-"one open P1 bug stops it"). Two P2 and one P3 need Jay's decision (ADR 0024 D26 to D28), and three P2 and six P3 are
-follow-ups. A fourth decision, D29, found reviewing PR 7, asks what "No freezes (MUST)" covers; PR 7 and PR 9 wait for
-it.
+The app works as its documents say on the paths a demo takes, and the holds in section 4 are many and real. The review
+found no defect that damages the database, but it found 32 defects (and three found twice): 8 P1, 15 P2 and 9 P3. Six of
+the P1 can meet a normal shift: a board ID with a dot (ENG-1), a shift CSV open in Excel (BLD-1), a full drive at
+opening (DAT-1), an ROI off the image (ENG-2), a recipe with the AI check off (ENG-3) and a switch to a damaged AI model
+file (TRN-5); UI-1 and UI-3 are off its path. Seven P1, five P2 and two P3 are fixed in the pull requests of section 3.
+One P1 (UI-1) and five P2 waited for the account pull request #479, which Jay merged during this review and which
+changed the same code; they are #487, the next train. **UI-1 is an open P1, so a release cannot ship until it is fixed**
+(Engineering, "one open P1 bug stops it"). Two P2 and one P3 need Jay's decision (ADR 0024 D26 to D28), and three P2 and
+six P3 are follow-ups. A fourth decision, D29, found reviewing PR 7, asks what "No freezes (MUST)" covers; PR 7 and PR 9
+wait for it.
 
 Priority, as the Customers & Launch standard defines it and the Engineering standard applies it: **P1** a line
 stopped, a missed defect, lost data, a crash or a frozen window (more than 2 s, whatever the cause); **P2** degraded,
@@ -27,8 +27,9 @@ standard's table does not name.
 
 ## 2. Findings
 
-Where the fix lives: **PR** is the pull request in section 3; **after #479** waits for the account pull request to
-merge; **D26 to D28** (and D29) are in section 6; an issue number is a follow-up of section 7.
+Where the fix lives: **PR** is the pull request in section 3; **after #479** is code the account pull request #479
+changed, so its fix is in #487's train now that it has merged; **D26 to D28** (and D29) are in section 6; an issue
+number is a follow-up of section 7.
 
 | ID | Pri | What was wrong (on `3efc292`) | Where | Now |
 |---|---|---|---|---|
@@ -69,9 +70,9 @@ Found twice: SEC-5 is TRN-6, BLD-4 is TRN-4, and the data reviewer found ENG-1 o
 
 ## 3. Pull requests
 
-One train, this record first so that every pull request's finding IDs resolve, stacked in this order on #479
-(`feat/REQ-USR-005-claim-and-landing`), each one concern and under 400 lines changed by hand, each read by a reviewer
-agent that had not seen it, `tests/regression/expected.json` unchanged.
+One train, this record first so that every pull request's finding IDs resolve, stacked in this order on #479's head
+289a3cb, which main holds since #479 merged, each one concern and under 400 lines
+changed by hand, each read by a reviewer agent that had not seen it, `tests/regression/expected.json` unchanged.
 
 | PR | Branch | Findings | Can it change a verdict? |
 |---|---|---|---|
@@ -161,8 +162,8 @@ merge. PR 7 and PR 9 wait for the answer.
 
 ## 7. Follow-ups (not in this train)
 
-- **After #479 merges,** one train for #487: UI-1 first, as the one open P1, then SEC-1, SEC-2, UI-2, SEC-4 and UI-5,
-  which change the sign-in, idle and Home code #479 changes.
+- **Next, now that #479 has merged,** one train for #487: UI-1 first, as the one open P1, then SEC-1, SEC-2, UI-2, SEC-4
+  and UI-5, which change the sign-in, idle and Home code #479 changed.
 - **One small pull request each when a train has room:** TRN-4 #481 first (P2, a Lineage MUST gap), UI-6 #489 (P2,
   after D29, needed under either answer) and DAT-7 #490 (P2, Jay chooses which fix), then DAT-4 #482,
   BLD-2 #484, BLD-3 #485, UI-4 #486 and TRN-7 #480; with UI-4, the Training and Inspection buttons that stay on for an
