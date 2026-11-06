@@ -900,6 +900,11 @@ class AppContext:
                 self.db.set_user_secret(str(admin["uuid"]), passwords.hash_secret(demo.ADMIN_PASSWORD))
                 self.audit("user.password_set", "user", str(admin["uuid"]), None, {"user": admin["name"], "demo": True})
 
+    def may_set_up(self) -> bool:
+        """Whether an Engineer or Admin in set-up may choose their password at a sign-in now (`_may_set_up`), so
+        Switch User says AOI-USR-009 before anyone types one rather than after (usability sweep 2026-11-06, M3)."""
+        return self._may_set_up()
+
     def _may_set_up(self) -> bool:
         """Whether an Engineer or Admin in set-up may choose their password now: an Admin with a password is signed in
         to hand the account over, or no Admin has one yet (a station's first run, the demo)."""

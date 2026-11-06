@@ -933,7 +933,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+195"/>
+        <location filename="../core/services.py" line="+196"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -973,7 +973,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+48"/>
         <source>Disabling a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1270,19 +1270,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+1310"/>
+        <location line="+1317"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4755"/>
-        <location line="+3459"/>
+        <location line="-4767"/>
+        <location line="+3464"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3548"/>
+        <location line="-3554"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1307,7 +1307,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+35"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1601"/>
+        <location line="+1606"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1594,7 +1594,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+445"/>
+        <location line="+452"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1604,12 +1604,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-505"/>
+        <location line="-512"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4210"/>
+        <location line="-4215"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,7 +1634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1525"/>
+        <location line="+1530"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1719,7 +1719,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+194"/>
+        <location line="+201"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,14 +1751,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4637"/>
+        <location line="-4649"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1263"/>
+        <location filename="../ui/main_window.py" line="+1270"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1773,7 +1773,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+488"/>
+        <location line="+495"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4537,7 +4537,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3701"/>
+        <location filename="../core/services.py" line="+3706"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -5392,7 +5392,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1118"/>
+        <location filename="../ui/main_window.py" line="-1125"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5763,14 +5763,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+101"/>
-        <location line="+107"/>
+        <location filename="../ui/pages/inspection.py" line="+102"/>
+        <location line="+110"/>
         <location line="+228"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-334"/>
+        <location line="-337"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5786,12 +5786,12 @@
     </message>
     <message>
         <location line="+6"/>
-        <location line="+90"/>
+        <location line="+93"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-49"/>
+        <location line="-52"/>
         <source>No</source>
         <comment>defect number</comment>
         <translation type="unfinished"></translation>
@@ -5827,7 +5827,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+9"/>
         <source>▶  Start</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5847,7 +5847,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+25"/>
         <source>Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5872,7 +5872,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-151"/>
+        <location line="-154"/>
         <source>Save Image… needs the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5887,7 +5887,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+77"/>
+        <location line="+29"/>
+        <source>Inspect a board first: Compare opens the board shown here.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Stop works while a run is on: press Start (F5) to run the queue.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+34"/>
         <source>Images ({extensions})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6042,7 +6052,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+69"/>
         <source>Review saved: {review} for record {record}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6297,7 +6307,7 @@
 <context>
     <name>LogsPage</name>
     <message>
-        <location filename="../ui/pages/logs.py" line="+149"/>
+        <location filename="../ui/pages/logs.py" line="+150"/>
         <source>Include archived</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6362,12 +6372,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+66"/>
+        <location line="+67"/>
         <source>Defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-64"/>
+        <location line="-65"/>
         <source>View</source>
         <translation>뷰</translation>
     </message>
@@ -6414,6 +6424,11 @@
     <message>
         <location line="+2"/>
         <source>Open in Compare ›</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Select a record in the table first.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -6503,8 +6518,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-277"/>
-        <location line="+44"/>
+        <location line="-278"/>
+        <location line="+45"/>
         <source>Records</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6592,12 +6607,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-329"/>
+        <location line="-330"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+193"/>
+        <location line="+194"/>
         <source>Reset Filters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6657,9 +6672,9 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-503"/>
+        <location line="-504"/>
         <location line="+6"/>
-        <location line="+591"/>
+        <location line="+592"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -6787,7 +6802,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+24"/>
         <source>{page} needs the {roles} role</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6797,7 +6812,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+16"/>
         <source>On {page}:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6823,7 +6838,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+50"/>
+        <location line="+53"/>
         <source>Drive: free space unknown</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7647,7 +7662,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1075"/>
+        <location filename="../ui/main_window.py" line="-1082"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7677,7 +7692,7 @@
         <translation>약 {minutes}분 남음</translation>
     </message>
     <message>
-        <location line="+170"/>
+        <location line="+193"/>
         <source>No board model yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7767,7 +7782,7 @@
         <translation type="unfinished">{action}  {key}</translation>
     </message>
     <message>
-        <location filename="../ui/pages/logs.py" line="-627"/>
+        <location filename="../ui/pages/logs.py" line="-628"/>
         <source>Logs &amp; Export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7782,7 +7797,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-652"/>
+        <location filename="../ui/pages/inspection.py" line="-654"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7833,7 +7848,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-475"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-482"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7978,7 +7993,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+124"/>
+        <location line="+127"/>
         <source>The 10 mandatory AOI checks (defect classification table, section 4):</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7998,7 +8013,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-193"/>
+        <location line="-196"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8009,7 +8024,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+182"/>
+        <location line="+185"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8039,7 +8054,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-179"/>
+        <location line="-182"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8091,6 +8106,11 @@
     <message>
         <location line="+2"/>
         <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Select an ROI in the table, or draw one with Draw ROI.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -8319,7 +8339,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+158"/>
+        <location line="+162"/>
         <source>Scale {scale:.2f} px/mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8555,17 +8575,22 @@
     </message>
     <message>
         <location line="-16"/>
-        <location line="+69"/>
+        <location line="+74"/>
         <source>False call</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-51"/>
+        <location line="-56"/>
         <source>False call…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+12"/>
+        <source>Only an NG or WARN board is reviewed: inspect one, or select its record on Logs &amp; Export.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
         <source>Review this call: is the defect real? Real defect F10 · False call F11</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8611,7 +8636,7 @@
 <context>
     <name>Role</name>
     <message>
-        <location filename="../ui/pages/base.py" line="-503"/>
+        <location filename="../ui/pages/base.py" line="-526"/>
         <source>Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9263,7 +9288,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+40"/>
+        <location line="+42"/>
         <source>New PIN</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9303,7 +9328,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location line="+5"/>
         <source>Type the recovery code of {user}, then choose a new password and type it again.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9315,6 +9340,21 @@
     <message>
         <location line="+4"/>
         <source>Type the password of {user}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>{count} of at least {low} characters.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The two PINs differ.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>The two passwords differ.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -9678,7 +9718,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3785"/>
+        <location filename="../core/services.py" line="-3790"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

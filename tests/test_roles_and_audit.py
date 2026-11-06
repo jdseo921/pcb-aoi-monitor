@@ -282,6 +282,7 @@ CHECKED_READS: dict[str, Callable[[AppContext, Path, Path], Any]] = {
 UNCHECKED = {
     "alarm", "alarms", "audit", "audit_entries", "report_error", "close", "set_user", "sign_in", "last_signed_in",
     "startable",  # the names a start may sign in (REQ-USR-006): reads only
+    "may_set_up",  # whether a password in set-up may be chosen now, for Switch User's hint (REQ-USR-002): reads only
     "take_recovery_code",  # the code made at the last sign-in, once, for the screen (REQ-USR-005): reads only
     "recover",  # a sign-in with the recovery code, as sign_in is, with no role yet (REQ-USR-005)
     "load_model", "recipe",

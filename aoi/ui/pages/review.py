@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QHBoxLayout, QInputDialog, QLabel, QVBoxLayout, QW
 from ...core.inspector import NG, WARN
 from ...core.services import DEFECT, FALSE_CALL
 from ..workers import Worker, start
-from .base import QT_TRANSLATE_NOOP, Page, action_button, size_class
+from .base import QT_TRANSLATE_NOOP, OffSays, Page, action_button, size_class
 
 # The reasons a False call offers first, the commonest causes of an AOI false call; any other may be typed.
 FALSE_CALL_REASONS = (
@@ -69,6 +69,11 @@ class ReviewBar(QWidget):
         row.addWidget(self.btn_defect)
         row.addWidget(self.btn_false)
         layout.addLayout(row)
+        off = QCoreApplication.translate(
+            "Review", "Only an NG or WARN board is reviewed: inspect one, or select its record on Logs & Export."
+        )
+        for b in (self.btn_defect, self.btn_false):  # greyed with what turns them on (usability sweep, M1)
+            OffSays(b, off, page.shell.status)
         self.show_record(None)
 
     def show_record(self, record: dict[str, Any] | None) -> None:

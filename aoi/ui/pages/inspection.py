@@ -39,6 +39,7 @@ from ..widgets.reflow import SideSplit, WrappedPane, least_width
 from ..workers import Worker, start
 from .base import (
     QT_TRANSLATE_NOOP,
+    OffSays,
     Page,
     WrappedLine,
     action_button,
@@ -171,6 +172,7 @@ class InspectionPage(Page):
         self.review = ReviewBar(self, self._reviewed)
         sl.addWidget(self.review)
         self.btn_compare = button(self.tr("Compare with Golden board ›"), slot=self.open_compare)
+        OffSays(self.btn_compare, self.tr("Inspect a board first: Compare opens the board shown here."), shell.status)
         sl.addWidget(self.btn_compare)
         split.addWidget(side)
         split.setSizes([1100, theme.SIDE_W])
@@ -187,6 +189,8 @@ class InspectionPage(Page):
         self.btn_stop = action_button(self.act_stop, "stop")
         self.btn_next = action_button(self.act_next, "primary")
         self.btn_save = action_button(self.act_save)
+        stop_off = self.tr("Stop works while a run is on: press Start (F5) to run the queue.")
+        OffSays(self.btn_stop, stop_off, shell.status)  # greyed with what turns it on (usability sweep, M1)
         for i, b in enumerate((self.btn_start, self.btn_stop, self.btn_next, self.btn_save)):
             ctl.addWidget(size_class(b, "T+"), 0, i)  # 56 px tall through the stylesheet
         self.root.addLayout(ctl)

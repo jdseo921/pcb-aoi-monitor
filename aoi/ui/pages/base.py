@@ -176,6 +176,29 @@ class PressSays(QObject):
         return False
 
 
+class OffSays(QObject):
+    """While `control` is off for a reason of the page's own, its tooltip is `why` and a press says it on the status
+    bar, as a touch screen shows no tooltip; while on, its own tooltip comes back. For a control no role greys, so
+    a greyed button always says what turns it on (REQ-USR-001; usability sweep 2026-11-06, M1)."""
+
+    def __init__(self, control: QWidget, why: str, status: Callable[[str], object]) -> None:
+        super().__init__(control)
+        self.control, self.why, self.status = control, why, status
+        self.own = control.toolTip()
+        control.installEventFilter(self)
+        self._sync()
+
+    def _sync(self) -> None:
+        self.control.setToolTip(self.own if self.control.isEnabled() else self.why)
+
+    def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
+        if e.type() == QEvent.Type.EnabledChange:
+            self._sync()
+        elif e.type() == QEvent.Type.MouseButtonPress and not self.control.isEnabled():
+            self.status(self.why)
+        return False
+
+
 class WrappedLine(QLabel):
     """A wrapped line that never sets the page's minimum width, however long a name in it (REQ-SET-004, #251): the
     layout gives it its width, and hovering shows its whole text, for a name the line has to cut. Inspection's summary

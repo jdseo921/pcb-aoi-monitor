@@ -1021,6 +1021,8 @@ class MainWindow(QMainWindow):
         self.nav.setItemWidget(it, row)
         return badge
 
+    _refused = ""  # the line `navigate` last showed for a page it did not open, cleared when another page opens
+
     def needs_role(self, title: str) -> str:
         """One sentence naming the page and the roles that may open it, for the tooltip and the status bar."""
         roles = " / ".join(role_text(r) for r in self.pages[title].roles)
@@ -1033,13 +1035,15 @@ class MainWindow(QMainWindow):
             return False
         it = self._items.get(title)
         if it and self.hidden(title):
-            self.status(self.tr("{page} is hidden in the presenter theme").format(page=page_text(title)))
+            self._refused = self.tr("{page} is hidden in the presenter theme").format(page=page_text(title))
+            self.status(self._refused)
             return False
         if it and it.flags() & Qt.ItemFlag.ItemIsEnabled:
             self.nav.setCurrentItem(it)
             return True
         if title in self.pages:
-            self.status(self.needs_role(title))
+            self._refused = self.needs_role(title)
+            self.status(self._refused)
         return False
 
     def keys_text(self) -> str:
@@ -1069,6 +1073,9 @@ class MainWindow(QMainWindow):
         if cur is None or not cur.data(Qt.ItemDataRole.UserRole):
             return
         page = self.pages[cur.data(Qt.ItemDataRole.UserRole)]
+        if self._refused and self.statusBar().currentMessage() == self._refused:
+            self.statusBar().clearMessage()  # a page refused before is not this page's news (usability sweep, M7)
+        self._refused = ""
         self.stack.setCurrentWidget(page)
         page.on_show()
         self._save_page(page.title)

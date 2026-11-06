@@ -173,3 +173,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-03: #448's Windows check twice put Inspection's first opening at the 300 ms budget (REQ-SET-020), as on
   `main`; Jay chose to fix it first: `perf/REQ-SET-020-inspection-first-open` rests the start-up self-check and fills
   the alarm list in one step, the 2026-11-04 train, before train E is merged.
+- 2026-11-06: usability sweep (project report `reports/2026-11-06-usability-sweep.md`); Jay chose "Yes, one small
+  fix PR" for its five low-risk findings: `fix/usability-sweep-low-risk` (greyed buttons say why, Switch User hints,
+  the Recipe Editor's ROI form, the status line of a refused page). Its high findings wait for Jay's decisions.
