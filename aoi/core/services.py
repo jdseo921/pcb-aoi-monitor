@@ -24,6 +24,7 @@ import sqlite3
 import threading
 import time
 import unicodedata
+import uuid
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
@@ -53,6 +54,7 @@ from . import (
     demo,
     disk,
     drift,
+    folder_watch,
     golden,
     heartbeat,
     imaging,
@@ -71,6 +73,7 @@ from . import (
 )
 from .compare import Region, changed_regions
 from .cycle import InspectionCycle
+from .folder_watch import FolderWatch
 from .imaging import (
     align_to_reference,
     encode_image,
@@ -471,6 +474,25 @@ def looks(name: str) -> str:
     folded = unicodedata.normalize("NFKC", unicodedata.normalize("NFKC", name).casefold())
     shown = "".join(c for c in folded if c not in SHOWS_NOTHING and unicodedata.category(c) != "Cf")
     return " ".join(shown.split())
+
+
+def _writable(folder: str) -> bool:
+    """Whether the station can write in `folder`, by writing and removing a hidden file of its own there: on Windows
+    `os.access` passes a share the station may only read. The line never takes a file whose name starts with "."."""
+    probe = Path(folder) / f".aoi-probe-{uuid.uuid4().hex[:8]}"
+    try:
+        probe.write_bytes(b"")
+        probe.unlink()
+    except OSError:
+        return False
+    return True
+
+
+# The folders of the line the self-check looks at (REQ-INSP-020, -021), named as AOI-SET-025 says them
+LINE_FOLDERS = {
+    "input_folder": QT_TRANSLATE_NOOP("Errors", "input folder"),
+    "output_folder": QT_TRANSLATE_NOOP("Errors", "output folder"),
+}
 
 
 def _stem(path: str | Path) -> str:
@@ -2024,6 +2046,28 @@ class AppContext:
         board from its frame to its saved record, keeping the engine while it is what is active."""
         return InspectionCycle(self)
 
+    def folder_watch(self) -> FolderWatch | None:
+        """The watched input folder of `Settings.input_folder` as a frame source (REQ-INSP-020), None when none is set.
+        A board is never inspected twice: by its name in done/, or by its image's SHA-256, which every record of a
+        board the line took keeps (migration 0031), whichever folder it came in. File work: call it off the UI thread.
+        AOI-INSP-023 when the folder cannot be opened; it is never made on the station's own disk."""
+        folder = self.settings.input_folder
+        if not folder:
+            return None
+        try:
+            load, seen = self._load_image_sha256, self.db.image_inspected
+            return folder_watch.FolderWatch(Path(folder), load, seen, self._line_alarm)
+        except OSError as e:
+            raise AoiError("AOI-INSP-023", system_detail(e), folder=folder, reason=system_reason(e)) from e
+
+    def _line_alarm(self, e: AoiError) -> None:
+        """A file the line refused, or its folder lost: a WARN alarm with its code; never raises (#179)."""
+        self.log.warning("line.refused", extra={"code": e.code, "detail": e.detail})
+        try:
+            self.alarm("WARN", e.what, e.code, wait_ms=BUSY_ALARM_WAIT_MS)
+        except Exception:
+            self.log.warning("alarm.not_stored", exc_info=True, extra={"code": e.code})
+
     def inspect(
         self,
         board_model: str,
@@ -2047,7 +2091,9 @@ class AppContext:
             self.log_result(board_model, path, res, insp)
         return res
 
-    def log_result(self, board_model: str, path: str, res: InspectionResult, insp: Inspector) -> int:
+    def log_result(
+        self, board_model: str, path: str, res: InspectionResult, insp: Inspector, image_sha256: str | None = None
+    ) -> int:
         """Save a result with its evidence (REQ-INSP-008, spec 4.1): the overlay PNG and the two maps beside it, then
         one transaction with the row, the whole result as JSON, its checks, its defects and an NG board's alarm
         (REQ-INSP-006), naming the AI model version active when the board was judged and the recipe revision that judged
@@ -2100,6 +2146,7 @@ class AppContext:
                     "recipe_rev": insp.recipe_rev,
                     "recipe_uuid": insp.recipe_uuid,
                     "image_path": path,
+                    "image_sha256": image_sha256,  # a board the line took (REQ-INSP-020): never inspected twice
                     "overlay_path": None if skip else str(overlay),
                     "diff_map_path": diff_map_path,
                     "ai_map_path": ai_map_path,
@@ -4503,8 +4550,9 @@ class AppContext:
     def self_check(self) -> dict[str, Any]:
         """The start-up self-check (REQ-SET-024), run on the heartbeat's thread: SQLite's quick_check, each unshredded
         store's key on this station, the files records name, temp files a crash left and could not be removed, the
-        migration backups and the free space. One alarm per failure: AOI-SET-020 to -023 (the drive's: AOI-LOG-005
-        and -006, from `check_disk`). Logged as `self_check.done` with the counts, and returned."""
+        migration backups, the input and output folders an Admin set, and the free space. One alarm per failure:
+        AOI-SET-020 to -023 and -025 (the drive's: AOI-LOG-005 and -006, from `check_disk`). Logged as `self_check.done`
+        with the counts, and returned."""
         found: dict[str, Any] = {"stores_without_key": [], "failed": []}
 
         def step(name: str, check: Callable[[], object]) -> None:  # one that fails is logged; the rest still run
@@ -4548,11 +4596,25 @@ class AppContext:
                 self._check_alarm("WARN", "AOI-SET-023", count=self._temp_left)
             found["backups"] = len(list(self.settings.root.glob(f"{self.settings.db_path.name}.bak-*")))
 
+        def line_folders() -> None:  # REQ-INSP-020, -021: a folder an Admin set that the line cannot use
+            found["line_folders"] = []
+            for name, setting in LINE_FOLDERS.items():
+                folder = getattr(self.settings, name)
+                if folder and not _writable(folder):
+                    found["line_folders"].append(name)
+                    self._check_alarm("WARN", "AOI-SET-025", setting=setting, folder=folder)
+
         def drive() -> None:
             space = self.check_disk()
             found["free_bytes"] = space.free if space else None
 
-        for name, check in (("database", database), ("store_keys", store_keys), ("files", files), ("drive", drive)):
+        for name, check in (
+            ("database", database),
+            ("store_keys", store_keys),
+            ("files", files),
+            ("line", line_folders),
+            ("drive", drive),
+        ):
             step(name, check)
         self.log.info("self_check.done", extra=found)
         return found

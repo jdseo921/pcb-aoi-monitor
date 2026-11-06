@@ -2,8 +2,9 @@
 written atomically after its record commits, and a line in the shift CSV of the local date, which lists every board of
 the day. The fields are those of `docs/schemas/result-file.schema.json`; the CSV columns are `COLUMNS`. Its CSV files
 are for machines: UTF-8 with no byte order mark and cells as they are, with no formula guard, unlike the CSV export a
-person opens in Excel (`AppContext.csv_bytes`, #113), since a guard would change a board ID. Until the line's
-file-naming contract arrives (REQ-INSP-020), a board's ID is its image file's stem."""
+person opens in Excel (`AppContext.csv_bytes`, #113), since a guard would change a board ID. A board's ID is the one
+its file name gives under the input-file naming contract (REQ-INSP-020, ADR 0024 D26), or its image file's stem for a
+file that keeps no contract, such as one an operator loaded by hand."""
 
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from ..data import atomic
+from .folder_watch import board_id
 from .inspector import InspectionResult, Inspector
 
 SCHEMA_VERSION = 1
@@ -34,7 +36,7 @@ def document(
     """One board's result file: `evidence` is what the record kept (png, jpeg, or none at a full disk)."""
     return {
         "schema_version": SCHEMA_VERSION,
-        "board_id": Path(path).stem,
+        "board_id": board_id(path),
         "board_model": board_model,
         "view": res.view,
         "verdict": res.verdict,

@@ -99,6 +99,13 @@ Each saved board's result files (REQ-INSP-021), `aoi/core/result_files.py`, are 
 commits, into `Settings.output_folder` when one is set: `<board ID>_<record UUID>.json` and `.csv`, and a line in
 `shift_<local date>.csv`, each replaced whole (`aoi/data/atomic.py`); `docs/schemas/result-file.schema.json` gives the
 fields.
+The watched input folder (REQ-INSP-020), `aoi/core/folder_watch.py`'s `FolderWatch` from `AppContext.folder_watch()`,
+is a frame source whose `grab(board_model)` takes the oldest complete file of `Settings.input_folder` that keeps the
+naming contract (`docs/schemas/input-file-naming.md`, ADR 0024 D26), claims it into `working/` and reads it with its
+SHA-256, which `FrameMeta` carries to the record (`inspections.image_sha256`, migration 0031), or gives None while none
+is complete; `InspectionCycle.watched()` inspects and saves it, then `finish()` moves it to `done/` or back to the
+input folder. Refusals go to `failed/` with AOI-INSP-020 to -022. The Inspection page runs one look job at a time,
+every `LOOK_S`, while its line runs.
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
 and `aoi/hal` too, and since S56 on `aoi/selftest.py`, with no flag relaxed (`pyproject.toml`). PySide6 enums are
