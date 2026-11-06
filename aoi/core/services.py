@@ -1776,10 +1776,13 @@ class AppContext:
         that judges (the override, else the active AI model's calibrated value; None with neither), that AI model's
         version and its calibrated value (None while none is active or its calibration cannot be read). A size in mm
         the engine cannot apply is refused with AOI-RCP-011 (`Recipe.mm_refusal`), and any recipe while the board
-        model's scale cannot be read with AOI-RCP-012, nothing stored (S29 review)."""
+        model's scale cannot be read with AOI-RCP-012, nothing stored (S29 review); so is one with an enabled ROI that
+        is not wholly on the Golden board at that scale, AOI-RCP-014 (`_roi_off_golden`)."""
         if (refused := recipe.mm_refusal()) is not None:
             raise refused
         scale = self.db.scale(recipe.board_model)  # AOI-RCP-012 for one that cannot be read
+        if (refused := self._roi_off_golden("AOI-RCP-014", recipe.in_px(scale))) is not None:
+            raise refused
         latest = self.db.latest_recipe(recipe.board_model)
         if (notice := recipe.size_notice(scale)) is not None:  # saved, and kept with it
             reason = f"{reason} {notice}" if reason else str(notice)  # in the audit entry (REQ-INSP-014)
@@ -1798,6 +1801,36 @@ class AppContext:
             after = {"revision": rev, "override": new, "threshold": new or named["calibrated"]}
             self.audit("recipe.ai_threshold", "board_model", recipe.board_model, before | named, after | named, reason)
         return rev
+
+    def _roi_off_golden(self, code: str, recipe: Recipe, golden: str | None = None, **fill: Any) -> AoiError | None:
+        """`code` (AOI-RCP-014 at Save Recipe, AOI-RCP-015 at Calibrate Scale…) for the first enabled ROI
+        of `recipe`, in px, that is not wholly on the image ROIs are drawn and judged on (`Recipe.off_image`): the
+        image `golden`, else its board model's Golden board. None when each is, with no such image, or when its size
+        cannot be read (missing, cut short, a header of no size: `_image_size`, which reads a plain file's header
+        only), as inspecting then refuses every board itself (AOI-INSP-009); senior review 2026-11-06, ENG-2."""
+        golden = golden or self.db.reference(recipe.board_model)
+        try:
+            width, height = self._image_size(golden) if golden else (0, 0)
+        except (OSError, AoiError):
+            return None
+        if not golden or (off := recipe.off_image(width, height)) is None:
+            return None
+        return AoiError(
+            code, roi=off.name, board_model=recipe.board_model, x=off.x, y=off.y, w=off.w, h=off.h, width=width,
+            height=height, **fill,
+        )  # fmt: skip
+
+    def _roi_moved_off(self, board_model: str, scale: float, golden: str | None) -> None:
+        """AOI-RCP-015, before anything is written, when the board model's recipe at the new `scale` would have an
+        enabled ROI held in mm not wholly on its Golden board `golden`, which would leave every board with no verdict
+        (AOI-INSP-021; senior review 2026-11-06, ENG-2: the line stopped at the next board, with no word at Calibrate
+        Scale…). Set Reference checks none: a camera change sets its Golden board first and calibrates the scale on it
+        after (REQ-RCP-006), and until then a board with an ROI off it gets AOI-INSP-021."""
+        if (latest := self.db.latest_recipe(board_model)) is not None:
+            recipe = Recipe.from_dict(latest[1]).in_px(scale)
+            recipe.rois = [r for r in recipe.rois if r.mm is not None]  # one in px no scale moves (review)
+            if (refused := self._roi_off_golden("AOI-RCP-015", recipe, golden)) is not None:
+                raise refused
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Setting the comparison's thresholds from labelled boards"))
     def learn_comparison(
@@ -3172,7 +3205,9 @@ class AppContext:
         verdicts: audited as board_model.scale with the scale before and after, the length, the distance and the Golden
         board file. Refused with AOI-RCP-008, before anything is written, unless both are numbers above 0, not true or
         false, whose ratio is from MIN_SCALE to MAX_SCALE, or for a board model that does not exist. It replaces a
-        stored scale that cannot be read (AOI-RCP-012), which its entry keeps as it was stored (S29 review)."""
+        stored scale that cannot be read (AOI-RCP-012), which its entry keeps as it was stored (S29 review). Refused
+        with AOI-RCP-015, nothing written, when the scale would move an enabled ROI held in mm off the Golden board
+        (`_roi_moved_off`)."""
         numbers = all(isinstance(v, int | float) and not isinstance(v, bool) for v in (length_px, distance_mm))
         scale = length_px / distance_mm if numbers and distance_mm > 0 else math.nan  # a bool is none (S29 review)
         if board_model not in self.db.board_models():
@@ -3185,6 +3220,7 @@ class AppContext:
         except AoiError as e:  # AOI-RCP-012: replaced
             before = e.params["value"]
         golden = self.db.reference(board_model)
+        self._roi_moved_off(board_model, scale, golden)
         self.db.set_scale(board_model, scale)
         image = to_stored(Path(golden), self.settings.root) if golden else None
         after = {"px_per_mm": scale, "length_px": length_px, "distance_mm": distance_mm, "image": image}

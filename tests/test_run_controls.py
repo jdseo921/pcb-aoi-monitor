@@ -23,7 +23,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.core.imaging import list_images
-from aoi.core.inspector import AI_OFF_NOTE, InspectionResult, Inspector
+from aoi.core.inspector import AI_OFF_NOTE, ROIS_NOT_JUDGED_NOTE, InspectionResult, Inspector
 from aoi.core.recipe import ROI
 from aoi.core.services import AppContext
 from aoi.ui import theme
@@ -672,7 +672,8 @@ def test_req_trn_010_a_run_with_the_ai_check_off_moves_only_with_its_recipe_scal
         f" recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and"
         " Golden board that judged it and the AI model version active then."
     )
-    assert notes == [[AI_OFF_NOTE]] * 2 and alarms == [line] and page.summary.text().endswith(f"\n{line}")
+    said = [AI_OFF_NOTE, ROIS_NOT_JUDGED_NOTE] if change == "roi" else [AI_OFF_NOTE]  # an enabled ROI, unjudged
+    assert notes == [said] * 2 and alarms == [line] and page.summary.text().endswith(f"\n{line}")
     assert page.alarms.item(0).text().endswith(f"[WARN]  AOI-INSP-013  {line}")
 
 

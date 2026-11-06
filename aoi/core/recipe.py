@@ -135,6 +135,15 @@ class Recipe:
                 )
         return None
 
+    def off_image(self, width: int, height: int) -> ROI | None:
+        """The first enabled ROI, in px as the recipe holds it, that is not wholly on an image `width` × `height` px:
+        one of no size, or one reaching past an edge. The engine gives no verdict with one (AOI-INSP-021), and Save
+        Recipe refuses one past the Golden board (AOI-RCP-014); None when every enabled ROI is on it."""
+        for roi in (x for x in self.rois if x.enabled):
+            if not (roi.w > 0 and roi.h > 0 and 0 <= roi.x <= width - roi.w and 0 <= roi.y <= height - roi.h):
+                return roi
+        return None
+
     @property
     def sized_in_mm(self) -> bool:
         """Whether the recipe holds a size in mm, its minimum defect size or an enabled ROI's box: one a scale sizes."""

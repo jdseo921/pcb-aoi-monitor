@@ -25,6 +25,7 @@ from PySide6.QtWidgets import QAbstractButton, QAbstractSpinBox, QApplication, Q
 from pytestqt.qtbot import QtBot
 
 from aoi.core.explain import TRIED_AI_OFF, explain
+from aoi.core.imaging import file_header
 from aoi.core.inspector import InspectionResult, ai_check
 from aoi.core.jobs import Job
 from aoi.core.recipe import ROI
@@ -510,7 +511,8 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
     operator_signs_in("an AI score threshold not saved, the AI check off, the board still worked out", again=False)
     win.set_user("engineer")
     roi = ctx.recipe(BOARD)[1]  # the AI check off: no ROI check, so an ROI only names the defects in it, by its type
-    roi.rois = [ROI("U1", "Presence", 0, 0, 4000, 4000), ROI("off", enabled=False)]
+    _, width, height = file_header(str(ctx.db.reference(BOARD))) or ("", 0, 0)  # ROIs on it whole (REQ-RCP-002)
+    roi.rois = [ROI("U1", "Presence", 0, 0, width, height), ROI("off", enabled=False)]
     ctx.save_recipe(roi)
     win.navigate("Home")
     win.navigate("Compare")
@@ -522,15 +524,15 @@ def test_req_cmp_005_one_threshold_not_saved_is_enough_to_have_an_operator_s_boa
         (0, stage_2, False),  # which nothing reads in this build, the AI check on or off
         (1, {"x": 9, "ai_score": 0.5}, False),  # a disabled ROI judges nothing
         (0, {"type": "Height"}, True),  # its defects named Anomaly, Major (REQ-RCP-002), not Missing Component
-        (0, {"x": 3000}, True),  # moved off the defects it named: they are named Anomaly now
+        (0, {"x": width - 8, "y": height - 8, "w": 8, "h": 8}, True),  # a corner, off the defects: named Anomaly now
     ):
         win.set_user("engineer")
         roi.rois[i] = replace(roi.rois[i], **values)
         ctx.save_recipe(roi)
         operator_signs_in(f"ROI {i + 1}'s {', '.join(values)} saved since, the AI check off", again)
     win.set_user("engineer")
-    roi.use_ai, roi.rois[0].x = True, 0  # ROI 1 over the board again, now checked by the AI model's map
-    roi.rois.append(ROI("U9", "Polarity", w=4000, h=4000))  # over the defects too, behind ROI 1, which names them
+    roi.use_ai, roi.rois[0] = True, replace(roi.rois[0], x=0, y=0, w=width, h=height)  # over the board again, now
+    roi.rois.append(ROI("U9", "Polarity", w=width, h=height))  # judged on the AI map; ROI 2 behind it names them
     ctx.save_recipe(roi)
     win.navigate("Home")
     win.navigate("Compare")

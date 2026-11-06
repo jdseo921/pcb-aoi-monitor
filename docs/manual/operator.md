@@ -112,8 +112,9 @@ and what happened, so the verdict of the board before is never shown beside it. 
 queue; when it was the last board, the view says so and offers Load Images… to queue more. A board is never passed on
 no evidence: the run stops the
 same way when the Golden board's file is gone or damaged (AOI-INSP-009), when nothing can judge the board because the
-board model has neither a Golden board nor an AI model yet, or the recipe turns both off (AOI-INSP-010), and for a
-picture under 11 px on a side (AOI-INSP-011); for the first two, call an Engineer. At the end of the queue the status bar reads "End of
+board model has neither a Golden board nor an AI model yet, or the recipe turns both off (AOI-INSP-010), when one of
+the recipe's ROIs is not wholly on the picture (AOI-INSP-021), and for a picture under 11 px on a side (AOI-INSP-011);
+for the first three, call an Engineer. At the end of the queue the status bar reads "End of
 queue".
 
 ## 3. When a board is NG or WARN
