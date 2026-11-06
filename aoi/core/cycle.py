@@ -52,10 +52,12 @@ A_SCALE = QT_TRANSLATE_NOOP("Page", "a scale of {scale:.2f} px/mm")
 
 @dataclass(frozen=True)
 class FrameMeta:
-    """A frame's file, which names the record, and the view it shows (REQ-INSP-010)."""
+    """A frame's file, which names the record, the view it shows (REQ-INSP-010) and, for a board the line took from its
+    input folder, the SHA-256 of its bytes, which the record keeps (REQ-INSP-020)."""
 
     path: Path
     view: str = VIEWS[0]
+    sha256: str | None = None
 
 
 class FrameSource(Protocol):

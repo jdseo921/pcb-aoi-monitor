@@ -4681,6 +4681,31 @@
         <source>is not 4 to 6 digits</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location filename="../core/folder_watch.py" line="+40"/>
+        <source>its name is not &lt;board model&gt;_&lt;revision&gt;_&lt;serial&gt;_&lt;view&gt;_&lt;UTC time&gt;.png, such as {example}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>its time {time} is not a real date and time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>a file of the same name is in done/</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the same image was inspected before, as {earlier}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>it could not be decoded as an image.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>Explain</name>
