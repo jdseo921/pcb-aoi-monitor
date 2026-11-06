@@ -1758,7 +1758,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1320"/>
+        <location filename="../ui/main_window.py" line="+1326"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5416,7 +5416,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1173"/>
+        <location filename="../ui/main_window.py" line="-1179"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5787,14 +5787,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+102"/>
+        <location filename="../ui/pages/inspection.py" line="+104"/>
         <location line="+110"/>
-        <location line="+228"/>
+        <location line="+229"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-337"/>
+        <location line="-338"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5876,7 +5876,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+204"/>
+        <location line="+205"/>
         <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
         <translation type="unfinished">✓ 교대 점검: 모든 판정이 올바름 · {until}까지 보드를 검사할 수 있습니다</translation>
     </message>
@@ -5891,17 +5891,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-210"/>
+        <location line="-211"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-154"/>
+        <location line="-156"/>
         <source>Save Image… needs the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+35"/>
         <source>Shift Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5946,7 +5946,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+24"/>
         <source>Stopping after this board…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6081,12 +6081,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+31"/>
+        <source>Run stopped: the session of {starter} ended after {minutes} minutes without input, and {user} is signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+32"/>
         <source>AI model {version} of {board_model} is trained but not active: only the Golden board comparison judges its boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6806,7 +6811,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+68"/>
+        <location line="+74"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6816,12 +6821,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-42"/>
+        <location line="-48"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+185"/>
+        <location line="+191"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7696,7 +7701,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1130"/>
+        <location filename="../ui/main_window.py" line="-1136"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7831,7 +7836,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-654"/>
+        <location filename="../ui/pages/inspection.py" line="-677"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>

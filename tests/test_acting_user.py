@@ -8,6 +8,7 @@ from __future__ import annotations
 import dataclasses
 import shutil
 import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
@@ -227,3 +228,68 @@ def test_req_usr_001_a_switch_user_on_the_last_board_ends_the_run_as_usual(
     qtbot.waitUntil(lambda: page.worker is None and not page.running, timeout=30000)
     assert [r["operator"] for r in ctx.inspections()] == ["operator"] and dialogs == []
     assert win.statusBar().currentMessage() == "End of queue"
+
+
+def test_req_usr_004_an_idle_end_during_a_run_stops_it_after_the_board_in_hand(
+    qtbot: QtBot, trained_ctx: AppContext, monkeypatch: pytest.MonkeyPatch, dialogs: list[tuple[str, str]]
+) -> None:
+    """An Engineer presses Start and leaves the station. Before, each idle check found a board of the run being
+    inspected and waited, so the session lasted as long as the queue (senior review 2026-11-06, SEC-4). Now the session
+    ends at once, back to the shift's Operator on Inspection; the board in hand is recorded under the Engineer, and the
+    run stops after it as at any sign-in (#177), saying why on the status bar and under the verdict, until a sign-in. On
+    the queue's last board the run ends as usual. An idle end the Engineer comes back from before the board is saved
+    lets the run go on, and is not the reason given when a Switch User stops it later (the second review's case)."""
+    ctx = trained_ctx
+    handed_over(ctx)
+    win = _window(qtbot, ctx, "Operator")  # the shift's Operator
+    win.set_user("engineer")
+    reached, release = _hold(monkeypatch, ctx, "log_result")  # the first board is judged; its record is not saved yet
+    page = cast(InspectionPage, win.pages["Inspection"])
+    assert win.navigate("Inspection")
+    page._set_queue([Path(s["path"]) for s in ctx.samples(BOARD, "OK")[:2]])
+    page.start_run()
+    assert reached.wait(30)
+    assert win.navigate("Training")  # the Engineer moved on while the run went on, then left
+    win.input.last = time.monotonic() - 15 * 60
+    assert win.check_idle() and ctx.user == "operator" and win.stack.currentWidget() is page
+    release.set()
+    qtbot.waitUntil(lambda: page.worker is None and not page.running, timeout=30000)
+    assert [r["operator"] for r in ctx.inspections()] == ["engineer"]
+    assert page.queue_pos == 0 and page.act_start.isEnabled() and dialogs == []
+    said = (
+        "Run stopped: the session of engineer ended after 15 minutes without input, and operator is signed in. The"
+        " boards of the run so far are recorded under engineer; press Start to carry on with the queue as operator."
+    )
+    assert win.statusBar().currentMessage() == said and page.summary.text().endswith(said)
+    win.set_user("engineer")  # back, to inspect the last board, and gone again
+    assert said not in page.summary.text() and page.stop_line is None  # it named who should press Start
+    reached, release = _hold(monkeypatch, ctx, "log_result")
+    page.start_run()
+    assert reached.wait(30) and page.idle_end is None  # a new run: the idle end before is not its reason
+    win.input.last = time.monotonic() - 15 * 60
+    assert win.check_idle() and ctx.user == "operator"
+    release.set()
+    qtbot.waitUntil(lambda: page.worker is None and not page.running, timeout=30000)
+    assert [r["operator"] for r in ctx.inspections()] == ["engineer", "engineer"]
+    assert win.statusBar().currentMessage() == "End of queue" and "press Start" not in page.summary.text()
+    win.set_user("engineer")  # a run of three boards: the Engineer comes back during the first
+    page._set_queue([Path(s["path"]) for s in ctx.samples(BOARD, "OK")[:3]])
+    reached, release = _hold(monkeypatch, ctx, "log_result")
+    second, release_second = _hold(monkeypatch, ctx, "log_result", call=2)
+    page.start_run()
+    assert reached.wait(30)
+    win.input.last = time.monotonic() - 15 * 60
+    assert win.check_idle() and page.idle_end == 15
+    win.set_user("engineer")  # back before the board is saved: the run goes on under them
+    release.set()
+    qtbot.waitUntil(second.is_set, timeout=30000)  # the window takes the first board's end and starts the second
+    assert page.running and page.idle_end is None
+    win.set_user("admin")  # Switch User during the second board
+    release_second.set()
+    qtbot.waitUntil(lambda: page.worker is None and not page.running, timeout=30000)
+    switched = (
+        "Run stopped: admin signed in. The boards of the run so far are recorded under engineer; press Start to carry"
+        " on with the queue as admin."
+    )
+    assert win.statusBar().currentMessage() == switched and page.summary.text().endswith(switched)
+    assert [r["operator"] for r in ctx.inspections()][2:] == ["engineer", "engineer"]

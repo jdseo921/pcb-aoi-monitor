@@ -877,15 +877,16 @@ class MainWindow(QMainWindow):
 
     def check_idle(self) -> bool:
         """End an Engineer's or Admin's session after `idle_minutes` without input, back to the shift's operator
-        (`AppContext.end_idle`, REQ-USR-004). Never while a board is being inspected: the next check, 30 s on, ends it,
-        and a run under way then stops after its board as at any sign-in (#177). Never in the demo, where the presenter
-        talks. A dialog left open is closed first, as Cancel would; one that will not close (a recovery key waiting to
-        be kept) keeps the session. While the first-run guide holds the frame on a new store's recovery key
-        (`hold_frame`), the session ends as at any other time, and the guide hides the key, still held, until an Admin
-        signs in again (senior review 2026-11-06, UI-1). Returns whether it ended one."""
-        busy = getattr(self.pages["Inspection"], "worker", None) is not None
+        (`AppContext.end_idle`, REQ-USR-004), on Inspection, the run screen (`landing`, D25). A board being inspected
+        does not wait: it is recorded under the user who started it, and a run under way stops after it, as at any
+        sign-in, saying why (#177, `InspectionPage.idle_end`), so no run keeps a session open (senior review 2026-11-06,
+        SEC-4). Never in the demo, where the presenter talks. A dialog left open is closed first, as Cancel would; one
+        that will not close (a recovery key waiting to be kept) keeps the session. While the first-run guide holds the
+        frame on a new store's recovery key (`hold_frame`), the session ends as at any other time, on Home, and the
+        guide hides the key, still held, until an Admin signs in again (senior review 2026-11-06, UI-1). Returns
+        whether it ended one."""
         idle = time.monotonic() - self.input.last >= self.ctx.settings.idle_minutes * 60
-        if self.ctx.role == "Operator" or self.in_demo or busy or not idle:
+        if self.ctx.role == "Operator" or self.in_demo or not idle:
             return False
         for _ in range(5):  # a dialog over a dialog, the top one first
             modal = QApplication.activeModalWidget()
@@ -897,6 +898,11 @@ class MainWindow(QMainWindow):
         if operator is None:
             return False
         self.set_user(operator)
+        inspection = cast(InspectionPage, self.pages["Inspection"])
+        if inspection.running:  # stops after the board in hand, saying why; a sign-in after clears it
+            inspection.idle_end = self.ctx.settings.idle_minutes
+        if not self.held:
+            self.navigate(self.landing(""))
         said = self.tr("The session of {user} ended after {minutes} minutes without input; {operator} is signed in.")
         self.status(said.format(user=before, minutes=self.ctx.settings.idle_minutes, operator=self.ctx.user))
         return True
