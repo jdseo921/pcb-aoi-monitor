@@ -691,15 +691,17 @@ class AppContext:
         return str(min(users, key=lambda u: rank.get(u["role"], len(ROLES)))["name"]) if users else "operator"
 
     def startable(self) -> set[str]:
-        """The names a start may sign in: never one who must prove who they are, so an enabled Operator, or an Engineer
-        or Admin in set-up only while no Admin has a password (a station's first run); once one has, an Admin hands
-        each account over (REQ-USR-006). Never a disabled user. Writes nothing."""
+        """The names a start may sign in: never one who must prove who they are, so an enabled Operator, or an Admin in
+        set-up only while no Admin has a password (a station's first run); an Engineer is only ever handed over by an
+        Admin (REQ-USR-006; ADR 0024 D24). Never a disabled user. Writes nothing."""
         users = self.db.users()
         first_run = not any(u["role"] == "Admin" and u["status"] == "active" for u in users)
         return {
             str(u["name"])
             for u in users
-            if u["role"] == "Operator" and u["status"] != "disabled" or (first_run and u["status"] == "setup")
+            if u["role"] == "Operator"
+            and u["status"] != "disabled"
+            or (first_run and u["status"] == "setup" and u["role"] == "Admin")
         }
 
     def guide_starter(self) -> GuideStarter | None:

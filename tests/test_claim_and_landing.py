@@ -15,12 +15,14 @@ from aoi.errors import AoiError
 from aoi.ui.main_window import HomePage, MainWindow
 from aoi.ui.sign_in_dialog import SignInDialog
 from tests.conftest import PASSPHRASE
+from tests.test_usability_sweep import _press
 
 
 def test_req_usr_005_only_the_admin_is_claimed_while_no_admin_has_a_password(ctx: AppContext) -> None:
     """A station's first run: an Operator may not choose the Engineer's password (AOI-USR-009) and the dialog says so
     before anything is typed; the first Admin's password is chosen at the station; then the Admin hands the Engineer
     over."""
+    assert ctx.startable() == {"operator", "admin"}  # a start never signs in an Engineer in set-up
     ctx.sign_in("operator")
     assert ctx.may_set_up("Admin") and not ctx.may_set_up("Engineer")
     with pytest.raises(AoiError, match="AOI-USR-009"):
@@ -47,8 +49,8 @@ def test_req_usr_005_switch_user_says_an_engineer_waits_for_the_first_admin(qtbo
 
 
 def test_req_set_013_no_board_model_is_made_on_screen_before_the_admins_password(qtbot: QtBot, ctx: AppContext) -> None:
-    """The guide's Create and the header's + New stay off while the Admin has no password, each saying why; once the
-    Admin has one, both turn on."""
+    """The guide's Create and the header's + New stay off while the Admin has no password, each saying why, in its
+    tooltip and at a press; once the Admin has one, both turn on."""
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     win.show()
@@ -58,6 +60,8 @@ def test_req_set_013_no_board_model_is_made_on_screen_before_the_admins_password
     guide.customer.setText("Beta Boards")
     assert not guide.btn_create.isEnabled() and "Admin's password first" in guide.btn_create.toolTip()
     assert not win.btn_new.isEnabled() and "Admin's password first" in win.btn_new.toolTip()
+    _press(win.btn_new)  # a touch screen shows no tooltip: the press says it
+    assert "Admin's password first" in win.statusBar().currentMessage()
     guide.make_board_model()  # Enter in a field: nothing is made, the status bar says why
     assert ctx.board_models() == [] and "Admin's password first" in win.statusBar().currentMessage()
     ctx.sign_in("admin", password=PASSPHRASE)

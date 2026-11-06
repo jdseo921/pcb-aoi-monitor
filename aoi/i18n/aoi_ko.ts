@@ -1758,7 +1758,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1289"/>
+        <location filename="../ui/main_window.py" line="+1297"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3466,12 +3466,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Ask an Admin to sign in, then choose {name} under Switch User and type the new password twice.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+10"/>
         <source>User disabled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4006,7 +4001,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1502"/>
+        <location line="-1503"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4196,7 +4191,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+59"/>
+        <location line="+43"/>
+        <source>Ask an Admin to sign in (on a new station, the Admin chooses theirs first), then choose {name} under Switch User and type the new password twice.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>{name} is signed in now, so cannot disable or reset their own account.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5396,7 +5396,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1144"/>
+        <location filename="../ui/main_window.py" line="-1151"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6746,7 +6746,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Exit presenter theme</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6781,7 +6781,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+60"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6791,12 +6791,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="-35"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+109"/>
+        <location line="+178"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7671,7 +7671,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1101"/>
+        <location filename="../ui/main_window.py" line="-1108"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>

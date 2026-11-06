@@ -55,6 +55,7 @@ from .errors import install_excepthook, open_workspace, phrase_text, show_alread
 from .pages.base import (
     QT_TRANSLATE_NOOP,
     Page,
+    PressSays,
     RoleGates,
     _Button,
     button,
@@ -723,6 +724,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.bm_combo)
         self.btn_new = button(self.tr("+ New"), slot=self.new_board_model)  # greyed for an Operator (_sync_nav)
         layout.addWidget(self.btn_new)
+        PressSays(self.btn_new, self._new_off_why, self._say_off)  # a touch screen shows no tooltip
         layout.addStretch(1)
         self.training_link = button("", slot=lambda: self.navigate("Training"))  # while a training run goes on
         self.training_link.hide()
@@ -840,6 +842,18 @@ class MainWindow(QMainWindow):
             (shown := RecoveryCodeDialog(self, code)).exec()
             shown.deleteLater()
 
+    def _new_off_why(self) -> str:
+        """Why + New is off while the first Admin has no password (ADR 0024 D24); "" otherwise, when a role's reason is
+        RoleGates' to say."""
+        if self.first_admin_unset() is None:
+            return ""
+        return self.tr("Choose the Admin's password first, under Switch User: an account without one can be claimed.")
+
+    def _say_off(self, why: str) -> None:
+        """A press on the greyed + New: its own reason, if any, on the status bar; a role's is RoleGates' to say."""
+        if why:
+            self.status(why)
+
     def landing(self, last: str) -> str:
         """The page a start or a sign-in opens: Inspection for an Operator, the run screen of their work; for an
         Engineer or Admin `last`, the page last shown (REQ-LOG-005; ADR 0024 D25)."""
@@ -908,8 +922,7 @@ class MainWindow(QMainWindow):
             heading.setHidden(all(self.hidden(t) for t in titles))
         self.exit_presenter.setVisible(theme.presenter() and role in SettingsPage.roles)  # where it was switched on
         unset = self.first_admin_unset()  # none made before the Admin has a password (ADR 0024 D24)
-        first = self.tr("Choose the Admin's password first, under Switch User: an account without one can be claimed.")
-        self.gates.own_tip(self.btn_new, first if unset else "")
+        self.gates.own_tip(self.btn_new, self._new_off_why())
         self.gates.gate(self.btn_new, "ensure_board_model", unset is None)  # never hidden: greyed, saying why
         self._fit_header()
 

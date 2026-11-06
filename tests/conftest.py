@@ -224,8 +224,9 @@ PASSPHRASE = "seven tired owls over Busan"  # a test's password for every Engine
 
 
 def handed_over(ctx: AppContext, name: str = "engineer") -> None:
-    """`name` with PASSPHRASE stored, as the Admin signed in hands an account over or the first Admin chooses theirs
-    at the station (ADR 0024 D24), with no sign-in on record: a test that is not about set-up starts past it."""
+    """`name` with PASSPHRASE stored straight in the users table, with no sign-in on record: a shortcut for a test
+    not about set-up, which starts past it. It may leave an Engineer active while no Admin has a password, a state
+    the app reaches only by a hand-over (ADR 0024 D24), so a test of set-up itself uses sign_in."""
     ctx.db.set_user_secret(str(ctx.db.user_uuid(name)), passwords.hash_secret(PASSPHRASE))
 
 

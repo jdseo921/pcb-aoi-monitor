@@ -143,7 +143,7 @@ def test_req_usr_002_a_first_sign_in_chooses_the_password_and_later_ones_need_it
     assert ctx.db.user_secret(uuid) is None and ctx.user == "admin"
     ctx.sign_in("engineer", password=PASSPHRASE)
     assert ctx.user == "engineer" and passwords.verify(ctx.db.user_secret(uuid), PASSPHRASE)
-    chose = ctx.audit_entries(action="user.password_set")[0]  # newest first: the Admin's came before
+    (chose,) = [e for e in ctx.audit_entries(action="user.password_set") if e["object_uuid"] == uuid]  # the Admin's too
     assert (chose["object_uuid"], chose["after"]) == (uuid, {"user": "engineer"})
     ctx.sign_in("operator")
     for wrong in (None, "seven tired owls over Seoul"):
