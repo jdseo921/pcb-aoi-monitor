@@ -845,8 +845,8 @@ class MainWindow(QMainWindow):
     def _new_off_why(self) -> str:
         """Why + New is off while the first Admin has no password (ADR 0024 D24); "" otherwise, when a role's reason is
         RoleGates' to say."""
-        if self.first_admin_unset() is None:
-            return ""
+        if self.first_admin_unset() is None or not self.gates.may("ensure_board_model"):
+            return ""  # a role that may not make one hears the role's reason (RoleGates), as before
         return self.tr("Choose the Admin's password first, under Switch User: an account without one can be claimed.")
 
     def _say_off(self, why: str) -> None:

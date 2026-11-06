@@ -8,13 +8,16 @@ from __future__ import annotations
 import gc
 import threading
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QCoreApplication, QEvent, QObject
 from pytestqt.qtbot import QtBot
 
 
 def test_req_insp_011_a_pool_thread_never_runs_the_collector(qtbot: QtBot) -> None:
     """A job making reference cycles starts no collection on its thread; the UI thread's timer collects once one is
     due, and a cycle holding a Qt object frees it there. Before: the job's thread ran collections and freed it."""
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)  # earlier tests' windows freed now:
+    # freed during the wait below, they would take the young generation's count back under its threshold, and the
+    # timer would find no collection due
     starts: list[str] = []
 
     def seen(phase: str, info: dict[str, int]) -> None:
