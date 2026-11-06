@@ -69,6 +69,8 @@ class SettingsPage(Page):
         wl.setContentsMargins(0, 0, 0, 0)
         wl.addWidget(self.ws)
         wl.addWidget(button(self.tr("Browse…"), slot=self._browse))
+        self.input_folder, input_row = self._folder_row(s.input_folder, self.tr("Input folder"))  # REQ-INSP-020
+        self.output_folder, output_row = self._folder_row(s.output_folder, self.tr("Output folder"))  # REQ-INSP-021
         self.device = QComboBox()
         self.device.addItems(["auto", "cpu", "cuda"])
         self.device.setCurrentText(s.device)
@@ -102,6 +104,8 @@ class SettingsPage(Page):
             self.lang.addItem(name, code)
         self.lang.setCurrentIndex(max(0, self.lang.findData(s.language)))
         f.addRow(self.tr("Workspace (images, AI models, database)"), ws_row)
+        f.addRow(self.tr("Input folder (empty: none)"), input_row)
+        f.addRow(self.tr("Output folder (empty: none)"), output_row)
         f.addRow(self.tr("AI device"), self.device)
         f.addRow(self.tr("Default input size"), self.input_size)
         f.addRow(self.tr("Default epochs"), self.epochs)
@@ -184,6 +188,20 @@ class SettingsPage(Page):
         wrap = QFormLayout.RowWrapPolicy
         self.form.setRowWrapPolicy(wrap.WrapAllRows if theme.presenter() else wrap.DontWrapRows)
 
+    def _folder_row(self, value: str, title: str) -> tuple[QLineEdit, QWidget]:
+        """A folder's box with its Browse…: the line's input or output folder, a full path or empty for none."""
+        box, row = QLineEdit(value), QWidget()
+        rl = QHBoxLayout(row)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.addWidget(box)
+
+        def browse() -> None:
+            if d := QFileDialog.getExistingDirectory(self, title, box.text()):
+                box.setText(d)
+
+        rl.addWidget(button(self.tr("Browse…"), slot=browse))
+        return box, row
+
     def _browse(self) -> None:
         d = QFileDialog.getExistingDirectory(self, self.tr("Workspace folder"), self.ws.text())
         if d:
@@ -203,6 +221,8 @@ class SettingsPage(Page):
             "log_retention_days": self.ret.value(),
             "language": self.lang.currentData(),
             "ok_evidence": self.ok_evidence.currentData(),
+            "input_folder": self.input_folder.text().strip(),  # empty: no line; a relative one is AOI-SET-008
+            "output_folder": self.output_folder.text().strip(),
         }
         s = self.ctx.settings
         limits = {"map_retention_days_ok": self.map_ret, "max_image_megapixels": self.max_mp}

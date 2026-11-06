@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from ... import defects as taxonomy
 from ...core.cycle import FrameMeta, Outcome
 from ...core.explain import notes
+from ...core.folder_watch import LOOK_S
 from ...core.imaging import IMAGE_EXTS, list_images
 from ...core.inspector import NG, InspectionResult
 from ...core.services import SHIFT_CHECK_REASONS, Actor, AppContext, refusal
@@ -54,10 +55,12 @@ from .base import (
 from .review import ReviewBar, review_text
 
 if TYPE_CHECKING:
+    from ...core.folder_watch import FolderWatch
     from ..main_window import MainWindow
 
 
 NO_VERDICT = "—"  # the banner before the first board
+LOOK_MS = round(1000 * LOOK_S)  # how often a running line looks in the input folder (REQ-INSP-020)
 
 
 def alarm_line(time_iso: str, level: str, code: str | None, msg: str) -> str:
@@ -75,6 +78,8 @@ class InspectionPage(Page):
     def __init__(self, ctx: AppContext, shell: MainWindow) -> None:
         super().__init__(ctx, shell)
         self.queue: list[Path] = []
+        self.watch: FolderWatch | None = None  # the watched input folder, in place of the queue (REQ-INSP-020)
+        self.in_hand: Path | None = None  # the file of the board being inspected
         self.queue_pos = -1
         self.running = False
         self.run_board_model: str | None = None  # the board model a run started under: its boards are judged under it
@@ -96,19 +101,27 @@ class InspectionPage(Page):
         self._pace_timer.setSingleShot(True)
         self._pace_timer.setTimerType(Qt.TimerType.PreciseTimer)  # a coarse timer may fire 5 % early
         self._pace_timer.timeout.connect(self._paced_next)
+        self._look_timer = QTimer(self)  # a running line's next look in the input folder
+        self._look_timer.setSingleShot(True)
+        self._look_timer.timeout.connect(self._looked)
 
         # Source bar. Every control is an action with a key (REQ-INSP-005); the keys work wherever the focus is on
         # this page, and only while this page is shown.
         self.act_load = self.action(self.tr("Load Images…"), QKeySequence.StandardKey.Open, self.load_files)
         self.act_folder = self.action(self.tr("Load Folder…"), "Ctrl+Shift+O", self.load_folder)
+        self.act_watch = self.action(self.tr("Watch Input Folder"), "Ctrl+Shift+I", self.watch_folder)
         self.act_view = self.action(self.tr("Next view"), "Alt+V", self.next_view)
         self.act_check = self.action(self.tr("Shift Check"), "F7", self.run_shift_check)  # REQ-INSP-017
         bar = QHBoxLayout()
         self.btn_load = size_class(action_button(self.act_load, show_key=False), "T")  # 48 px: the sketch's size T
         self.btn_folder = size_class(action_button(self.act_folder, show_key=False), "T")
+        self.btn_watch = size_class(action_button(self.act_watch, show_key=False), "T")
+        watch_off = self.tr("Watch Input Folder waits for the run to stop or the board in hand to finish.")
+        OffSays(self.btn_watch, watch_off, shell.status)
         self.btn_check = size_class(action_button(self.act_check, show_key=False), "T")
         bar.addWidget(self.btn_load)
         bar.addWidget(self.btn_folder)
+        bar.addWidget(self.btn_watch)
         bar.addWidget(self.btn_check)
         bar.addWidget(QLabel(self.tr("View:")))
         self.view_combo = QComboBox()
@@ -207,7 +220,13 @@ class InspectionPage(Page):
             self.empty.hide()
         elif not self.board_model:
             self.show_empty(self.empty, *self.no_board_model())
-        elif not self.queue:
+        elif self.watch is not None and self.last is None and self.skipped is None:
+            what = self.tr("Each board image that arrives in the input folder is inspected while the line runs.")
+            if self.running:
+                self.show_empty(self.empty, self.tr("Line running"), what, self.tr("■  Stop"), self.stop_run)
+            else:
+                self.show_empty(self.empty, self.tr("Line paused"), what, self.tr("▶  Start"), self.start_run)
+        elif not self.queue and self.watch is None:
             what = self.tr("Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.")
             self.show_empty(self.empty, self.tr("No images loaded"), what, self.tr("Load Images…"), self.load_files)
         elif self.skipped is not None:  # until the next board starts: which board was not inspected, why, what next
@@ -242,8 +261,34 @@ class InspectionPage(Page):
         if d:
             self._set_queue(list_images(d))
 
+    def watch_folder(self) -> None:
+        """Ctrl+Shift+I: the input folder an Admin set, in place of the queue (REQ-INSP-020); Start runs the line, which
+        inspects each board image that arrives, and Stop pauses it. A folder that cannot be opened is AOI-INSP-023."""
+        if self.running or self.worker is not None or self._bg is not None:
+            return
+        self.run_in_background(self.ctx.folder_watch, on_result=self._watching)  # file work, never on the UI thread
+
+    def _watching(self, watch: FolderWatch | None) -> None:
+        """The input folder opened: the page watches it, paused until Start."""
+        if watch is None or self.running or self.worker is not None:
+            return
+        self._set_queue([])
+        self.watch = watch
+        self._show_line()
+        self.shell.status(self.tr("Watching {folder}: press Start (F5) to run the line").format(folder=watch.folder))
+        self._update_buttons()
+        self._show_empty()
+
+    def _show_line(self) -> None:
+        """The line's state where the queue's count was: running or paused, and the images waiting at the last look."""
+        if self.watch is None:
+            return
+        line = self.tr("Line running") if self.running else self.tr("Line paused: Start (F5) resumes")
+        waiting = self.tr("{count} image(s) waiting in the input folder").format(count=self.watch.waiting)
+        self.queue_label.setText(f"{line}  ·  {waiting}")
+
     def _set_queue(self, paths: list[Path]) -> None:
-        self.queue, self.queue_pos, self.skipped, self.pace_s = paths, -1, None, None
+        self.queue, self.queue_pos, self.skipped, self.pace_s, self.watch = paths, -1, None, None, None
         self._drop_engine()  # a new queue builds its engine from what is active (#243)
         self.queue_label.setText(self.tr("{count} image(s) queued").format(count=len(paths)))
         self.shell.status(self.tr("Loaded {count} image(s)").format(count=len(paths)))
@@ -273,12 +318,17 @@ class InspectionPage(Page):
         self.running, self.run_board_model, self.run_actor = True, self.board_model, self.ctx.actor
         self.cycle.start_run()
         self._update_buttons()
+        self._show_line()
+        self._show_empty()
         self.next_board()
 
     def stop_run(self) -> None:
         """F6: stop after the board being inspected; nothing is deleted, so no confirmation."""
         self.running = False
         self._pace_timer.stop()
+        self._look_timer.stop()
+        self._show_line()
+        self._show_empty()
         if self.worker is not None:
             self.shell.status(self.tr("Stopping after this board…"), ms=0)  # until the board's result replaces it
         else:
@@ -297,7 +347,7 @@ class InspectionPage(Page):
         if self.running and bm != self.run_board_model:  # no board of a run is judged under another board model (#172)
             self._stop_for_board_model(bm)
             return
-        if self.queue_pos + 1 >= len(self.queue):
+        if self.watch is None and self.queue_pos + 1 >= len(self.queue):
             self.running = False
             self.shell.status(self.tr("End of queue"))
             self._update_buttons()
@@ -305,29 +355,39 @@ class InspectionPage(Page):
         if self.running and self.ctx.user != self.run_actor.name:  # a board of a run names who pressed Start (#177)
             self._stop_for_user()  # another user signed in; a change of the same user's role goes on
             return
-        if not self._shift_checked(bm):
+        if self.watch is None and not self._shift_checked(bm):  # a line's job asks it before each look
             return
-        self.queue_pos += 1
-        path = self.queue[self.queue_pos]
         self._board_started = time.monotonic()
-        view = str(self.view_combo.currentData())  # the English key the engine stores on every defect
         in_run = self.running
 
-        def verdict(res: InspectionResult) -> None:
-            report(res)  # the verdict first, while the save runs; bound before the job starts
+        def verdict(res: object) -> None:
+            report(res)  # the file taken, then the verdict while the save runs; bound before the job starts
 
         # The engine kept now, or built on the pool thread on the first board, so no key waits for a model load (#447)
-        w = self.worker = Worker(self.cycle.board(bm, FrameMeta(path, view), report=verdict))
+        if self.watch is not None:  # a look in the input folder, and its next complete file inspected (REQ-INSP-020)
+            self.in_hand, watch = None, self.watch
+            go = lambda: self.running and self.watch is watch  # noqa: E731 - paused meanwhile: no file is taken
+            w = self.worker = Worker(self.cycle.watched(bm, watch, report=verdict, go=go))
+        else:
+            self.queue_pos += 1
+            self.in_hand = path = self.queue[self.queue_pos]
+            view = str(self.view_combo.currentData())  # the English key the engine stores on every defect
+            w = self.worker = Worker(self.cycle.board(bm, FrameMeta(path, view), report=verdict))
+            self._show_busy(path)  # the response to the action, before the pool thread has started (REQ-INSP-005)
         report, ref = w.signals.progress.emit, weakref.ref(w)  # the job and the slots never hold the worker or its
         # signals (#132): Qt keeps the slots as long as the signals, so the worker, its job and the board's result would
         # stay as long as the app runs, and signals the job held could be deleted on a pool thread, which Qt forbids
-        self._show_busy(path)  # the response to the action, before the pool thread has started (REQ-INSP-005)
         self._update_buttons()
 
-        def result(out: Outcome) -> None:
+        def result(out: Outcome | None) -> None:
             if (worker := ref()) is not None and self.worker is worker:
                 self.worker = None  # before _on_result, which may start the next board of a run
                 self._update_buttons()  # the controls follow the worker at once, not at the finished signal
+            if out is None:  # the line found no complete file: it looks again while it runs
+                self._show_line()
+                if self.running:
+                    self._look_timer.start(LOOK_MS)
+                return
             out = self.cycle.settle(out, self.board_model, in_run)  # keeps its engine; a run judged by two (#243, S29)
             self._on_result(out)  # first: the result, and a failed save's error, never wait for the alarm below (#179)
             if out.engine.model is None and bm == self.board_model:  # each board judged with no AI model: a version
@@ -345,11 +405,41 @@ class InspectionPage(Page):
                 self.worker = None
             self._update_buttons()
 
-        w.signals.progress.connect(self._show_verdict)  # painted within 100 ms of the engine's result (REQ-INSP-002)
+        w.signals.progress.connect(self._progress)  # painted within 100 ms of the engine's result (REQ-INSP-002)
         w.signals.result.connect(result)
-        w.signals.error.connect(lambda e: self._not_inspected(path, e))
+        w.signals.error.connect(self._job_failed)
         w.signals.finished.connect(done)
         start(w, self.ctx.jobs)
+
+    def _progress(self, got: object) -> None:
+        """A board job's report: the file the line took, shown busy, or the verdict."""
+        if isinstance(got, FrameMeta):
+            self.in_hand = got.path
+            self._show_busy(got.path)
+        elif isinstance(got, InspectionResult):
+            self._show_verdict(got)
+
+    def _job_failed(self, e: BaseException) -> None:
+        """A board job raised: a line paused by the shift check or by a board of another board model keeps what it
+        shows (REQ-INSP-020); anything else is a board not inspected."""
+        if self.watch is not None and self.in_hand is None and isinstance(e, AoiError):
+            self.running = False
+            self._look_timer.stop()
+            self._update_buttons()
+            self._show_line()
+            self._show_empty()
+            if e.code == "AOI-INSP-016":
+                self._show_shift_check()
+                self.shell.status(self.tr("Stopped: a shift check is needed first"), ms=0)
+            self.error(e)
+            self._refresh_alarms()
+            return
+        self._not_inspected(self.in_hand, e)
+
+    def _looked(self) -> None:
+        """A running line's next look in the input folder, unless it was paused meanwhile."""
+        if self.running and self.worker is None and self.watch is not None:
+            self.next_board()
 
     # --- the start-of-shift check (REQ-INSP-017, ADR 0014) ---------------------------
     def run_shift_check(self) -> None:
@@ -424,27 +514,33 @@ class InspectionPage(Page):
         }[state]
         self.shift_line.setText(text)
 
-    def _not_inspected(self, path: Path, e: BaseException) -> None:
+    def _not_inspected(self, path: Path | None, e: BaseException) -> None:
         """The board was not inspected: the run stops, and the page shows that board, not the one before (#182): the
         banner reads "Not inspected" with its shape, the picture and the defect list go, Save Image… and Compare… have
         no result to act on, and the empty state names the board, the error's code and what happened, with Next Board
         to carry on with the queue, or Load Images… when it was the last board. The coded dialog says what happened and
         what to do (REQ-SET-019)."""
         self.running = False
+        self._look_timer.stop()
         self.last = self.last_path = self.last_id = self.last_board_model = None
-        heading, sentence = self.not_inspected(self.verdict, path.name, e)
+        name = path.name if path is not None else str(self.watch.folder if self.watch else "")
+        heading, sentence = self.not_inspected(self.verdict, name, e)
         link, go = self.tr("Next Board ›"), self.next_board
         step = self.tr("Press Next Board to carry on with the queue.")
-        if self.queue_pos + 1 >= len(self.queue):  # the last board: Next Board would only say "End of queue"
+        if self.watch is not None:  # its file went back to the input folder (REQ-INSP-020)
+            step = self.tr("The line is paused and the image is back in the input folder: Start (F5) runs the line.")
+            link, go = self.tr("▶  Start"), self.start_run
+        elif self.queue_pos + 1 >= len(self.queue):  # the last board: Next Board would only say "End of queue"
             step = self.tr("No board is left in the queue. Load Images… or Load Folder… to queue more boards.")
             link, go = self.tr("Load Images…"), self.load_files
         self.skipped = heading, " ".join([sentence, step]), link, go
         self.view.set_image(None)
         fill_table(self.table, [])
-        summary = self.tr("{file}  ·  not inspected").format(file=path.name)
+        summary = self.tr("{file}  ·  not inspected").format(file=name)
         self.summary.setText(summary)
         self.shell.status(summary)
         self._update_buttons()
+        self._show_line()
         self._show_empty()
         self.error(e)
         self._refresh_alarms()
@@ -468,7 +564,7 @@ class InspectionPage(Page):
         parts = [note]
         if iid is not None:
             parts.append(self.tr("Its record is on Logs & Export under {board_model}.").format(board_model=bm))
-        if in_run and self.queue_pos + 1 < len(self.queue):
+        if in_run and (self.watch is not None or self.queue_pos + 1 < len(self.queue)):
             step = self.tr("The run stopped; press Start to carry on with the queue under {header}.")
             parts.append(step.format(header=self.board_model or NO_VERDICT))
         note = " ".join(parts)
@@ -487,8 +583,11 @@ class InspectionPage(Page):
             self.skipped = None
             self._show_empty()
         self.summary.setText(self.tr("Inspecting {file}…").format(file=path.name))
-        status = self.tr("Inspecting {file} ({n} of {total})…")
-        busy = status.format(file=path.name, n=self.queue_pos + 1, total=len(self.queue))
+        if self.watch is not None:
+            busy = self.tr("Inspecting {file} from the input folder…").format(file=path.name)
+        else:
+            status = self.tr("Inspecting {file} ({n} of {total})…")
+            busy = status.format(file=path.name, n=self.queue_pos + 1, total=len(self.queue))
         self.shell.status(busy, ms=0)  # stays until the result or the error replaces it, however long the board takes
 
     def _show_verdict(self, res: InspectionResult | None) -> None:
@@ -499,11 +598,12 @@ class InspectionPage(Page):
 
     def _on_result(self, out: Outcome) -> None:
         path, res, iid, save_error = out.path, out.result, out.record_id, out.save_error
+        keep = self.queue_pos > 0 or (self.watch is not None and self.last is not None)  # the zoom of the boards before
         self.last, self.last_path, self.last_id, self.last_board_model = res, path, iid, self.board_model
         self._update_buttons()  # Save Image… and Compare on with the result, not at the finished slot (#241 review)
         self._show_verdict(res)  # painted before the image and the table are built: the verdict first (REQ-INSP-002)
         self.empty.hide()
-        self.view.set_image(res.image, keep_view=self.queue_pos > 0)
+        self.view.set_image(res.image, keep_view=keep)
         for d in res.defects:
             sev = taxonomy.BY_NAME.get(d.type, taxonomy.ANOMALY).severity
             label = f"{d.no} {d.type} {theme.severity_label(sev)}  {d.score:.2f}"
@@ -556,6 +656,7 @@ class InspectionPage(Page):
         its own code and step, AOI-INSP-014 (#245); anything else, AOI-INSP-002 included, is AOI-INSP-008."""
         self.running = False
         self._update_buttons()
+        self._show_line()  # a line pauses: the image is back in the input folder (REQ-INSP-020)
         if isinstance(e, AoiError) and e.code == "AOI-INSP-014":
             err = e
         else:
@@ -630,10 +731,17 @@ class InspectionPage(Page):
         while a board is being inspected (#120), Stop acts while a run is on, Save Image… once there is a result, for a
         role `export_board_image` allows and while no save runs (#241), and Compare while there is a record or a file to
         open (#243): not before the first board, after a board that was not inspected, or after a board model change."""
-        has, busy = bool(self.queue) and self.board_model is not None, self.worker is not None
+        busy, fed = self.worker is not None, bool(self.queue) or self.watch is not None
+        has = fed and self.board_model is not None
         self.act_start.setEnabled(has and not self.running and not busy)
         self.act_stop.setEnabled(self.running)
-        self.act_next.setEnabled(has and not self.running and not busy)
+        self.act_next.setEnabled(has and self.watch is None and not self.running and not busy)  # a line takes its own
+        idle_line = not self.running and not busy and self._bg is None
+        line = bool(self.ctx.settings.input_folder)
+        self.btn_watch.setVisible(line)  # shown on a station with a line only: the bar stays whole at 1366 x 768
+        self.act_watch.setEnabled(line and idle_line)
+        for act in (self.act_load, self.act_folder):  # a running line is paused before a queue replaces it
+            act.setEnabled(self.watch is None or idle_line)
         idle = self.board_model is not None and not self.running and not busy and self._bg is None
         self.act_check.setEnabled(idle)  # never beside a board, a run or a Save Image… job
         # a board image leaves the station only by an Admin (#151): Save Image… greyed for another role, never hidden
@@ -665,7 +773,9 @@ class InspectionPage(Page):
         """The header shows another board model than the run's: the run stops, so no board of its queue is judged or
         saved under a board model it was not started for; the board in hand keeps the run's (#172)."""
         self.running = False
+        self._look_timer.stop()
         self._update_buttons()
+        self._show_line()
         msg = self.cycle.board_model_alarm(self.run_board_model, name)  # AOI-INSP-012
         self.shell.status(phrase_text(msg), ms=0)  # until the board in hand, if one is, replaces it with its own line
         self._refresh_alarms()
@@ -674,7 +784,9 @@ class InspectionPage(Page):
         """Another user signed in with Switch User during a run: the run stops after the board in hand, which is
         recorded under the user who pressed Start, so no board is recorded under a user who did not start it (#177)."""
         self.running = False
+        self._look_timer.stop()
         self._update_buttons()
+        self._show_line()
         msg = self.tr(
             "Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to"
             " carry on with the queue as {user}."
@@ -743,6 +855,9 @@ class InspectionPage(Page):
         self._show_empty()
 
     def on_show(self) -> None:
+        if self.watch is not None and str(self.watch.folder) != self.ctx.settings.input_folder:
+            self.stop_run()  # an Admin set another input folder, or none: the line leaves the old one
+            self._set_queue([])
         self._drop_engine()  # pick up newly trained models or saved recipes
         self.cycle.forget_warnings()  # each visit says once that a board model has no AI model yet
         self._update_buttons()  # Save Image… follows the role after a Switch User (#241)
