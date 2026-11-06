@@ -11,6 +11,7 @@ from PySide6.QtGui import (
     QAction,
     QCloseEvent,
     QColor,
+    QInputMethodEvent,
     QKeySequence,
     QMouseEvent,
     QPainter,
@@ -458,17 +459,28 @@ class _HeldPress(QObject):
 
 
 class _InputWatch(QObject):
-    """A press, key, wheel or touch in the app: an Engineer's or Admin's idle time starts again (REQ-USR-004). One for
-    the application, whatever windows it opens (`watch_input`), so no event passes through a filter per window."""
+    """A press, key, wheel or touch in the app: an Engineer's or Admin's idle time starts again (REQ-USR-004). A key
+    that fires a shortcut (F1, Inspection's F5 to F11, Enter on the guide's key step) reaches no widget as `KeyPress`,
+    only its action as `Shortcut`, and Hangul typed through the input method arrives as `InputMethod`, so both count
+    too, the second once it carries text (senior review 2026-11-06, UI-2). A trigger from code, a timer or a mouse
+    moved without a press counts as none. One for the application, whatever windows it opens (`watch_input`), so no
+    event passes through a filter per window."""
 
-    INPUT = {QEvent.Type.MouseButtonPress, QEvent.Type.KeyPress, QEvent.Type.Wheel, QEvent.Type.TouchBegin}
+    INPUT = {
+        QEvent.Type.MouseButtonPress,
+        QEvent.Type.KeyPress,
+        QEvent.Type.Shortcut,
+        QEvent.Type.Wheel,
+        QEvent.Type.TouchBegin,
+    }
 
     def __init__(self, app: QObject | None) -> None:
         super().__init__(app)
         self.last = time.monotonic()
 
     def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
-        if e.type() in self.INPUT:
+        typed = isinstance(e, QInputMethodEvent) and bool(e.commitString() or e.preeditString())
+        if e.type() in self.INPUT or typed:
             self.last = time.monotonic()
         return False
 

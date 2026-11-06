@@ -1758,7 +1758,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1307"/>
+        <location filename="../ui/main_window.py" line="+1319"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5411,7 +5411,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1161"/>
+        <location filename="../ui/main_window.py" line="-1172"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6721,7 +6721,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+172"/>
+        <location line="+183"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7691,7 +7691,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1118"/>
+        <location filename="../ui/main_window.py" line="-1129"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
