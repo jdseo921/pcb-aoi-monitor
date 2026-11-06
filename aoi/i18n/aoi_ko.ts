@@ -1757,7 +1757,7 @@
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
-        <location filename="../ui/errors.py" line="+163"/>
+        <location filename="../ui/errors.py" line="+164"/>
         <location filename="../ui/main_window.py" line="+1302"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
@@ -3771,6 +3771,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+9"/>
+        <source>Workspace drive full</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The workspace folder {path} could not be opened: its drive is full, with no room for the database&apos;s working files.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Restore no backup: the database is not damaged, only out of room. Free space on that drive, for example by moving old exports off it, and start the app again. Or choose another workspace folder in the window that opens next; Cancel there closes the app.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+20"/>
         <source>Leave out / : * ? &quot; &lt; &gt; \ | and control characters, end with no dot or space, and use no device name such as CON or NUL.</source>
         <translation type="unfinished">/ : * ? &quot; &lt; &gt; \ | 와 제어 문자를 빼고, 점이나 공백으로 끝내지 말고, CON이나 NUL 같은 장치 이름은 쓰지 마십시오.</translation>
@@ -3931,7 +3946,7 @@
         <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
     </message>
     <message>
-        <location line="-326"/>
+        <location line="-341"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
