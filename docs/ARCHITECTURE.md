@@ -745,11 +745,14 @@ dialog opens on the USB drive plugged in last (Q68): the line beside Save to Fil
 and I Have Saved the Key waits for `saved`. Until then `MainWindow.hold_frame` greys the sidebar and the header, a press
 on them, or on any of the header's controls, which take a press for themselves, says why (`_HeldPress`), `navigate`
 refuses every page but Home and `closeEvent` is ignored, as the New board model dialog's modal key step holds the window
-behind it (ADR 0021, decision 3). A refusal, of Create or of the key's save or print, is said under the control that
-raised it, with its code, and opens no dialog; a save or print that works, and a sign-in, take it away. F1 lists the key
-step's keys (`Page.key_actions`). Show All Steps › and Show the Guide › switch Home between the guide and what Home
-shows without it, its empty state with + New board model while there is no board model, for the board model shown, kept
-in `cards_for` until the next sign-in. The name field takes the focus at a start too, before the window is shown.
+behind it (ADR 0021, decision 3). An idle end (`check_idle`) goes ahead meanwhile; while no Admin is signed in the guide
+then takes the key's text off the screen (`RecoveryKey.hide_text`) and hides its buttons and keys, the frame still held
+and the key kept, and Sign In as Admin… opens Switch User with the Admin who made it picked, to whom it shows again
+(senior review UI-1). A refusal, of Create or of the key's save or print, is said under the control that raised it, with
+its code, and opens no dialog; a save or print that works, and a sign-in, take it away. F1 lists the key step's keys
+(`Page.key_actions`). Show All Steps › and Show the Guide › switch Home between the guide and what Home shows without
+it, its empty state with + New board model while there is no board model, for the board model shown, kept in `cards_for`
+until the next sign-in. The name field takes the focus at a start too, before the window is shown.
 `tests/test_first_run_guide.py` drives screen 1 for each role.
 
 **The guide's screen 2, the images** (REQ-TRN-021, B5; Q69 to Q71). `AppContext.guide_step(board_model)` gives the
@@ -1106,7 +1109,7 @@ The writes, their roles and entries:
 | `reset_secret` | Admin | `user.reset` (the status before and after); object = user UUID; the password or PIN dropped and any lock cleared, never recorded; never the Admin's own (`AOI-USR-011`) nor the last Admin's with a password (`AOI-USR-013`); an Admin's recovery code goes with it (REQ-USR-006) |
 | `recover` | anyone | `user.recovered` and `user.recovery_code_made`, then as `sign_in`; object = user UUID. An Admin who lost their password types their recovery code and chooses a new one; the code is used up and a new one made, held for the screen once (`take_recovery_code`). A wrong code is `user.sign_in_failed` with `recovery` and AOI-USR-015; neither code nor hash is recorded (REQ-USR-005) |
 | `save_code_sheet` · `print_code_sheet` | Admin | `user.code_saved` (the path) or `user.code_printed` (the printer, and any file); object = the Admin's UUID; never the code; AOI-LOG-002 for a file in the workspace or a OneDrive folder, as for a store's recovery key (REQ-USR-005) |
-| `end_idle` | system, on the window's 30 s timer after `idle_minutes` without input, never while a board is inspected or in the demo, never to anyone but an Operator | `user.idle_end` (the Engineer or Admin before → the Operator signed in last, `Database.last_operator`); object = that Operator's UUID (REQ-USR-004) |
+| `end_idle` | system, on the window's 30 s timer after `idle_minutes` without input, never while a board is inspected or in the demo, never to anyone but an Operator; while the first-run guide holds a recovery key too, which it then hides until an Admin signs in | `user.idle_end` (the Engineer or Admin before → the Operator signed in last, `Database.last_operator`); object = that Operator's UUID (REQ-USR-004) |
 | `sign_in` | anyone | `user.sign_in` (the user signed in before → the user signed in now, each with the role); object = user UUID. An Engineer or Admin types their password (REQ-USR-002): a refusal is `user.sign_in_failed`, and the `lock_after`th wrong one in a row (settings, 5) adds `user.lock` and AOI-USR-006 for `lock_minutes` (5), the 100th AOI-USR-007 until `unlock_user`; a try while locked is `user.sign_in_failed` with `locked`, checking nothing (REQ-USR-004). With `operator_pin`, an Operator types a PIN the same way at Switch User, chosen at the first as `user.pin_set` (AOI-USR-008 for one not of 4 to 6 digits); a start asks for none (REQ-USR-003). Switch User; the newest entry names the user the next start signs in (`last_signed_in`, REQ-USR-003). The station's first Admin choosing their password, while no Admin has one, also gets a recovery code (`user.recovery_code_made`), held for the screen once (`take_recovery_code`, REQ-USR-005). In the demo workspace its Admin has the demo's known password (`demo.ADMIN_PASSWORD`, set at open, audited `user.password_set` with `demo`), and a start signs that Admin in. With `start`, `user.start` (before: none; after: the user and role a window opens with: at a start, or at a workspace switch the first user of the role carried, the demo's Admin say), which no later start reads |
 | `save_settings` | Admin | `settings.change` (the Settings page's values: what settings.json held before → what it holds now); object type `settings`, no object UUID (#197). Two system writes to settings.json go past the check, unaudited, since no user asks for them: the page in use (`last_page`, `MainWindow._on_nav`) and the folder chosen after a refused workspace at start-up (`workspace`, `aoi/ui/errors.py`) |
 

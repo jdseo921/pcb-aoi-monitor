@@ -89,11 +89,13 @@ PRESENTER_SMALL_SHOTS = {  # every page the demo scripts open (tools/screen_size
     "presenter-1366-settings-admin": ("Settings", "admin"),
 }
 NEW_BOARD_MODEL_SHOTS = {"new-board-model-admin": "form", "new-board-model-key-admin": "key"}  # dialogs (ADR 0021)
-GUIDE_SHOTS = {  # Home's first-run guide (B5): screen 1 as the Admin types, the key Create shows, and the Engineer's;
+GUIDE_SHOTS = {  # Home's first-run guide (B5): screen 1 as the Admin types, the key Create shows (and hides from an
+    # Operator signed in by an idle end), and the Engineer's;
     # screen 2 for a board model with no image yet, then with GUIDE_OK and GUIDE_NG images in and the box area open;
     # screen 3 before Train and with what Train made, its reads pinned (`guide_steps`)
     "home-guide-admin": ("admin", "form"),
     "home-guide-key-admin": ("admin", "key"),
+    "home-guide-key-hidden-operator": ("operator", "key"),  # the key the Admin made, hidden after an idle end (UI-1)
     "home-guide-engineer": ("engineer", "form"),
     "home-guide-images-admin": ("admin", "images"),
     "home-guide-boxes-admin": ("admin", "boxes"),
@@ -638,7 +640,8 @@ def guide_made() -> dict[str, Any]:
 def guide_steps(win: Any, dataset: Path) -> Iterator[str]:
     """Home's first-run guide (B5) in each state of GUIDE_SHOTS in turn, its name yielded with the window laid out:
     with no board model in the header, as a workspace with none shows it, screen 1 with NEW_BOARD_MODEL and NEW_CUSTOMER
-    typed by the Admin, the recovery key Create would show for `pinned_store` and screen 1 greyed for the Engineer;
+    typed by the Admin, the recovery key Create would show for `pinned_store`, the same key hidden from the Operator an
+    idle end signs in, and screen 1 greyed for the Engineer;
     then screen 2 for GUIDE_BOARD_MODEL, made in GUIDE_CUSTOMER's store, with no image, and with GUIDE_OK OK and
     GUIDE_NG NG images of `dataset` in, the box area on the first NG image; then screen 3 for it, before Train and with
     what Train made. Screen 3's reads are pinned (`guide_step` 3, `guide_ready`, `guide_made`), as a training in the
@@ -679,7 +682,9 @@ def guide_steps(win: Any, dataset: Path) -> Iterator[str]:
                 guide.name.setText(NEW_BOARD_MODEL)
                 guide.customer.setText(NEW_CUSTOMER)
             if step == "key":
+                win.set_user("admin")  # the Admin makes the key; any other role sees it as an idle end leaves it
                 guide.show_key(NEW_BOARD_MODEL, pinned_store())
+                win.set_user(role)
             while guide.images.reading is not None:  # the box area's NG image, read on a pool thread
                 QTest.qWait(20)
             settle()

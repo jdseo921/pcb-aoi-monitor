@@ -102,10 +102,13 @@ A lock never stops the Operator view; where Operators have PINs, wrong ones lock
 the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, key or touch, an
 Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited `user.idle_end`; never
 while a board is being inspected (a run under way stops after its board, as at any sign-in), never in the demo
-workspace, and a dialog left open is closed first, as Cancel would. A barcode scanner that types as a keyboard counts as
-input, so one in use keeps the session alive. `operator_pin: true` in `settings.json` asks
-each Operator for a 4 to 6 digit PIN at Switch User, chosen at their first sign-in (AOI-USR-008 for one that is not); a
-start still signs the Operator in, so the Operator view is never held.
+workspace, and a dialog left open is closed first, as Cancel would. If it ends while the first-run guide shows a new
+store's recovery key, the Operator signed in sees no key: the guide keeps it, hidden, until an Admin signs in again with
+**Sign In as Admin…**, and the station does nothing else until the key is kept. A recovery key's or code's dialog left
+open still keeps the session (#499). A barcode scanner that types as a keyboard counts as input, so one in use keeps the
+session alive. `operator_pin: true` in `settings.json` asks each Operator for a 4 to 6 digit PIN at Switch User, chosen
+at their first sign-in (AOI-USR-008 for one that is not); a start still signs the Operator in, so the Operator view is
+never held.
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
@@ -216,11 +219,12 @@ away from the station, not the one that brings the images: the dialog opens on t
 Windows lists as a fixed disk, as many USB SSDs are, does not count) or **Print…** (Ctrl+P), and the line beside them
 says where it went; then **I Have Saved the Key** (Enter), which until then says to save or print the key first. While
 the key shows, the sidebar, the top bar, the page keys and the window's close do nothing, and a press on them says why
-on the status bar. F1 lists the step's keys. A refusal, such as a folder under `images` that holds files already
-(AOI-TRN-044) or a key saved into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and
-opens no dialog. The board model made is then chosen in the top bar, and the guide goes on to its images. **Show All
-Steps ›** leaves the guide for Home without it, which with no board model yet is the empty state with **+ New board
-model**, and **Show the Guide ›** brings it back, until the next sign-in.
+on the status bar; if the session ends for idle time meanwhile, the key is hidden until an Admin signs in again. F1
+lists the step's keys. A refusal, such as a folder under `images` that holds files already (AOI-TRN-044) or a key saved
+into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and opens no dialog. The board
+model made is then chosen in the top bar, and the guide goes on to its images. **Show All Steps ›** leaves the guide for
+Home without it, which with no board model yet is the empty state with **+ New board model**, and **Show the Guide ›**
+brings it back, until the next sign-in.
 
 **The guide's images.** Screen 2 takes the board model's images, for a board model in a customer's store that has
 not inspected a board yet. Put them in one folder with two folders in it: `ok`, with the good boards' images, and

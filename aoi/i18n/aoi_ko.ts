@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+466"/>
+        <location line="+468"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1275,14 +1275,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4771"/>
-        <location line="+3468"/>
+        <location line="-4773"/>
+        <location line="+3470"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3558"/>
+        <location line="-3560"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1610"/>
+        <location line="+1612"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4219"/>
+        <location line="-4221"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,7 +1634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1534"/>
+        <location line="+1536"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,14 +1751,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4653"/>
+        <location line="-4655"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1297"/>
+        <location filename="../ui/main_window.py" line="+1307"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4537,7 +4537,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3710"/>
+        <location filename="../core/services.py" line="+3712"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4758,7 +4758,7 @@
         <translation type="unfinished">학습</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+48"/>
         <source>Show All Steps ›</source>
         <translation type="unfinished">모든 단계 보기 ›</translation>
     </message>
@@ -4813,17 +4813,27 @@
         <translation type="unfinished">이 스테이션과 떨어져 보관하는 USB 드라이브(이미지를 가져오는 드라이브 말고)에 저장하거나 인쇄하십시오.</translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+9"/>
+        <source>Sign In as Admin…  Enter</source>
+        <translation type="unfinished">관리자로 로그인…  Enter</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Sign In as Admin…</source>
+        <translation type="unfinished">관리자로 로그인…</translation>
+    </message>
+    <message>
+        <location line="-4"/>
         <source>I Have Saved the Key</source>
         <translation type="unfinished">키를 저장했습니다</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+9"/>
         <source>I Have Saved the Key  Enter</source>
         <translation type="unfinished">키를 저장했습니다  Enter</translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+53"/>
         <source>Set up your first board model</source>
         <translation type="unfinished">첫 보드 모델 설정</translation>
     </message>
@@ -4833,7 +4843,7 @@
         <translation type="unfinished">{board_model} 설정</translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+42"/>
         <source>✓ {name} can be used.</source>
         <translation type="unfinished">✓ {name}을(를) 쓸 수 있습니다.</translation>
     </message>
@@ -4854,12 +4864,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+38"/>
+        <location line="+66"/>
         <source>Board model {name} is set up for {customer}.</source>
         <translation type="unfinished">보드 모델 {name}이(가) {customer}용으로 설정되었습니다.</translation>
     </message>
     <message>
-        <location line="-25"/>
+        <location line="-52"/>
         <source>✓ {name} · for {customer}</source>
         <translation type="unfinished">✓ {name} · {customer}용</translation>
     </message>
@@ -4867,6 +4877,11 @@
         <location line="+4"/>
         <source>If this station&apos;s own key is ever lost, this key opens the images of {customer} again. It is shown only now.</source>
         <translation type="unfinished">이 스테이션의 키를 잃어버리면 이 키로 {customer}의 이미지를 다시 열 수 있습니다. 지금 한 번만 표시됩니다.</translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in to save it. The station does nothing else until then.</source>
+        <translation type="unfinished">{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 키는 보관되며, 그때까지 스테이션은 다른 작업을 하지 않습니다.</translation>
     </message>
 </context>
 <context>
@@ -5396,7 +5411,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1151"/>
+        <location filename="../ui/main_window.py" line="-1161"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6776,12 +6791,17 @@
         <translation type="unfinished">보드 모델 {name}이(가) {customer}의 암호화된 데이터셋 저장소에 있습니다.</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+32"/>
+        <source>An Admin signs in with Sign In as Admin… on Home and saves the recovery key first.</source>
+        <translation type="unfinished">먼저 관리자가 홈에서 관리자로 로그인…을 눌러 로그인하고 복구 키를 저장하십시오.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Save the recovery key to a file or print it, then press I Have Saved the Key.</source>
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+67"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6791,12 +6811,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-35"/>
+        <location line="-42"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+178"/>
+        <location line="+185"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7671,7 +7691,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1108"/>
+        <location filename="../ui/main_window.py" line="-1118"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8501,7 +8521,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+53"/>
         <source>Store {uuid} · key id {key_id}</source>
         <translation type="unfinished">저장소 {uuid} · 키 ID {key_id}</translation>
     </message>
@@ -9727,7 +9747,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3794"/>
+        <location filename="../core/services.py" line="-3796"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
