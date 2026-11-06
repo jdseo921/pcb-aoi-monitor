@@ -61,6 +61,8 @@ NOT_ATOMIC = {  # (file, call as the scan shows it): why it may write outside at
     ("aoi/core/retention.py", "os.replace()"): "moves a whole gzipped log into logs/archive/: a rename writes nothing",
     ("aoi/core/services.py", "model.save()"): "AnomalyModel.save writes the .pt through atomic.write_with",
     ("aoi/data/workspace_lock.py", "os.open(write)"): "an empty lock file, never written: the OS lock counts (#204)",
+    ("aoi/core/folder_watch.py", "os.replace()"): "moves a whole board image between the input folder and its working/,"
+    " done/ and failed/ (REQ-INSP-020): a rename writes nothing",
 }
 
 
