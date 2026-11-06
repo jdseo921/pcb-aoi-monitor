@@ -1145,10 +1145,16 @@ class TrainingPage(Page):
             self.refresh()
 
     def rollback(self) -> None:
-        """One click back to the version active before the active one, with its Golden board (REQ-TRN-010)."""
+        """One click back to the version active before the active one, with its Golden board (REQ-TRN-010); a refusal,
+        such as AOI-TRN-048 for a version whose AI model file does not load (review TRN-5), shows its dialog, as
+        Activate Selected's does, and the version in use stays."""
         if self.board_model:
-            back = self.ctx.rollback_model(self.board_model)
-            self.shell.status(self.tr("Rolled back to AI model {version}").format(version=back["version"]))
+            try:
+                back = self.ctx.rollback_model(self.board_model)
+            except AoiError as e:
+                self.error(e)
+            else:
+                self.shell.status(self.tr("Rolled back to AI model {version}").format(version=back["version"]))
             self.refresh()
 
     def show_card(self) -> None:
