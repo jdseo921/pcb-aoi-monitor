@@ -540,7 +540,12 @@ same step, its button then reading Finish Moving In, moves them. A file the app 
 why. When an engagement ends, an Admin ticks Advanced and shreds the store with Shred Store…, which names the board models and the files it
 deletes and waits for the customer's name typed: its key goes first, then its images, versions, AI models and Golden
 boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. A file that would not go is
-AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010).
+AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010). From the shred on, a board model of the store judges
+no board: Inspection refuses its next board with AOI-TRN-058, and AI Model Test its next image or the run's store,
+keeping no run; a training of it still running is refused, or loses its AI model's files to the shred if it registered
+first; and no version of it is made active again. To inspect those boards again, an Admin makes a new board model
+under another name with + New, naming the customer, and an Engineer imports its images, freezes a version, locks its
+validation set and trains from it, as AOI-TRN-058 says.
 
 **Training › Datasets freezes, splits and checks versions.** The Working set panel counts each view's OK, NG and UNSURE
 images and the checks a freeze needs, with ✓ once the view can be frozen, and names the customer whose dataset store
