@@ -173,3 +173,8 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-03: #448's Windows check twice put Inspection's first opening at the 300 ms budget (REQ-SET-020), as on
   `main`; Jay chose to fix it first: `perf/REQ-SET-020-inspection-first-open` rests the start-up self-check and fills
   the alarm list in one step, the 2026-11-04 train, before train E is merged.
+- 2026-11-04: #452 (REQ-TST-008, test only, Jay's request): the Stage 1 proxy validation on public data, recorded in
+  `docs/tests/2026-11-04-stage1-proxy-validation.md`, with `tools/proxy_validation.py`; nothing under `aoi/` changed
+  and the regression set is unchanged. Two program defects opened, not fixed: #453 (on VisA photos the default
+  golden-board comparison calls every good board NG and the shift check stops the line) and #454 (the AI image
+  threshold follows the highest calibration OK score). Four PRs, one train, stacked on `main`.
