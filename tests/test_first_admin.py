@@ -216,6 +216,37 @@ def test_req_usr_005_a_demo_marker_dropped_into_a_workspace_gives_nothing(worksp
         after.close()
 
 
+def test_req_usr_002_the_demos_published_password_is_never_chosen(ctx: AppContext) -> None:
+    """Anyone may read the demo's Admin password (docs/demo/README.md), and a start outside the demo puts an Admin who
+    has it back in set-up, which on a station with no other Admin leaves its password to whoever claims it next. So
+    no one chooses it, at a first sign-in or a recovery, whatever its case, width, spaces or marks, and the station's
+    Admin keeps a password across starts (senior review 2026-11-06, SEC-1)."""
+    ctx.set_user("operator")
+    full_width = "ｓｈｏｗ　ｔｈｅ　ｄｅｍｏ　ｔｏ　ｔｈｅ　ｃｕｓｔｏｍｅｒ"  # NFKC: the same password at a sign-in
+    for typed in (demo.ADMIN_PASSWORD, "Show the Demo to the Customer", full_width, "show-the-demo-to-the-customer."):
+        with pytest.raises(AoiError, match="AOI-USR-005") as refused:
+            ctx.sign_in("admin", password=typed)
+        assert "The password chosen for admin is the demo workspace's published password." in str(refused.value)
+    assert ctx.user == "operator" and not ctx.audit_entries(action="user.password_set")
+    assert next(u for u in ctx.users() if u["name"] == "admin")["status"] == "setup"
+    ctx.sign_in("admin", password=PASSPHRASE)
+    code = ctx.take_recovery_code()
+    assert code is not None
+    ctx.sign_in("operator")
+    with pytest.raises(AoiError, match="AOI-USR-005"):
+        ctx.recover("admin", code, demo.ADMIN_PASSWORD)
+    assert not ctx.audit_entries(action="user.recovered")
+    workspace = ctx.settings
+    ctx.close()
+    again = AppContext(workspace)  # the next start: the Admin keeps the password, and nothing is reset
+    try:
+        assert next(u for u in again.users() if u["name"] == "admin")["status"] == "active"
+        assert not again.audit_entries(action="user.reset")
+        again.sign_in("admin", password=PASSPHRASE)
+    finally:
+        again.close()
+
+
 def test_req_usr_005_a_locked_admin_recovers_and_a_disabled_one_does_not(ctx: AppContext) -> None:
     ctx.sign_in("admin", password=PASSPHRASE)
     code = ctx.take_recovery_code()

@@ -3,7 +3,8 @@ RFC 9106's low-memory profile (3 passes, 64 MiB, 4 lanes, 16-byte salt, 32-byte
 hash), of its text normalised to NFKC, so a Korean passphrase typed with another input method still matches. A hash
 carries its parameters; one made with older ones is `stale` and replaced at the next successful sign-in. A new password
 is 15 to 64 characters of any kind, with no composition rule and no expiry, and is not a user's name, a customer's or
-the product's; a PIN is 4 to 6 digits. Neither the secret nor its hash is ever logged, audited or exported. No Qt here.
+the product's, nor the demo workspace's published Admin password; a PIN is 4 to 6 digits. Neither the secret nor its
+hash is ever logged, audited or exported. No Qt here.
 
 Not yet (ADR 0002, decision 3): the bundled list of common passwords, which waits for a list under an allowed licence.
 """
@@ -25,11 +26,13 @@ from ..errors import QT_TRANSLATE_NOOP, Phrase
 
 MIN_LENGTH, MAX_LENGTH = 15, 64  # NIST SP 800-63B-4 asks for 15 where a password is the only factor
 PIN_DIGITS = range(4, 7)
+DEMO_ADMIN = "show the demo to the customer"  # the demo workspace's Admin's, published: docs/demo/README.md
 _HASHER = PasswordHasher.from_parameters(profiles.RFC_9106_LOW_MEMORY)  # Argon2id; named, not the library's default
 
 TOO_SHORT = QT_TRANSLATE_NOOP("Errors", "is shorter than {length} characters")
 TOO_LONG = QT_TRANSLATE_NOOP("Errors", "is longer than {length} characters")
 A_NAME = QT_TRANSLATE_NOOP("Errors", "is the name of a user, a customer or the product")
+PUBLISHED = QT_TRANSLATE_NOOP("Errors", "is the demo workspace's published password")
 NOT_A_PIN = QT_TRANSLATE_NOOP("Errors", "is not 4 to 6 digits")
 
 
@@ -71,16 +74,27 @@ def stale(stored: str) -> bool:
 
 
 def refusal(password: str, names: Iterable[str]) -> Phrase | None:
-    """Why `password` cannot be a new password, or None when it can. `names`: the station's users and customers."""
+    """Why `password` cannot be a new password, or None when it can. `names`: the station's users and customers. The
+    demo's published Admin password (`DEMO_ADMIN`) never is, whatever its case, spaces or marks between the words, in
+    the demo or not: anyone may read it, and a start outside the demo puts an Admin who has it back in set-up
+    (`AppContext._demo_admin`), which on a station with no other Admin leaves the Admin's password to whoever claims it
+    next (senior review 2026-11-06, SEC-1)."""
     text = normal(password)
     if len(text) < MIN_LENGTH:
         return TOO_SHORT.fill(length=MIN_LENGTH)
     if len(text) > MAX_LENGTH:
         return TOO_LONG.fill(length=MAX_LENGTH)
-    taken = {normal(n).casefold().replace(" ", "") for n in (*names, APP_NAME)}
-    if text.casefold().replace(" ", "") in taken:
+    folded = text.casefold().replace(" ", "")
+    if folded in {normal(n).casefold().replace(" ", "") for n in (*names, APP_NAME)}:
         return A_NAME
+    if _letters(folded) == _letters(normal(DEMO_ADMIN).casefold()):
+        return PUBLISHED
     return None
+
+
+def _letters(text: str) -> str:
+    """Only the letters and digits of `text`, so "show-the-demo" and "show the demo." read as "showthedemo"."""
+    return "".join(c for c in text if c.isalnum())
 
 
 def pin_refusal(pin: str) -> Phrase | None:

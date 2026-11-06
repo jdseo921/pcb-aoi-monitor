@@ -4526,7 +4526,7 @@
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
     <message>
-        <location filename="../core/demo.py" line="+108"/>
+        <location filename="../core/demo.py" line="+109"/>
         <source>it has no readable bundle.json</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4572,7 +4572,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/passwords.py" line="+30"/>
+        <location filename="../core/passwords.py" line="+32"/>
         <source>is shorter than {length} characters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4584,6 +4584,11 @@
     <message>
         <location line="+1"/>
         <source>is the name of a user, a customer or the product</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>is the demo workspace&apos;s published password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

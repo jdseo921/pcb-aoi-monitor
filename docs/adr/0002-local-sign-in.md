@@ -72,5 +72,8 @@ gloves, and must never be stopped from inspecting by a sign-in screen.
   unattended: the demo workspace's Admin has a fixed password published in `docs/demo/README.md`, set when the demo
   workspace opens, and only while no Admin has a password (a new station's own state). A workspace that is no demo puts
   an Admin with that password back in set-up, so a demo.json dropped into a production workspace gives nothing.
+  Amended 2026-11-06 (senior review, SEC-1): no one chooses that password as their own, in the demo or not
+  (AOI-USR-005): anyone may read it, and a start outside the demo would put that Admin back in set-up, which on a
+  station with no other Admin leaves the Admin's password to whoever claims it next.
 - Tests: hashing and rehashing, lockout and idle timing with a fake clock, and a role check on every `AppContext`
   write.

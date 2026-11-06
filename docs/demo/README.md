@@ -33,7 +33,7 @@ Korean drafts of each file are in [ko/](ko/), marked for review by a native spea
 The demo workspace opens signed in as `admin`, whose password is `show the demo to the customer` (REQ-USR-005).
 It is the demo workspace's only, set when the workspace opens and again after **Reset Demo**, so the scripts' Switch
 User to the Admin runs unattended. It is published here on purpose. It is set only while no Admin has a password, as on a new station, and a workspace
-that is no demo puts an Admin with it back to choosing a new one.
+that is no demo puts an Admin with it back to choosing a new one. No one may choose it as their own password, in the demo or out of it (AOI-USR-005).
 A production workspace has no default password; its first Admin chooses one in the first-run guide.
 
 ## Before every demo
