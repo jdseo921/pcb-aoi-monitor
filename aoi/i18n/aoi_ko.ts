@@ -4622,7 +4622,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/annotation_files.py" line="+42"/>
+        <location filename="../core/annotation_files.py" line="+43"/>
         <source>it is not a YOLO or Pascal VOC label file this app reads</source>
         <translation>이 앱이 읽는 YOLO 또는 Pascal VOC 라벨 파일이 아닙니다</translation>
     </message>
