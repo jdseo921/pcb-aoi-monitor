@@ -46,15 +46,24 @@ comes once the workspace is open, while the main window is built (a damaged data
 AOI-SET-007 too, writes its details to that workspace's log (event `error.shown`, context `start-up`) and closes the
 app with the workspace closed; send that log file to support.
 
-**Result files (REQ-INSP-021).** Set `"output_folder"` in `settings.json` to a full path of a folder that exists (a
-local folder or a share the line's systems read), and restart: each board saved from then on is written there as
+**The line's folders (REQ-INSP-020, REQ-INSP-021).** An Admin sets the **Input folder** and the **Output folder** on
+Settings (or `"input_folder"` and `"output_folder"` in `settings.json`), each a full path of a folder that exists, or
+empty for none; the result files follow at once, and the Inspection page leaves an input folder changed or cleared
+the next time it is shown. The imaging station writes each board image into the input folder as
+`docs/schemas/input-file-naming.md` says (the Engineering standard's capture name,
+`<board model>_<revision>_<serial>_<view>_<UTC time>.png`, written under a temporary name and renamed), and the
+Inspection page's Watch Input Folder and Start run the line on it: `working/`, `done/` and `failed/` are made inside
+it, and nothing in them is ever deleted (size the share for the originals). A board is never inspected twice: by its
+name in `done/`, and by the SHA-256 of its image, which its record keeps. One station per input folder. The start-up
+self-check writes and removes a hidden file in each folder set, and alarms with AOI-SET-025 for one it cannot.
+
+**Result files (REQ-INSP-021).** With an output folder set, each board saved from then on is written there as
 `<board ID>_<record UUID>.json` and a one-line `.csv`, and added to `shift_<date>.csv` (the local date, with a header).
-`docs/schemas/result-file.schema.json` gives the fields; the board ID is the image file's name without its extension
-until the line's file-naming contract arrives. Empty, the default, writes none. One output folder per station: two
+`docs/schemas/result-file.schema.json` gives the fields; the board ID is the serial the input file's name gives, or
+the image file's name without its extension for a board loaded by hand. Empty, the default, writes none. One output folder per station: two
 stations writing to one folder overwrite each other's shift CSV. A folder that is gone or refuses the files raises
 AOI-INSP-019 once (the app never makes the folder again, so files never land on the station's own disk by mistake),
 the boards are still judged and recorded, and the boards missed are not written later: export them from Logs & Export.
-The Settings page and the self-check take the folder in a later release.
 
 **Settings and settings.json.** A workspace folder saved on the Settings page is used from the next start; until
 then the app keeps the open workspace, its database, log and folders. The AI device, the default epochs and input
