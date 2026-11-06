@@ -188,3 +188,6 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-06: usability sweep (project report `reports/2026-11-06-usability-sweep.md`); Jay chose "Yes, one small
   fix PR" for its five low-risk findings: `fix/usability-sweep-low-risk` (greyed buttons say why, Switch User hints,
   the Recipe Editor's ROI form, the status line of a refused page). Its high findings wait for Jay's decisions.
+- 2026-11-06: Jay said "Set H1 and H2 rules using industry norms": ADR 0024 D24 (no account claimed at a station) and
+  D25 (each role lands on its own work), confirmed, then built in `feat/REQ-USR-005-claim-and-landing`, stacked on
+  `fix/usability-sweep-low-risk` (#478), the same day's train.

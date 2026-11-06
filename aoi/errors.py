@@ -1435,7 +1435,8 @@ CODES: dict[str, ErrorCode] = {
             QT_TRANSLATE_NOOP("Errors", "{name} has no password yet, and one is chosen only with an Admin signed in."),
             QT_TRANSLATE_NOOP(
                 "Errors",
-                "Ask an Admin to sign in, then choose {name} under Switch User and type the new password twice.",
+                "Ask an Admin to sign in (on a new station, the Admin chooses theirs first), then choose {name} under "
+                "Switch User and type the new password twice.",
             ),
             personal=("name",),
         ),

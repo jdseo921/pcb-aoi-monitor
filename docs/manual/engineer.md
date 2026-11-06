@@ -89,7 +89,10 @@ who types the new password twice. No Admin disables or resets their own account 
 keeps an Admin with a password (AOI-USR-013) and an enabled Operator for a start (AOI-USR-014).
 
 **The first Admin and the recovery code.** On a new station the first-run guide on Home asks first for the Admin's
-password: **Choose the Admin's Password…** opens Switch User with the Admin picked. Once it is chosen, a recovery
+password: **Choose the Admin's Password…** opens Switch User with the Admin picked. Until it is chosen, Create and
+the header's **+ New** stay greyed and say so, and only the Admin account may choose a password: an Engineer's is
+chosen once an Admin with a password hands it over (ADR 0024 D24), so no account is left for anyone to claim. Once it
+is chosen, a recovery
 code of 25 letters and digits shows once, with **Save to File…** and **Print…**; **Done** waits until it is saved or
 printed. Keep the sheet apart from the station. An Admin who loses their password presses **Use Recovery Code…** at
 Switch User, types the code and chooses a new password; the code then works no more, and a new one shows once. A

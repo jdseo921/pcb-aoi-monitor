@@ -33,7 +33,7 @@ from pytestqt.qtbot import QtBot  # noqa: E402
 
 from aoi import config  # noqa: E402
 from aoi.config import Settings  # noqa: E402
-from aoi.core import anomaly, crypto, disk, heartbeat, model_card  # noqa: E402
+from aoi.core import anomaly, crypto, disk, heartbeat, model_card, passwords  # noqa: E402
 from aoi.core.imaging import list_images, load_image  # noqa: E402
 from aoi.core.services import AppContext  # noqa: E402
 from aoi.data import credentials  # noqa: E402
@@ -221,6 +221,13 @@ def answer_new_board_model(monkeypatch: pytest.MonkeyPatch, name: str) -> list[s
 
 
 PASSPHRASE = "seven tired owls over Busan"  # a test's password for every Engineer and Admin (REQ-USR-002)
+
+
+def handed_over(ctx: AppContext, name: str = "engineer") -> None:
+    """`name` with PASSPHRASE stored straight in the users table, with no sign-in on record: a shortcut for a test
+    not about set-up, which starts past it. It may leave an Engineer active while no Admin has a password, a state
+    the app reaches only by a hand-over (ADR 0024 D24), so a test of set-up itself uses sign_in."""
+    ctx.db.set_user_secret(str(ctx.db.user_uuid(name)), passwords.hash_secret(PASSPHRASE))
 
 
 def answer_sign_in(monkeypatch: pytest.MonkeyPatch, name: str, password: str = PASSPHRASE) -> list[str]:

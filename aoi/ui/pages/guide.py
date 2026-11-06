@@ -124,8 +124,8 @@ class FirstRunGuide(QFrame):
         # the first Admin (REQ-USR-005): until an Admin has a password, whoever starts the station is its Admin
         self.admin_line = QLabel(
             self.tr(
-                "First, choose the Admin's password: until an Admin has one, whoever starts this station is its Admin."
-                " A recovery code shows once after it, to save or print."
+                "First, choose the Admin's password: Create stays off until it is chosen, as an account without one"
+                " could be claimed by anyone at this station. A recovery code shows once after it, to save or print."
             )
         )
         self.admin_line.setWordWrap(True)
@@ -243,10 +243,7 @@ class FirstRunGuide(QFrame):
 
     def _admin_unset(self) -> str | None:
         """The first Admin in set-up while no Admin has a password, outside the demo; else None."""
-        users = self.ctx.users()
-        if self.page.shell.in_demo or any(u["role"] == "Admin" and u["status"] == "active" for u in users):
-            return None
-        return next((str(u["name"]) for u in users if u["role"] == "Admin" and u["status"] == "setup"), None)
+        return self.page.shell.first_admin_unset()
 
     def _first_admin(self) -> None:
         """Switch User with the first Admin picked: their password twice, then their recovery code once."""
@@ -318,8 +315,9 @@ class FirstRunGuide(QFrame):
             self.page.gates.gate(field, STORE_CALL, why=role)
         self.role_line.setText(role)
         self.role_line.setVisible(not allowed)
-        ready = bool(name) and bool(customer) and refused is None
-        self.page.gates.own_tip(self.btn_create, "" if ready else self.tr("Type a board model name and its customer"))
+        typed = bool(name) and bool(customer) and refused is None
+        ready = typed and self._admin_unset() is None  # the Admin's password first (ADR 0024 D24)
+        self.page.gates.own_tip(self.btn_create, "" if ready else self._not_ready())
         self.page.gates.gate(self.btn_create, STORE_CALL, ready, why=role)
         self.btn_kept.setEnabled(self.recovery.saved)
 
@@ -332,6 +330,8 @@ class FirstRunGuide(QFrame):
         refused = self.ctx.board_model_name_refusal(name) if name else None
         if refused is not None:
             return said_text(ErrorReport.of(refused))
+        if name and self.customer.text().strip() and self._admin_unset() is not None:
+            return self.tr("Choose the Admin's password first, with Choose the Admin's Password….")
         return self.tr("Type a board model name and its customer")
 
     def make_board_model(self) -> None:

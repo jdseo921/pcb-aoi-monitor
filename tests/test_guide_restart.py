@@ -12,7 +12,7 @@ from pytestqt.qtbot import QtBot
 
 from aoi.core.services import AppContext, GuideStarter
 from aoi.errors import AoiError
-from aoi.ui.main_window import HomePage, MainWindow
+from aoi.ui.main_window import MainWindow
 from tests.test_dataset_stores import as_admin
 from tests.test_start_user import _reopened
 
@@ -32,9 +32,9 @@ def started(qtbot: QtBot, ctx: AppContext, last_page: str = "Home", carried: str
 
 def test_req_trn_021_a_restart_goes_on_as_the_user_who_started_the_guide(qtbot: QtBot, ctx: AppContext) -> None:
     """An Admin makes TBOX-A1 in Acme's store, and the Engineer AAA-1 with no store and then TBOX-B2, which the Admin
-    moves into the store. After the Operator signs in with Switch User, a start signs in the Engineer, who made the
-    newest board model the guide shows for, with TBOX-B2 in the header and its screen 2 on Home, though the window was
-    closed on Inspection, and the status bar says who and why. A workspace switch keeps the role carried and the page,
+    moves into the store. After the Operator signs in with Switch User, a start signs in the Operator, on Inspection,
+    though the Engineer made the newest board model the guide shows for: a start never signs in an Engineer, who
+    proves who they are (ADR 0024 D24). A workspace switch keeps the role carried and the page,
     as before. With the Engineer an Operator now, a start signs in the first Admin, and the status bar says that the
     Admin goes on with it."""
     as_admin(ctx, ctx.create_customer_board_model, "TBOX-A1", "Acme")
@@ -44,14 +44,9 @@ def test_req_trn_021_a_restart_goes_on_as_the_user_who_started_the_guide(qtbot: 
     as_admin(ctx, ctx.move_in, "TBOX-B2", store)
     ctx.sign_in("operator")
     assert ctx.last_signed_in() == "operator" and ctx.guide_starter() == GuideStarter("engineer", "TBOX-B2", True)
-    win = started(qtbot, ctx, "Inspection")
-    assert win.ctx.user == "engineer" and win.board_model == "TBOX-B2"
-    home = cast(HomePage, win.pages["Home"])
-    assert win.stack.currentWidget() is home and home.guide.images.isVisible()
-    assert win.statusBar().currentMessage() == (
-        "Signed in as engineer (Engineer), who started setting up TBOX-B2. Not you? Press Switch User."
-    )
-    assert [e["after"]["user"] for e in win.ctx.audit_entries(action="user.start")][0] == "engineer"
+    win = started(qtbot, ctx, "Inspection")  # a start never signs in an Engineer, who signs in with Switch User
+    assert win.ctx.user == "operator" and win.stack.currentWidget() is win.pages["Inspection"]  # ADR 0024 D24, D25
+    assert "started setting up" not in win.statusBar().currentMessage()
     win.close()
 
     win = started(qtbot, win.ctx, "Inspection", carried="Operator")

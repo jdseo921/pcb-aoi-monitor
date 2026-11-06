@@ -63,7 +63,7 @@ def test_req_usr_002_switch_user_says_why_sign_in_is_off_while_a_password_is_typ
     """A new password too short counts its characters; two that differ say so; two that agree turn Sign In on."""
     win = MainWindow(ctx)
     qtbot.addWidget(win)
-    box = SignInDialog(win, "engineer")
+    box = SignInDialog(win, "admin")  # the first Admin: the one account claimed at the station (ADR 0024 D24)
     box.password.setText("short")
     assert box.hint.text() == "5 of at least 15 characters." and not box.btn_sign_in.isEnabled()
     box.again.setText("short")  # the two agree, still too short: Sign In stays off, the count still says why
@@ -72,7 +72,7 @@ def test_req_usr_002_switch_user_says_why_sign_in_is_off_while_a_password_is_typ
     box.again.setText(PASSPHRASE + "x")
     assert box.hint.text() == "The two passwords differ." and not box.btn_sign_in.isEnabled()
     box.again.setText(PASSPHRASE)
-    assert box.btn_sign_in.isEnabled() and "engineer has no password yet" in box.hint.text()
+    assert box.btn_sign_in.isEnabled() and "admin has no password yet" in box.hint.text()
     box.reject()
     win.close()
 
@@ -85,7 +85,7 @@ def test_req_usr_002_an_account_in_set_up_says_it_waits_for_an_admin_before_anyo
     sees the fields, as they hand the account over."""
     ctx.sign_in("admin", password=PASSPHRASE)  # the station's first Admin chooses theirs
     ctx.sign_in("operator")
-    assert not ctx.may_set_up()
+    assert not ctx.may_set_up("Engineer")
     win = MainWindow(ctx)
     qtbot.addWidget(win)
     box = SignInDialog(win, "engineer")
@@ -95,7 +95,7 @@ def test_req_usr_002_an_account_in_set_up_says_it_waits_for_an_admin_before_anyo
     assert not box.password.isVisible() and not box.again.isVisible() and not box.btn_sign_in.isEnabled()
     box.reject()
     ctx.sign_in("admin", password=PASSPHRASE)
-    assert ctx.may_set_up()
+    assert ctx.may_set_up("Engineer")
     handover = SignInDialog(win, "engineer")
     handover.show()
     assert handover.password.isVisible() and handover.again.isVisible()

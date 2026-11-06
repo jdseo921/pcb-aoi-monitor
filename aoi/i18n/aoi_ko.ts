@@ -973,7 +973,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+52"/>
         <source>Disabling a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1275,14 +1275,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4767"/>
-        <location line="+3464"/>
+        <location line="-4771"/>
+        <location line="+3468"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3554"/>
+        <location line="-3558"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1606"/>
+        <location line="+1610"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4215"/>
+        <location line="-4219"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,7 +1634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1530"/>
+        <location line="+1534"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,14 +1751,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4649"/>
+        <location line="-4653"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1270"/>
+        <location filename="../ui/main_window.py" line="+1297"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3466,12 +3466,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Ask an Admin to sign in, then choose {name} under Switch User and type the new password twice.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+8"/>
+        <location line="+10"/>
         <source>User disabled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4006,7 +4001,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1502"/>
+        <location line="-1503"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4196,7 +4191,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+59"/>
+        <location line="+43"/>
+        <source>Ask an Admin to sign in (on a new station, the Admin chooses theirs first), then choose {name} under Switch User and type the new password twice.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>{name} is signed in now, so cannot disable or reset their own account.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4537,7 +4537,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3706"/>
+        <location filename="../core/services.py" line="+3710"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4764,7 +4764,7 @@
     </message>
     <message>
         <location line="+26"/>
-        <source>First, choose the Admin&apos;s password: until an Admin has one, whoever starts this station is its Admin. A recovery code shows once after it, to save or print.</source>
+        <source>First, choose the Admin&apos;s password: Create stays off until it is chosen, as an account without one could be claimed by anyone at this station. A recovery code shows once after it, to save or print.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4823,7 +4823,7 @@
         <translation type="unfinished">키를 저장했습니다  Enter</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+44"/>
         <source>Set up your first board model</source>
         <translation type="unfinished">첫 보드 모델 설정</translation>
     </message>
@@ -4843,8 +4843,12 @@
         <translation type="unfinished">고객용 보드 모델을 설정하려면 {role} 역할이 필요합니다.</translation>
     </message>
     <message>
-        <location line="+7"/>
-        <location line="+13"/>
+        <location line="+22"/>
+        <source>Choose the Admin&apos;s password first, with Choose the Admin&apos;s Password….</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Type a board model name and its customer</source>
         <translation type="unfinished">보드 모델 이름과 고객을 입력하십시오</translation>
     </message>
@@ -5392,7 +5396,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1125"/>
+        <location filename="../ui/main_window.py" line="-1151"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5482,7 +5486,7 @@
         <translation type="unfinished">{board_model}은(는) 아직 설정 중입니다</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+8"/>
         <source>Ask an Admin to set up the first one.</source>
         <translation type="unfinished">관리자에게 첫 보드 모델 설정을 요청하십시오.</translation>
     </message>
@@ -5502,7 +5506,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-238"/>
+        <location line="-239"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5532,7 +5536,7 @@
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+55"/>
+        <location line="+56"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6742,7 +6746,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+7"/>
         <source>Exit presenter theme</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6772,12 +6776,12 @@
         <translation type="unfinished">보드 모델 {name}이(가) {customer}의 암호화된 데이터셋 저장소에 있습니다.</translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+30"/>
         <source>Save the recovery key to a file or print it, then press I Have Saved the Key.</source>
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+60"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6787,7 +6791,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+141"/>
+        <location line="-35"/>
+        <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+178"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7662,7 +7671,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1082"/>
+        <location filename="../ui/main_window.py" line="-1108"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9718,7 +9727,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3790"/>
+        <location filename="../core/services.py" line="-3794"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

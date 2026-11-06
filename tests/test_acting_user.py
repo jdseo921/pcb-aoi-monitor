@@ -21,7 +21,7 @@ from aoi.core.services import AppContext
 from aoi.ui.pages.inspection import InspectionPage
 from aoi.ui.pages.model_test import ModelTestPage
 from aoi.ui.pages.training import TrainingPage
-from tests.conftest import answer_sign_in, distinct_copies
+from tests.conftest import answer_sign_in, distinct_copies, handed_over
 from tests.test_req_done_in_v01 import BOARD, _window
 
 Held = tuple[threading.Event, threading.Event]
@@ -156,6 +156,7 @@ def test_req_usr_001_a_run_stops_at_switch_user_so_every_board_names_who_pressed
     recorded under the new user, who pressed nothing. Now the run stops after the board in hand, which is recorded
     under the user who pressed Start; the new user presses Start to carry on, as themselves."""
     ctx = trained_ctx
+    handed_over(ctx)  # an Admin handed the Engineer over (ADR 0024 D24)
     win = _window(qtbot, ctx, "Operator")
     reached, release = _hold(monkeypatch, ctx, "log_result")  # the first board is judged; its record is not saved yet
     page = cast(InspectionPage, win.pages["Inspection"])

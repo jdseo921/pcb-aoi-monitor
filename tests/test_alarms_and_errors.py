@@ -142,7 +142,9 @@ def test_req_log_005_reopens_on_the_last_page(qtbot: QtBot, trained_ctx: AppCont
         settings = Settings.load()
         settings.last_page = last_page
         settings.save()
-        assert reopened() == "Home"
+        assert reopened() == "Inspection"  # an Operator's start opens Inspection whatever was last (ADR 0024 D25)
+    # An Engineer's or Admin's page last shown is kept by landing() (tests/test_claim_and_landing.py); since D24 a
+    # start signs in no Engineer, and the first Admin only before any board model, on the guide (ADR 0024 D25 (c)).
 
 
 def test_req_log_005_the_app_keeps_hand_edits_to_settings_json(

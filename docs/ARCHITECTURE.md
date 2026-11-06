@@ -844,7 +844,8 @@ bar saying who and why; once a board model has an AI model or an inspected board
 workspace switch, which carries the role signed in and its page, never takes the guide's start. A board model whose
 guide step cannot be read is passed over, logged, so choosing the user never refuses the workspace; Home still reads
 that board model when the header selects it, as before. `tests/test_guide_click_count.py` goes from an empty workspace
-to the first verdict as the sketch counts it, 24 actions on 4 screens, with 90 or 70 OK images and 10 NG ones and the
+whose Admin has chosen their password (station set-up, ADR 0024 D24, not counted) to the first verdict as the sketch
+counts it, 24 actions on 4 screens, with 90 or 70 OK images and 10 NG ones and the
 shift check on: each dialog is answered as a person would, one action more where it does not open on the right USB
 drive. The test names each action as it takes it; what it measures is that this path ends in a verdict, on those 4
 screens, with each dialog on the right drive and no message shown. `tests/test_usb_drives.py`, with a stand-in for
