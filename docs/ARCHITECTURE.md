@@ -537,6 +537,11 @@ files, AOI-TRN-045; AOI-TRN-043), finds none for the use "own"; an unlocked one 
 uses fit and `datasets.train_ok`, the OK files its split leaves for training (`train_ok_after_split`, which the Split
 sheet also states), reaches `TRAIN_OK`. An AI model whose registry row cannot be read (AOI-TRN-012) is not counted. `MissingList`
 (`aoi/ui/pages/missing_list.py`) shows it on Home and on Training (section 5), whose `TrainingPage.fix` takes each step.
+`missing` reads the samples once, without their paths; inside `AppContext.reading()`, which Home's `on_show` opens, it
+keeps each answer for that board model and kind, Trial or Validated (None resolved first), on the thread that opened it,
+until this connection writes (`Database.changes`), and keeps nothing read inside a transaction, so `guide_step`, the
+first-run guide's screens and Home's own checks share one reading of each kind they ask (REQ-SET-020; senior review
+2026-11-06, UI-5).
 `freeze_dataset` (REQ-TRN-005, S35) is refused while `labels_ready_to_freeze` is False (AOI-TRN-020, -021), with no
 customer (AOI-TRN-024), a view outside `aoi.hal.VIEWS` (AOI-TRN-038), a board model whose name has no Latin letter or
 digit (AOI-TRN-039: one made before such a name was refused where it is entered, AOI-TRN-054) or gives the letters and

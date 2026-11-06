@@ -24,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 from time import perf_counter
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from PySide6.QtCore import QEvent, QObject
@@ -32,11 +32,13 @@ from PySide6.QtWidgets import QApplication, QWidget
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
-from aoi.core.services import AppContext
+from aoi.core.services import AppContext, Missing
+from aoi.data.db import new_uuid
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.logs import LogsPage
 from tests.budgets import LONG_TRIES, TRIES, judged
 from tests.conftest import listed
+from tests.test_dataset_stores import as_admin
 from tests.test_ui_offscreen import _record
 from tools.seed_workspace import seed
 
@@ -183,3 +185,78 @@ def test_req_set_020_logs_lists_its_records_on_the_pool(
     assert win.navigate("Home") and win.navigate("Logs & Export")
     listed(qtbot, logs)
     assert [r["id"] for r in logs.rows] == [9] and logs.table.rowCount() == 1 and logs.btn_csv.isEnabled()
+
+
+def test_req_set_020_home_counts_the_samples_it_never_reads(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Home shows a board model's OK and NG counts, counted in the database, and What is missing, from one read of the
+    samples that resolves no path. Before, an opening ran six reads of the samples, which resolved every path about
+    four times: 391 to 551 ms for the counts alone at 10,000 samples on a Linux VM, against the 300 ms budget (senior
+    review 2026-11-06, UI-5). A relabel moves a sample from one count to the other, and another board model's samples
+    count for it alone.
+    In a customer's store, with the first-run guide's screen 2 on Home, What is missing is read once too, and only the
+    NG images the screen opens are read with their paths."""
+    ctx.ensure_board_model("MANY")
+    ctx.ensure_board_model("OTHER")
+    with ctx.db.transaction():
+        for i in range(2000):
+            ng = i % 5 == 0
+            ctx.db.add_sample("MANY", f"samples/MANY/s{i}.png", "NG" if ng else "OK", "Short" if ng else None)
+        for i in range(30):
+            ctx.db.add_sample("OTHER", f"samples/OTHER/s{i}.png", "NG", "Short")
+    first = ctx.db.samples("MANY", "NG")[0]
+    ctx.db.add_label(first["uuid"], "OK", None, [], None, "2026-11-06T00:00:00+00:00")  # relabelled: one NG fewer
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    win.show()
+    qtbot.waitExposed(win)
+    win.set_user("engineer")
+    read: list[dict[str, Any]] = []
+    real = type(ctx.db).samples
+    monkeypatch.setattr(type(ctx.db), "samples", lambda db, *a, **k: read.append(k) or real(db, *a, **k))
+    win.select_board_model("MANY")
+    win.navigate("Inspection")
+    assert win.navigate("Home")
+    home = cast(Any, win.pages["Home"])
+    assert home.status_labels["Upload samples"].text() == "1601 OK · 399 NG uploaded"
+    assert read == [{"paths": False}] and home.missing_list.isVisible()  # What is missing's one read
+    store = as_admin(ctx, ctx.create_store, "Acme")
+    row = {"uuid": new_uuid(), "board_model": "MANY", "store_uuid": store["uuid"], "set_by": "engineer"}
+    ctx.db.add_board_model_store(row | {"set_at": "2026-11-06T00:00:00+00:00"})  # the guide's screen 2 for MANY
+    win.navigate("Inspection")
+    read.clear()
+    assert win.navigate("Home") and home.guide.isVisible() and home.guide.shown == 2
+    assert read == [{"paths": False}, {}]  # What is missing once, then the NG images screen 2 opens, with their paths
+
+
+def test_req_set_020_a_reading_keeps_what_is_missing_while_nothing_changes(ctx: AppContext) -> None:
+    """Inside `reading`, What is missing is read once for a board model and kind while the database is unchanged, so
+    Home and the first-run guide open on one reading (UI-5): None asks for the kind it resolves to, and another board
+    model is read for itself. A write reads it again, nothing read inside a transaction is kept, which a rollback would
+    leave stale, another thread never takes the answer kept, and outside it every call reads."""
+
+    def ok(found: Missing) -> int:
+        return next(n.have for n in found.needs if n.key == "ok")
+
+    ctx.ensure_board_model("MANY")
+    ctx.ensure_board_model("OTHER")
+    ctx.db.add_sample("MANY", "samples/MANY/a.png", "OK", None)
+    with ctx.reading():
+        first = ctx.missing("MANY", trial=False)
+        assert ctx.missing("MANY", trial=False) is first and ctx.missing("MANY") is first  # Validated before a version
+        assert ctx.missing("MANY", trial=True) is not first and ctx.missing("OTHER", trial=False).board_model == "OTHER"
+        other: list[Missing] = []
+        worker = threading.Thread(target=lambda: other.append(ctx.missing("MANY", trial=False)))
+        worker.start()
+        worker.join()
+        assert other[0] is not first and other[0] == first
+        ctx.db.add_sample("MANY", "samples/MANY/b.png", "OK", None)
+        again = ctx.missing("MANY", trial=False)
+        assert again is not first and ok(again) == 2
+        with pytest.raises(RuntimeError, match="rolled back"), ctx.db.transaction():
+            ctx.db.add_sample("MANY", "samples/MANY/c.png", "OK", None)
+            assert ok(ctx.missing("MANY", trial=False)) == 3
+            raise RuntimeError("rolled back")
+        assert ok(ctx.missing("MANY", trial=False)) == 2
+    assert ctx.missing("MANY", trial=False) is not ctx.missing("MANY", trial=False)

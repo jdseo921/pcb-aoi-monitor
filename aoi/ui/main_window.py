@@ -305,6 +305,10 @@ class HomePage(Page):
             go.setToolTip("" if allowed else self.shell.needs_role(target))  # the page and the roles that open it
 
     def on_show(self) -> None:
+        with self.ctx.reading():  # What is missing read once as Home opens, the guide's screens and steps too (UI-5)
+            self._show()
+
+    def _show(self) -> None:
         self._sync_links()
         bm = self.board_model
         guided = self.guided(bm)
