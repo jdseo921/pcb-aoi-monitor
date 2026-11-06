@@ -19,6 +19,7 @@ from ..hal import VIEWS
 from .inspector import InspectionResult, Inspector
 
 if TYPE_CHECKING:
+    from .folder_watch import FolderWatch
     from .services import AppContext
 
 NO_VALUE = "—"  # a version, revision or Golden board the engine has none of
@@ -116,24 +117,62 @@ class InspectionCycle:
     ) -> Callable[[], Outcome]:
         """The job that inspects and saves one board with the engine kept now; `report` gets the verdict before the save
         (REQ-INSP-002). A failed save is in the outcome, so the driver stops its run on the missing record."""
-        kept, gen, ctx = self.engine, self.generation, self.ctx
+        kept, gen = self.engine, self.generation
+        return lambda: self._inspect(kept, gen, board_model, meta, frame, report)
 
-        def inspect() -> Outcome:
-            # a training run, an activation or a recipe saved meanwhile makes the kept engine stale (#243)
-            current = kept is not None and ctx.engine_is_current(board_model, kept)
-            engine = kept if kept is not None and current else ctx.inspector(board_model, side=meta.view)
-            engine.side = meta.view  # one job at a time per cycle, so nothing else reads it meanwhile
-            res = engine.inspect(ctx.load_image(meta.path) if frame is None else frame)
-            if report is not None:
-                report(res)
-            iid, error = None, None
+    def watched(
+        self,
+        board_model: str,
+        watch: FolderWatch,
+        report: Callable[[object], None] | None = None,
+        go: Callable[[], bool] = lambda: True,
+    ) -> Callable[[], Outcome | None]:
+        """The job that takes the next complete file of the watched input folder (REQ-INSP-020) and inspects and saves
+        it as `board`'s does; None when no file is complete, or when `go` says the line was paused meanwhile. `report`
+        gets the file taken (its FrameMeta), then the verdict. As a run, no file is taken while the shift check stops
+        the line (AOI-INSP-016). The file goes to done/ once its record is saved; back to the input folder when the
+        save or the inspection failed, so the line takes it again."""
+        kept, gen = self.engine, self.generation
+
+        def job() -> Outcome | None:
+            if not go() or not self.ctx.require_shift_check(board_model) or (got := watch.grab(board_model)) is None:
+                return None
+            frame, meta = got
             try:
-                iid = ctx.log_result(board_model, str(meta.path), res, engine)
-            except Exception as e:
-                error = e
-            return Outcome(board_model, meta.path, res, engine, iid, error, gen, engine is not kept)
+                if report is not None:
+                    report(meta)
+                out = self._inspect(kept, gen, board_model, meta, frame, report)
+            except BaseException:
+                watch.finish(meta, saved=False)
+                raise
+            watch.finish(meta, saved=out.record_id is not None)
+            return out
 
-        return inspect
+        return job
+
+    def _inspect(
+        self,
+        kept: Inspector | None,
+        gen: int,
+        board_model: str,
+        meta: FrameMeta,
+        frame: np.ndarray | None,
+        report: Callable[[InspectionResult], None] | None,
+    ) -> Outcome:
+        ctx = self.ctx
+        # a training run, an activation or a recipe saved meanwhile makes the kept engine stale (#243)
+        current = kept is not None and ctx.engine_is_current(board_model, kept)
+        engine = kept if kept is not None and current else ctx.inspector(board_model, side=meta.view)
+        engine.side = meta.view  # one job at a time per cycle, so nothing else reads it meanwhile
+        res = engine.inspect(ctx.load_image(meta.path) if frame is None else frame)
+        if report is not None:
+            report(res)
+        iid, error = None, None
+        try:
+            iid = ctx.log_result(board_model, str(meta.path), res, engine, meta.sha256)
+        except Exception as e:
+            error = e
+        return Outcome(board_model, meta.path, res, engine, iid, error, gen, engine is not kept)
 
     def settle(self, out: Outcome, header: str | None, in_run: bool) -> Outcome:
         """Keep the engine the board built while nothing dropped it and `header` is still its board model; tell whether

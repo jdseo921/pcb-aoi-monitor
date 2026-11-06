@@ -933,7 +933,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+196"/>
+        <location filename="../core/services.py" line="+199"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -963,7 +963,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+468"/>
+        <location line="+102"/>
+        <source>input folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>output folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+384"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1018,12 +1028,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2522"/>
+        <location line="+2547"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2491"/>
+        <location line="-2516"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1048,12 +1058,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+89"/>
+        <location line="+113"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+197"/>
+        <location line="+198"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
@@ -1270,19 +1280,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+1317"/>
+        <location line="+1332"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4773"/>
-        <location line="+3470"/>
+        <location line="-4832"/>
+        <location line="+3514"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3560"/>
+        <location line="-3604"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1392,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1612"/>
+        <location line="+1631"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1392,7 +1402,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1073"/>
+        <location line="+1098"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1594,7 +1604,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+452"/>
+        <location line="+467"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1604,12 +1614,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-512"/>
+        <location line="-527"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4221"/>
+        <location line="-4265"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,12 +1644,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1536"/>
+        <location line="+1555"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1492"/>
+        <location line="+1517"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1719,7 +1729,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+201"/>
+        <location line="+216"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,7 +1761,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4655"/>
+        <location line="-4714"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4627,7 +4637,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3712"/>
+        <location filename="../core/services.py" line="+3756"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -7982,7 +7992,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/cycle.py" line="+26"/>
+        <location filename="../core/cycle.py" line="+27"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9842,7 +9852,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3796"/>
+        <location filename="../core/services.py" line="-3840"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
