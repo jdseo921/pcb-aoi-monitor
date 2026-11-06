@@ -258,7 +258,7 @@ def ui_exports(ctx: AppContext, bm: str, run_uuid: str, out: Path) -> dict[str, 
             before = len(seen)
             act()
             end = time.monotonic() + 300
-            while time.monotonic() < end and getattr(page, "_bg", None) is not None:
+            while time.monotonic() < end and (page._bg is not None or page.writing is not None):  # UI-3
                 app.processEvents()
                 time.sleep(0.05)
             for _ in range(20):
