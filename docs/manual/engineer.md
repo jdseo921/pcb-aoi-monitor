@@ -87,7 +87,8 @@ one at their next sign-in), and turns a user off or on again with **Disable / En
 (AOI-USR-010) and keeps their name on past records. An Engineer's or Admin's first password is chosen only while an
 Admin is signed in to hand the account over (AOI-USR-009): the Admin signs in, then picks the user under Switch User,
 who types the new password twice. No Admin disables or resets their own account (AOI-USR-011), and the station always
-keeps an Admin with a password (AOI-USR-013) and an enabled Operator for a start (AOI-USR-014).
+keeps an Admin with a password and a recovery code who is not locked until an Admin unlocks them (AOI-USR-013) and an
+enabled Operator for a start (AOI-USR-014).
 
 **The first Admin and the recovery code.** On a new station the first-run guide on Home asks first for the Admin's
 password: **Choose the Admin's Password…** opens Switch User with the Admin picked. Until it is chosen, Create and
@@ -97,7 +98,12 @@ is chosen, a recovery
 code of 25 letters and digits shows once, with **Save to File…** and **Print…**; **Done** waits until it is saved or
 printed. Keep the sheet apart from the station. An Admin who loses their password presses **Use Recovery Code…** at
 Switch User, types the code and chooses a new password; the code then works no more, and a new one shows once. A
-wrong code is refused (AOI-USR-015). Without the code, another Admin resets the password.
+wrong code is refused (AOI-USR-015). Every Admin gets a code of their own the same way, one handed over when they choose
+their password, and one moved to the Admin role at their next sign-in, so an Admin locked until an Admin unlocks them
+(AOI-USR-007) signs in again with it when no other Admin can. Save to File… offers a file named for the Admin. Without
+the code, another Admin resets the password. An Admin moved to the role, or one whose password is older than recovery
+codes, counts as one who can sign in once their code is made, at their next sign-in: until then, the Admin before them
+cannot step down (AOI-USR-013).
 
 A lock never stops the Operator view; where Operators have PINs, wrong ones lock only that Operator's name. `lock_after` and `lock_minutes` in `settings.json` set
 the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, wheel turn, key or

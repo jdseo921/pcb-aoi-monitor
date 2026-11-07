@@ -1093,8 +1093,9 @@ class Database:
         r = self.query("SELECT recovery_hash FROM users WHERE uuid=?", (uuid,))
         return str(r[0]["recovery_hash"]) if r and r[0]["recovery_hash"] else None
 
-    def set_recovery_hash(self, uuid: str, recovery_hash: str) -> None:
-        """Store the hash of the Admin's new recovery code, which replaces any code before it (REQ-USR-005)."""
+    def set_recovery_hash(self, uuid: str, recovery_hash: str | None) -> None:
+        """Store the hash of the Admin's new recovery code, which replaces any code before it (REQ-USR-005); None for a
+        code used up."""
         self.execute("UPDATE users SET recovery_hash=? WHERE uuid=?", (recovery_hash, uuid))
 
     def count_failure(self, uuid: str, lock_after: int, until: str, limit: int, for_good: str) -> str | None:

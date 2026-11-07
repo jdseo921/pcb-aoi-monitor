@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+468"/>
+        <location line="+479"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -983,7 +983,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+82"/>
+        <location line="+96"/>
         <source>Unlocking a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1275,14 +1275,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4773"/>
-        <location line="+3470"/>
+        <location line="-4798"/>
+        <location line="+3495"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3560"/>
+        <location line="-3585"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1612"/>
+        <location line="+1637"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4221"/>
+        <location line="-4246"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,7 +1634,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1536"/>
+        <location line="+1561"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,14 +1751,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4655"/>
+        <location line="-4680"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1319"/>
+        <location filename="../ui/main_window.py" line="+1320"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3436,12 +3436,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Ask an Admin to unlock it with Unlock User on Settings.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+10"/>
         <source>PIN not allowed</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3486,7 +3481,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+38"/>
         <source>Recovery code not accepted</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4001,7 +3996,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1503"/>
+        <location line="-1511"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4191,7 +4186,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+29"/>
+        <source>Ask an Admin to unlock it with Unlock User on Settings. An Admin with no other Admin to do it signs in with Use Recovery Code… at Switch User.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Ask an Admin to sign in (on a new station, the Admin chooses theirs first), then choose {name} under Switch User and type the new password twice.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4232,11 +4232,11 @@
     </message>
     <message>
         <location line="+5"/>
-        <source>Add another Admin and hand the account over to them first.</source>
+        <source>First add another Admin and have them sign in once, to choose their password and get their recovery code, or unlock a locked Admin.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+9"/>
         <source>Last Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4537,7 +4537,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3712"/>
+        <location filename="../core/services.py" line="+3737"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -5416,7 +5416,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1172"/>
+        <location filename="../ui/main_window.py" line="-1173"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6806,7 +6806,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+67"/>
+        <location line="+68"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7696,7 +7696,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1129"/>
+        <location filename="../ui/main_window.py" line="-1130"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8448,7 +8448,7 @@
 <context>
     <name>RecoveryCodeDialog</name>
     <message>
-        <location filename="../ui/recovery_code_dialog.py" line="+29"/>
+        <location filename="../ui/recovery_code_dialog.py" line="+30"/>
         <source>Recovery code for {user}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8478,7 +8478,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+27"/>
         <source>Save Recovery Code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9752,7 +9752,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3796"/>
+        <location filename="../core/services.py" line="-3821"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
