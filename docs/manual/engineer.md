@@ -99,16 +99,17 @@ Switch User, types the code and chooses a new password; the code then works no m
 wrong code is refused (AOI-USR-015). Without the code, another Admin resets the password.
 
 A lock never stops the Operator view; where Operators have PINs, wrong ones lock only that Operator's name. `lock_after` and `lock_minutes` in `settings.json` set
-the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, key or touch, an
-Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited `user.idle_end`; never
-while a board is being inspected (a run under way stops after its board, as at any sign-in), never in the demo
-workspace, and a dialog left open is closed first, as Cancel would. If it ends while the first-run guide shows a new
-store's recovery key, the Operator signed in sees no key: the guide keeps it, hidden, until an Admin signs in again with
-**Sign In as Admin…**, and the station does nothing else until the key is kept. A recovery key's or code's dialog left
-open still keeps the session (#499). A barcode scanner that types as a keyboard counts as input, so one in use keeps the
-session alive. `operator_pin: true` in `settings.json` asks each Operator for a 4 to 6 digit PIN at Switch User, chosen
-at their first sign-in (AOI-USR-008 for one that is not); a start still signs the Operator in, so the Operator view is
-never held.
+the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, wheel turn, key or
+touch, an Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited
+`user.idle_end`; never while a board is being inspected (a run under way stops after its board, as at any sign-in),
+never in the demo workspace, and a dialog left open is closed first, as Cancel would. If it ends while the first-run
+guide shows a new store's recovery key, the Operator signed in sees no key: the guide keeps it, hidden, until an Admin
+signs in again with **Sign In as Admin…**, and the station does nothing else until the key is kept. A recovery key's or
+code's dialog left open still keeps the session (#499). Every key counts as input, a page's keys such as F1, F5 or Enter
+and Hangul typed through the input method too, and so does a barcode scanner that types as a keyboard, so one in use
+keeps the session alive. `operator_pin: true` in `settings.json` asks each Operator for a 4 to 6 digit PIN at Switch
+User, chosen at their first sign-in (AOI-USR-008 for one that is not); a start still signs the Operator in, so the
+Operator view is never held.
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48

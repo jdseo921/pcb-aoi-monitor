@@ -301,3 +301,26 @@ def test_req_usr_004_an_idle_end_hides_the_guides_recovery_key_until_an_admin_si
     guide.recovery.btn_save.click()
     guide.btn_kept.click()
     assert key.split()[0] in dest.read_text(encoding="utf-8") and frame_free(win) and win.board_model == "TBOX-A1"
+
+
+def test_req_usr_004_enter_on_the_key_step_starts_the_idle_time_again(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An Admin who saves the key and presses Enter for I Have Saved the Key has given input: Enter fires the step's
+    shortcut, which reaches no widget as a key press, and still starts the idle time again, so the Admin who just kept
+    the key is not signed out on the next 30 s check (senior review 2026-11-06, UI-2)."""
+    win = shell(qtbot, ctx)
+    win.navigate("Home")
+    guide = guide_of(win)
+    typed(qtbot, guide, "TBOX-A1", "Hanil Electronics")
+    guide.btn_create.click()
+    dest = tmp_path / "recovery-key.txt"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a: (str(dest), "")))
+    win.activateWindow()
+    qtbot.waitUntil(lambda: QApplication.activeWindow() is win)
+    qtbot.keyClick(guide.key_step, Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier)
+    assert dest.exists() and guide.btn_kept.isEnabled()
+    win.input.last = time.monotonic() - ctx.settings.idle_minutes * 60
+    qtbot.keyClick(guide.key_step, Qt.Key.Key_Return)  # I Have Saved the Key, by its key
+    assert frame_free(win) and win.board_model == "TBOX-A1"
+    assert time.monotonic() - win.input.last < 5 and not win.check_idle() and ctx.role == "Admin"
