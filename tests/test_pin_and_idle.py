@@ -69,11 +69,10 @@ def test_req_usr_003_the_dialog_asks_an_operator_for_their_pin(qtbot: QtBot, ctx
     win.close()
 
 
-def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator_never_mid_inspection(
-    qtbot: QtBot, ctx: AppContext
-) -> None:
+def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator(qtbot: QtBot, ctx: AppContext) -> None:
     """After idle_minutes without input an Engineer's session ends, back to the Operator signed in last, audited
-    user.idle_end, a dialog left open closed first; input in time, an Operator, or a board being inspected keep it."""
+    user.idle_end, a dialog left open closed first; input in time, or an Operator, keep it. A board being inspected no
+    longer does: it is recorded under who started it (senior review 2026-11-06, SEC-4; `tests/test_acting_user.py`)."""
     ctx.ensure_board_model("B")
     ctx.set_user("admin")
     ctx.add_user("kim", "Operator")
@@ -88,10 +87,6 @@ def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator_never_mid
     QTest.keyClick(win, Qt.Key.Key_Shift)  # input: the idle time starts again
     assert time.monotonic() - win.input.last < 5
     win.input.last = time.monotonic() - 15 * 60
-    inspection = cast(Any, win.pages["Inspection"])
-    inspection.worker = object()  # a board being inspected
-    assert not win.check_idle() and ctx.user == "engineer"
-    inspection.worker = None
     box = QDialog(win)
     box.open()  # a dialog left open is closed first, as Cancel would
     assert QApplication.activeModalWidget() is box
