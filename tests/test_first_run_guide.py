@@ -8,6 +8,7 @@ the cards, until the next sign-in."""
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import cast
 
@@ -256,3 +257,47 @@ def test_req_trn_021_the_held_frame_says_why_and_takes_its_keys(
     monkeypatch.setattr(QPrintDialog, "exec", to_file)
     qtbot.keyClick(guide.key_step, Qt.Key.Key_P, Qt.KeyboardModifier.ControlModifier)
     assert guide.recovery.saved_line.text() == f"✓ Sent to {usb / 'key.pdf'}" and (usb / "key.pdf").exists()
+
+
+def test_req_usr_004_an_idle_end_hides_the_guides_recovery_key_until_an_admin_signs_in(
+    qtbot: QtBot, ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Admin left the key step to fetch a USB drive, as it says: past idle_minutes the session ends as ever, and the
+    Operator signed in sees no key, no key's button and no key's shortcut, with the frame still held and the key kept;
+    Sign In as Admin… picks the Admin who made it, and the key shows again, to save and keep (senior review
+    2026-11-06, UI-1)."""
+    win = shell(qtbot, ctx)
+    win.navigate("Home")
+    guide = guide_of(win)
+    typed(qtbot, guide, "TBOX-A1", "Hanil Electronics")
+    guide.btn_create.click()
+    key = guide.recovery.key.text()
+    assert guide.holding() and len(key.split()) == 13
+    win.input.last = time.monotonic() - ctx.settings.idle_minutes * 60
+    assert win.check_idle() and ctx.role == "Operator"
+    assert [e["before"]["user"] for e in ctx.audit_entries(action="user.idle_end")] == ["admin"]
+    assert guide.holding() and not frame_free(win) and guide.key_step.isVisible()
+    assert guide.recovery.key.text() == "" and not guide.recovery.isVisible() and not guide.btn_kept.isVisible()
+    assert guide.key_hidden.text().startswith("The session of admin ended, so the recovery key of Hanil Electronics")
+    assert guide.btn_key_admin.isVisible() and QWidget.focusWidget(win) is guide.btn_key_admin
+    assert guide.keys() == [guide.admin_action]  # Ctrl+S, Ctrl+P and the key's Enter are off
+    said = "An Admin signs in with Sign In as Admin… on Home and saves the recovery key first."
+    assert not win.close() and win.statusBar().currentMessage() == said
+    asked: list[str | None] = []
+    who = iter(["engineer", "admin"])  # an Engineer first, who may not save it either, then the Admin
+    monkeypatch.setattr(win, "switch_user", lambda name=None: asked.append(name) or win.set_user(next(who)))
+    guide.btn_key_admin.click()
+    assert ctx.role == "Engineer" and guide.recovery.key.text() == "" and guide.btn_key_admin.isVisible()
+    assert guide.keys() == [guide.admin_action] and win.held_text() == said
+    win.activateWindow()  # a window's keys need it active, which the offscreen platform does not make it by itself
+    qtbot.waitUntil(lambda: QApplication.activeWindow() is win)
+    qtbot.keyClick(guide.key_step, Qt.Key.Key_Return)  # Sign In as Admin… by its key
+    assert asked == ["admin", "admin"] and ctx.role == "Admin" and guide.holding()
+    assert guide.recovery.key.text() == key and guide.recovery.isVisible() and not guide.key_hidden.isVisible()
+    assert QWidget.focusWidget(win) is guide.recovery.btn_save
+    assert guide.keys() == [a for a in guide.key_step.actions() if a is not guide.admin_action]
+    dest = tmp_path / "recovery-key.txt"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a: (str(dest), "")))
+    guide.recovery.btn_save.click()
+    guide.btn_kept.click()
+    assert key.split()[0] in dest.read_text(encoding="utf-8") and frame_free(win) and win.board_model == "TBOX-A1"

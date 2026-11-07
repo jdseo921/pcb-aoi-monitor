@@ -813,7 +813,10 @@ class MainWindow(QMainWindow):
         self.header.setEnabled(not on)
 
     def held_text(self) -> str:
-        """What the frame says while the guide holds it."""
+        """What the frame says while the guide holds it: to an Admin, what to do with the key; to anyone else, signed in
+        by an idle end while the key showed, that an Admin signs in first."""
+        if self.ctx.role != "Admin":
+            return self.tr("An Admin signs in with Sign In as Admin… on Home and saves the recovery key first.")
         return self.tr("Save the recovery key to a file or print it, then press I Have Saved the Key.")
 
     def _on_board_model(self, name: str) -> None:
@@ -864,7 +867,9 @@ class MainWindow(QMainWindow):
         (`AppContext.end_idle`, REQ-USR-004). Never while a board is being inspected: the next check, 30 s on, ends it,
         and a run under way then stops after its board as at any sign-in (#177). Never in the demo, where the presenter
         talks. A dialog left open is closed first, as Cancel would; one that will not close (a recovery key waiting to
-        be kept) keeps the session. Returns whether it ended one."""
+        be kept) keeps the session. While the first-run guide holds the frame on a new store's recovery key
+        (`hold_frame`), the session ends as at any other time, and the guide hides the key, still held, until an Admin
+        signs in again (senior review 2026-11-06, UI-1). Returns whether it ended one."""
         busy = getattr(self.pages["Inspection"], "worker", None) is not None
         idle = time.monotonic() - self.input.last >= self.ctx.settings.idle_minutes * 60
         if self.ctx.role == "Operator" or self.in_demo or busy or not idle:
