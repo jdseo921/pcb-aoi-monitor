@@ -185,6 +185,11 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   a non-Minor difference region makes a board WARN still flags every good board. Opened, not fixed: #460 to #462 (the
   three ranked changes), #463 to #467 (defects), #468 (commissioning steps the app lacks, for Jay). Nine PRs, one
   train, stacked on `test/452-proxy-record`.
+- 2026-11-06: #459 (REQ-TST-008, test only, Jay's request "run and test in a possible scale"): the scenarios again on
+  pcb2, both configurations, added to `docs/tests/2026-11-05-stage1-industry-scenarios.md` as an addendum; pcb3, pcb4
+  and more seeds did not fit the machine, and Jay chose to stop at pcb2 (S6 as commissioned and S9 did not run there
+  either). Every good pcb2 board was flagged, as on pcb1; nothing under `aoi/` changed and the regression set is
+  unchanged. One PR on `main`.
 - 2026-11-06: usability sweep (project report `reports/2026-11-06-usability-sweep.md`); Jay chose "Yes, one small
   fix PR" for its five low-risk findings: `fix/usability-sweep-low-risk` (greyed buttons say why, Switch User hints,
   the Recipe Editor's ROI form, the status line of a refused page). Its high findings wait for Jay's decisions.
