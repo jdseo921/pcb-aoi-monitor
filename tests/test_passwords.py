@@ -48,6 +48,7 @@ def test_req_usr_002_a_new_password_is_15_to_64_characters_and_no_name() -> None
     assert passwords.refusal("hanwha precision", names) == passwords.A_NAME
     assert passwords.refusal(APP_NAME.upper(), []) in (passwords.A_NAME, passwords.TOO_SHORT.fill(length=15))
     assert passwords.refusal("a" * 15, names) is None  # no composition rule (NIST SP 800-63B-4)
+    assert passwords.refusal(" SHOW THE DEMO TO THE CUSTOMER ", []) == passwords.PUBLISHED  # SEC-1: published
     assert [passwords.pin_refusal(p) for p in ("1234", "123456")] == [None, None]
     assert {passwords.pin_refusal(p) for p in ("123", "1234567", "12a4", "١٢٣٤")} == {passwords.NOT_A_PIN}
 
