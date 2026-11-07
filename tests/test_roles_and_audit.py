@@ -315,6 +315,7 @@ UNCHECKED = {
     "retention_confirmed",  # the Admin's confirmation the sweep deletes under, read (D20)
     "end_idle",  # an idle Engineer's or Admin's session ends: a system action on the window's timer (REQ-USR-004)
     "users_with_pins",  # which Operators have a PIN, read for Switch User (REQ-USR-003)
+    "reading",  # one screen's reads share What is missing while nothing is written; it writes nothing (REQ-SET-020)
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

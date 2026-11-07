@@ -575,6 +575,7 @@ class AppContext:
         self.training: Job[dict[str, Any]] | None = None  # the run start_training began last, running or ended
         self.training_progress: run_progress.RunProgress | None = None  # its latest report, for the header and Home
         self.guide_training: str | None = None  # the board model the first-run guide's Train was started for last
+        self._reading: tuple[int, dict[tuple[str, bool], tuple[int, Missing]]] | None = None  # `reading`
         self._golden_alarmed: set[tuple[str, str | None, str]] = set()  # each (board model, file, code) alarmed (#195)
         self._golden_lock = threading.Lock()  # the Recipe Editor reads on the UI thread, Compare on the pool's
         self._closed = False
@@ -2993,9 +2994,10 @@ class AppContext:
         run = self.db.latest_test_run(board_model)
         inspected, ng = self.db.inspection_counts(board_model)
         reviewed, false_calls = self.db.review_counts(board_model)
+        counts = self.db.sample_counts(board_model)  # counted, never read: Home opens on it (UI-5)
         return BoardStatus(
-            ok_samples=len(self.db.samples(board_model, "OK")),
-            ng_samples=len(self.db.samples(board_model, "NG")),
+            ok_samples=counts.get("OK", 0),
+            ng_samples=counts.get("NG", 0),
             model_version=model["version"] if model else None,
             recipe_revision=history[0]["revision"] if history else 0,
             recipe_is_default=not history or history[0]["user"] == "system",
@@ -3026,9 +3028,37 @@ class AppContext:
         images and every defect boxed, without which the version frozen is not one to split and train from; Split and
         Lock Validation Set… waits for nothing, its version frozen already; Start Training for the locked set; Activate
         AI Model for a trained one. So images added after a freeze do not grey the steps of a version frozen before."""
-        versions = self.db.datasets(board_model)  # newest first
         if trial is None:
+            versions = self.db.datasets(board_model)  # newest first
             trial = bool(versions) and versions[0]["assurance"] == datasets.TRIAL
+        held = self._reading
+        memo = held[1] if held and held[0] == threading.get_ident() else None
+        key, changes = (board_model, trial), self.db.changes()
+        if memo is not None and changes is not None and key in memo and memo[key][0] == changes:
+            return memo[key][1]
+        found = self._missing(board_model, trial)
+        if memo is not None and changes is not None:
+            memo[key] = (changes, found)
+        return found
+
+    @contextlib.contextmanager
+    def reading(self) -> Iterator[None]:
+        """Within it, on the thread that opened it, `missing` reads a board model once for each kind, Trial or
+        Validated, until this connection writes (`Database.changes`), and never keeps what it reads inside a
+        transaction: a page that asks it several times as it opens, as Home with the first-run guide, opens on one
+        reading (REQ-SET-020; senior review 2026-11-06, UI-5). One opened inside another joins it."""
+        if self._reading is not None:
+            yield
+            return
+        self._reading = (threading.get_ident(), {})
+        try:
+            yield
+        finally:
+            self._reading = None
+
+    def _missing(self, board_model: str, trial: bool) -> Missing:
+        """`missing` of one kind, read from the database."""
+        versions = self.db.datasets(board_model)  # newest first
         counts = self.db.dataset_counts(board_model)
         locked_sha = self.db.split_sha256("validation")
 
@@ -3049,11 +3079,12 @@ class AppContext:
 
         ours = [v for v in versions if kind(v)]
         locked = next((v for v in ours if trains(v)), None)
-        samples = [s for s in self.db.samples(board_model) if s["label"] in ("OK", "NG")]
+        rows = self.db.samples(board_model, paths=False)  # read once, no path resolved: Home opens on it (UI-5)
+        samples = [s for s in rows if s["label"] in ("OK", "NG")]
         labelled = Counter(s["side"] for s in samples)
         newest = locked or next(iter(ours), None)
         view = newest["view"] if newest else max(VIEWS, key=lambda v: labelled[v])  # Top first among equals
-        status = self.label_check_status(board_model, view)
+        status = self._check_status(board_model, view, rows)
         ng = [s for s in samples if s["side"] == view and s["label"] == "NG"]
         boxed = self.db.current_boxes(board_model)
         ok_need = max(status["ok"], datasets.OK_NEEDED)
@@ -3069,7 +3100,7 @@ class AppContext:
             -(-ok_need // 10),  # 10 % rounded up, as label_check_status counts it
             "show_unchecked" if drawn else "draw_ok_checks",
         )
-        check = self._newest_check(board_model, view)
+        check = self._newest_check(board_model, view, rows)
         found["calibration"] = (len(samples), labels.CALIBRATION_IMAGES, "add_ok")
         found["agreement"] = (int(bool(check and check["agreed"])), 1, "agreement")
         split = None if locked else next((v for v in ours if v["view"] == view and splits(v)), None)
@@ -3369,7 +3400,13 @@ class AppContext:
         `ng_unchecked`, the NG samples whose label is not checked; `ok_needed`, 10 % of the OK labels rounded up;
         `ok_drawn` and `ok_checked`, the drawn samples still OK and those of them checked; and `ready`, never with no OK
         or NG label. A view other than Top, Side or Bottom is refused with AOI-TRN-038, here and in each call below."""
-        ok, ng = self._in_view(board_model, view, "OK"), self._in_view(board_model, view, "NG")
+        return self._check_status(board_model, view, self.db.samples(board_model, paths=False))
+
+    def _check_status(self, board_model: str, view: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
+        """`label_check_status` from the board model's samples as the caller read them, once (UI-5)."""
+        if view not in VIEWS:
+            raise AoiError("AOI-TRN-038", view=view)
+        ok, ng = ([s for s in rows if s["side"] == view and s["label"] == k] for k in ("OK", "NG"))
         drawn = {u for d in self.db.ok_check_draws(board_model, view) for u in d["sample_uuids"]}
         ok_drawn = [s for s in ok if s["uuid"] in drawn]
         status: dict[str, Any] = {"ok": len(ok), "ng": len(ng), "ok_needed": -(-len(ok) // 10)}
@@ -4234,10 +4271,14 @@ class AppContext:
             raise AoiError("AOI-TRN-027", name=name, reason=why)
         return newest
 
-    def _newest_check(self, board_model: str, view: str) -> dict[str, Any] | None:
+    def _newest_check(
+        self, board_model: str, view: str, rows: list[dict[str, Any]] | None = None
+    ) -> dict[str, Any] | None:
         """The newest agreement check of the board model whose calibration set holds an image of `view`: it decides,
-        so a newer check short of the targets refuses a freeze until a newer one reaches them (ADR 0009)."""
-        side = {s["uuid"]: s["side"] for s in self.db.samples(board_model)}
+        so a newer check short of the targets refuses a freeze until a newer one reaches them (ADR 0009). `rows`: the
+        board model's samples, when the caller read them already (`missing`)."""
+        rows = self.db.samples(board_model, paths=False) if rows is None else rows
+        side = {s["uuid"]: s["side"] for s in rows}
         sets = {c["uuid"]: c["sample_uuids"] for c in self.db.calibration_sets(board_model)}
         checks = self.db.agreement_checks(board_model)
         return next((c for c in checks if view in {side.get(u) for u in sets.get(c["set_uuid"], [])}), None)

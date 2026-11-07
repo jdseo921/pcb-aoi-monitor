@@ -175,6 +175,13 @@ class Database:
         with self._lock:
             return [dict(r) for r in self._conn.execute(sql, tuple(params)).fetchall()]
 
+    def changes(self) -> int | None:
+        """How many rows this connection has inserted, changed or deleted since it opened, rolled back ones too: a
+        reader that kept an answer reads again once it moves (`AppContext.reading`). None while a transaction is open,
+        whose rows read may yet be rolled back, so nothing read then is kept."""
+        with self._lock:
+            return None if self._conn.in_transaction else self._conn.total_changes
+
     # --- paths (REQ-SET-001) -----------------------------------------------
     def resolve_path(self, stored: str) -> str:
         """A path as the database stores it, made absolute for this workspace."""
@@ -250,12 +257,25 @@ class Database:
         )
         return self._resolved(rows[0], "path") if rows else None
 
-    def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
-        """A board model's samples, oldest first, each with its current label (REQ-TRN-002); `label` filters by it."""
+    def samples(self, board_model: str, label: str | None = None, *, paths: bool = True) -> list[dict[str, Any]]:
+        """A board model's samples, oldest first, each with its current label (REQ-TRN-002); `label` filters by it.
+        With `paths` off, each path as stored, relative to the workspace, for a caller that opens no file: resolving
+        every path is most of the read's time (REQ-SET-020; senior review 2026-11-06, UI-5)."""
         sql, p = f"{SAMPLES} WHERE s.board_model=?", [board_model]
         if label:
             sql, p = f"{sql} AND l.label=?", [board_model, label]
-        return [self._resolved(r, "path") for r in self.query(f"{sql} ORDER BY s.id", p)]
+        rows = self.query(f"{sql} ORDER BY s.id", p)
+        return [self._resolved(r, "path") for r in rows] if paths else rows
+
+    def sample_counts(self, board_model: str) -> dict[str, int]:
+        """How many of a board model's samples carry each current label, as `samples` labels them, counted in the
+        database: no row is read and no path resolved, so a page that shows only the counts opens as fast with
+        thousands of samples (REQ-SET-020; senior review 2026-11-06, UI-5)."""
+        sql = (
+            "SELECT l.label, COUNT(*) n FROM samples s JOIN labels l ON l.sample_uuid = s.uuid AND l.superseded_by IS"
+            " NULL WHERE s.board_model=? GROUP BY l.label"
+        )
+        return {str(r["label"]): int(r["n"]) for r in self.query(sql, (board_model,))}
 
     def sample(self, sample_id: int) -> dict[str, Any]:
         """One sample by id, with its absolute path and its current label."""
