@@ -63,6 +63,8 @@ NOT_ATOMIC = {  # (file, call as the scan shows it): why it may write outside at
     ("aoi/data/workspace_lock.py", "os.open(write)"): "an empty lock file, never written: the OS lock counts (#204)",
     ("aoi/core/folder_watch.py", "os.replace()"): "moves a whole board image between the input folder and its working/,"
     " done/ and failed/ (REQ-INSP-020): a rename writes nothing",
+    ("aoi/core/services.py", "probe.write_bytes()"): "an empty probe file the self-check writes to test a line folder"
+    " and removes at once (REQ-INSP-020): it holds nothing a cut can lose",
 }
 
 
