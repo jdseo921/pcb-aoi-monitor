@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+474"/>
+        <location line="+473"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1018,12 +1018,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2580"/>
+        <location line="+2583"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2549"/>
+        <location line="-2552"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1053,7 +1053,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+219"/>
+        <location line="+217"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
@@ -1145,7 +1145,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+206"/>
+        <location line="+211"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1270,19 +1270,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+1321"/>
+        <location line="+1329"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4841"/>
-        <location line="+3534"/>
+        <location line="-4851"/>
+        <location line="+3536"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3624"/>
+        <location line="-3626"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1651"/>
+        <location line="+1650"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1397,7 +1397,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+485"/>
+        <location line="+488"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1594,7 +1594,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+456"/>
+        <location line="+464"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1604,12 +1604,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-516"/>
+        <location line="-524"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4285"/>
+        <location line="-4287"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,12 +1634,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1542"/>
+        <location line="+1541"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1550"/>
+        <location line="+1553"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1719,7 +1719,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+205"/>
+        <location line="+213"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,7 +1751,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4723"/>
+        <location line="-4733"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4617,7 +4617,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3776"/>
+        <location filename="../core/services.py" line="+3778"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -9812,7 +9812,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3860"/>
+        <location filename="../core/services.py" line="-3862"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

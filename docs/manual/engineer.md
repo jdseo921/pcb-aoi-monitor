@@ -16,7 +16,8 @@ made. If the copy cannot be made (the disk is full, the folder cannot be written
 changes nothing. To roll back, close the app and copy the backup over `aoi.sqlite`; if `aoi.sqlite-wal` or
 `aoi.sqlite-shm` are there (after a crash), delete them, since they belong to the replaced file. Then start the version
 you upgraded from: this one would upgrade the database again. Results recorded since the upgrade are only in the
-replaced file, so keep a copy of it if they matter. The app never deletes the backups; remove old ones by hand.
+replaced file, so keep a copy of it if they matter. Until an Admin confirms the retention policy the app deletes no
+backup; from then on each retention sweep keeps the newest 3 and deletes the older ones (section 8, Retention sweep).
 
 **A workspace the app refuses.** A workspace created by version 0.1 (AOI-SET-001), written by a newer version
 (AOI-SET-002), recorded with a migration file that has changed since (AOI-SET-003), or on a drive without the
