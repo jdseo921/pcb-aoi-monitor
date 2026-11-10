@@ -42,8 +42,9 @@ def test_req_usr_005_the_first_admin_gets_a_recovery_code_stored_only_as_a_hash(
     (made,) = ctx.audit_entries(action="user.recovery_code_made")
     assert made["after"] == {"user": "admin"} and code not in json.dumps(made)
     ctx.add_user("kim", "Admin")
-    ctx.sign_in("kim", password=PASSPHRASE)  # handed over by the first Admin: no code of their own
-    assert ctx.take_recovery_code() is None and ctx.db.recovery_hash(str(ctx.db.user_uuid("kim"))) is None
+    ctx.sign_in("kim", password=PASSPHRASE)  # handed over by the first Admin: a code of their own (SEC-2)
+    theirs = ctx.take_recovery_code()
+    assert theirs not in (None, code) and ctx.db.recovery_hash(str(ctx.db.user_uuid("kim"))) is not None
     with sqlite3.connect(ctx.settings.db_path) as raw:  # nowhere in the database as typed
         dump = "\n".join(raw.iterdump())
     assert code not in dump and code.replace(" ", "") not in dump
@@ -63,7 +64,8 @@ def test_req_usr_005_the_first_admin_gets_a_recovery_code_stored_only_as_a_hash(
 def test_req_usr_005_a_code_is_held_only_for_the_admin_signed_in(
     ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The review's case: a sign-in refused after the password is stored never shows the code to anyone."""
+    """The review's case: a sign-in refused after the password is stored never shows the code to anyone, nor stores
+    one no one saw; the next sign-in makes it (senior review 2026-11-06, SEC-2)."""
     ctx.set_user("operator")
     real = ctx.audit
 
@@ -76,6 +78,10 @@ def test_req_usr_005_a_code_is_held_only_for_the_admin_signed_in(
     with pytest.raises(OSError):
         ctx.sign_in("admin", password=PASSPHRASE)
     assert ctx.user == "operator" and ctx.take_recovery_code() is None
+    assert ctx.db.recovery_hash(str(ctx.db.user_uuid("admin"))) is None
+    monkeypatch.undo()
+    ctx.sign_in("admin", password=PASSPHRASE)  # the password chosen before the refusal
+    assert ctx.take_recovery_code() is not None
 
 
 def test_req_usr_005_the_guide_makes_the_first_admin_and_shows_the_code_until_it_is_saved(
@@ -141,6 +147,32 @@ def test_req_usr_005_the_recovery_code_signs_in_once(ctx: AppContext) -> None:
     assert ctx.db.recovery_hash(str(ctx.db.user_uuid("admin"))) is None  # a reset drops it with the password
 
 
+def test_req_usr_005_an_admin_handed_over_sees_their_code_offered_under_their_name(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every Admin's code shows at Switch User, and Save to File… offers a file named for them, so a second Admin's
+    sheet on the same USB drive is never offered over the first's (senior review 2026-11-06, SEC-2)."""
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    ctx.sign_in("admin", password=PASSPHRASE)  # the Admin who hands kim's account over
+    assert ctx.take_recovery_code() is not None
+    ctx.add_user("kim", "Admin")
+    titles = answer_sign_in(monkeypatch, "kim")
+    win.switch_user()
+    assert ctx.user == "kim" and titles == ["Switch user", "Recovery code for kim"]
+    offered: list[str] = []
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda _p, _t, path, _f: offered.append(path) or ("", ""))
+    sheet = RecoveryCodeDialog(win, "AAAAA BBBBB CCCCC DDDDD EEEEE")
+    sheet.save_file()
+    assert [Path(p).name for p in offered] == ["recovery-code-kim.txt"]
+    names = []
+    for user in ("kim.a", "kim_a", "kim a", "Kim", "KIM", "김민"):
+        monkeypatch.setattr(type(ctx), "user", property(lambda _c, u=user: u))
+        names.append(sheet.file_name())
+    assert len({n.casefold() for n in names}) == 6 and names[-1] == "recovery-code-김민.txt"  # apart, ignoring case
+    assert names[0].startswith("recovery-code-kim-a-") and names[3].startswith("recovery-code-Kim-")
+
+
 def test_req_usr_005_the_sign_in_dialog_takes_the_recovery_code(qtbot: QtBot, ctx: AppContext) -> None:
     ctx.sign_in("admin", password=PASSPHRASE)
     code = ctx.take_recovery_code()
@@ -177,6 +209,9 @@ def test_req_usr_005_the_demo_opens_as_its_admin_whose_password_is_known(workspa
     again = AppContext(workspace)  # opened again: the password is kept, the Admin started
     try:
         assert again.user == "admin" and len(again.audit_entries(action="user.password_set")) == 1
+        again.add_user("kim", "Admin")
+        again.sign_in("kim", password=PASSPHRASE)  # an Admin handed over in the demo: no code, its workspace reset
+        assert again.take_recovery_code() is None and again.db.recovery_hash(str(again.db.user_uuid("kim"))) is None
     finally:
         again.close()
 
@@ -214,6 +249,37 @@ def test_req_usr_005_a_demo_marker_dropped_into_a_workspace_gives_nothing(worksp
         assert reset["after"] == {"user": "admin", "demo": True}
     finally:
         after.close()
+
+
+def test_req_usr_002_the_demos_published_password_is_never_chosen(ctx: AppContext) -> None:
+    """Anyone may read the demo's Admin password (docs/demo/README.md), and a start outside the demo puts an Admin who
+    has it back in set-up, which on a station with no other Admin leaves its password to whoever claims it next. So
+    no one chooses it, at a first sign-in or a recovery, whatever its case, width, spaces or marks, and the station's
+    Admin keeps a password across starts (senior review 2026-11-06, SEC-1)."""
+    ctx.set_user("operator")
+    full_width = "ｓｈｏｗ　ｔｈｅ　ｄｅｍｏ　ｔｏ　ｔｈｅ　ｃｕｓｔｏｍｅｒ"  # NFKC: the same password at a sign-in
+    for typed in (demo.ADMIN_PASSWORD, "Show the Demo to the Customer", full_width, "show-the-demo-to-the-customer."):
+        with pytest.raises(AoiError, match="AOI-USR-005") as refused:
+            ctx.sign_in("admin", password=typed)
+        assert "The password chosen for admin is the demo workspace's published password." in str(refused.value)
+    assert ctx.user == "operator" and not ctx.audit_entries(action="user.password_set")
+    assert next(u for u in ctx.users() if u["name"] == "admin")["status"] == "setup"
+    ctx.sign_in("admin", password=PASSPHRASE)
+    code = ctx.take_recovery_code()
+    assert code is not None
+    ctx.sign_in("operator")
+    with pytest.raises(AoiError, match="AOI-USR-005"):
+        ctx.recover("admin", code, demo.ADMIN_PASSWORD)
+    assert not ctx.audit_entries(action="user.recovered")
+    workspace = ctx.settings
+    ctx.close()
+    again = AppContext(workspace)  # the next start: the Admin keeps the password, and nothing is reset
+    try:
+        assert next(u for u in again.users() if u["name"] == "admin")["status"] == "active"
+        assert not again.audit_entries(action="user.reset")
+        again.sign_in("admin", password=PASSPHRASE)
+    finally:
+        again.close()
 
 
 def test_req_usr_005_a_locked_admin_recovers_and_a_disabled_one_does_not(ctx: AppContext) -> None:

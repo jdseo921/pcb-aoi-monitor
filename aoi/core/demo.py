@@ -34,6 +34,7 @@ from ..config import Settings
 from ..data import atomic, credentials
 from ..errors import QT_TRANSLATE_NOOP, AoiError, system_detail, system_reason
 from ..times import now_utc
+from . import passwords
 
 FORMAT = 1
 BUNDLE_FILE = "bundle.json"
@@ -46,7 +47,7 @@ KEEP = frozenset({"settings.json", MARKER})  # what a reset leaves in the demo f
 BUILD_ONLY = frozenset({"logs", ".aoi.lock", "heartbeat.json", "aoi.running"})
 
 
-ADMIN_PASSWORD = "show the demo to the customer"  # noqa: S105 (the demo workspace's, published: docs/demo/README.md)
+ADMIN_PASSWORD = passwords.DEMO_ADMIN  # the demo workspace's Admin's, published: docs/demo/README.md
 
 
 def bundle_dir() -> Path:

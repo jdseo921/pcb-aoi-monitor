@@ -85,9 +85,14 @@ class RecoveryKey(QWidget):
     def show_key(self, store: dict[str, Any]) -> None:
         """`store`'s key, as `create_store` returned it with its `sheet`; the tick off until it is saved or printed."""
         self.made = {k: str(store[k]) for k in ("uuid", "customer", "key_id", "sheet", "created_at")}
-        groups = self.made["sheet"].split()
-        self.key.setText(" ".join(groups[:7]) + "\n" + " ".join(groups[7:]))
+        self.hide_text(False)
         self._keepable(False)
+
+    def hide_text(self, on: bool) -> None:
+        """The key's text taken off the screen (`on`), the key kept to show again, or shown again: the first-run guide
+        hides it while no Admin is signed in (senior review 2026-11-06, UI-1)."""
+        groups = self.made["sheet"].split() if self.made and not on else []
+        self.key.setText(" ".join(groups[:7]) + "\n" + " ".join(groups[7:]) if groups else "")
 
     def clear(self) -> None:
         """The key forgotten: the label empty, the tick off."""

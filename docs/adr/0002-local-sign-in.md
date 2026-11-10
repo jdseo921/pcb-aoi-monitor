@@ -36,6 +36,11 @@ gloves, and must never be stopped from inspecting by a sign-in screen.
    shows a one-time recovery code, stored only as a hash, that lets that Admin set a new password. A lost
    password and code are fixed by a Windows administrator running the installer's repair, which creates a new
    Admin and writes an audit entry. The app does not try to defend itself against a Windows administrator.
+   Amended 2026-11-06 (senior review, SEC-2): every Admin outside the demo gets a recovery code of their own the same
+   way, one handed over on choosing their password and one moved to the role at their next sign-in, as anyone at
+   Switch User may lock the only Admin until an Admin unlocks them with 100 wrong passwords (decision 4, NIST SP
+   800-63B-4's limit), and no other Admin is then left to do it. Only an Admin with a password and a code, and not
+   locked so, counts as one who can sign in when a change to an Admin would leave none (AOI-USR-013).
 7. **Records.** A user is a UUID, name, role, password or PIN hash, status (active or disabled; and set-up, an Engineer or Admin with no password yet, added by migration 0029 under ADR 0024 D3), failed-attempt
    count and lock time, with times in UTC ISO 8601. In daily use users are disabled rather than deleted, so past
    records keep their names. When a person asks, an Admin exports their records and removes the account, and
@@ -72,5 +77,8 @@ gloves, and must never be stopped from inspecting by a sign-in screen.
   unattended: the demo workspace's Admin has a fixed password published in `docs/demo/README.md`, set when the demo
   workspace opens, and only while no Admin has a password (a new station's own state). A workspace that is no demo puts
   an Admin with that password back in set-up, so a demo.json dropped into a production workspace gives nothing.
+  Amended 2026-11-06 (senior review, SEC-1): no one chooses that password as their own, in the demo or not
+  (AOI-USR-005): anyone may read it, and a start outside the demo would put that Admin back in set-up, which on a
+  station with no other Admin leaves the Admin's password to whoever claims it next.
 - Tests: hashing and rehashing, lockout and idle timing with a fake clock, and a role check on every `AppContext`
   write.

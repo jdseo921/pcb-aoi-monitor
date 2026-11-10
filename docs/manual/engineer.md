@@ -85,15 +85,17 @@ role you change holds after a restart. Each sign-in is an audit entry: `user.sig
 before, and `user.start` for the user a start signs in. The demo workspace always starts with its first Admin.
 
 **Passwords and locked accounts.** An Engineer or Admin signs in with Switch User and their password; at their first
-sign-in they choose one of 15 to 64 characters and type it twice. Five wrong passwords in a row lock the account for 5
-minutes (AOI-USR-006), and while it is locked even the right password is not checked; the 100th wrong one since the last
-right one locks it until an Admin unlocks it (AOI-USR-007). An Admin sees each user's status under Users & roles and
-ends a lock with **Unlock User**, a forgotten password or PIN with **Reset Password** (for a PIN too; the user chooses a new one
-at their next sign-in), and turns a user off or on again with **Disable / Enable**: a disabled user cannot sign in
+sign-in they choose one of 15 to 64 characters and type it twice; it may not be a user's, a customer's or the product's
+name, nor the demo workspace's published password. Five wrong passwords in a row lock the account for 5 minutes
+(AOI-USR-006), and while it is locked even the right password is not checked; the 100th wrong one since the last right
+one locks it until an Admin unlocks it (AOI-USR-007). An Admin sees each user's status under Users & roles and ends a
+lock with **Unlock User**, a forgotten password or PIN with **Reset Password** (for a PIN too; the user chooses a new
+one at their next sign-in), and turns a user off or on again with **Disable / Enable**: a disabled user cannot sign in
 (AOI-USR-010) and keeps their name on past records. An Engineer's or Admin's first password is chosen only while an
 Admin is signed in to hand the account over (AOI-USR-009): the Admin signs in, then picks the user under Switch User,
 who types the new password twice. No Admin disables or resets their own account (AOI-USR-011), and the station always
-keeps an Admin with a password (AOI-USR-013) and an enabled Operator for a start (AOI-USR-014).
+keeps an Admin with a password and a recovery code who is not locked until an Admin unlocks them (AOI-USR-013) and an
+enabled Operator for a start (AOI-USR-014).
 
 **The first Admin and the recovery code.** On a new station the first-run guide on Home asks first for the Admin's
 password: **Choose the Admin's Password…** opens Switch User with the Admin picked. Until it is chosen, Create and
@@ -103,16 +105,27 @@ is chosen, a recovery
 code of 25 letters and digits shows once, with **Save to File…** and **Print…**; **Done** waits until it is saved or
 printed. Keep the sheet apart from the station. An Admin who loses their password presses **Use Recovery Code…** at
 Switch User, types the code and chooses a new password; the code then works no more, and a new one shows once. A
-wrong code is refused (AOI-USR-015). Without the code, another Admin resets the password.
+wrong code is refused (AOI-USR-015). Every Admin gets a code of their own the same way, one handed over when they choose
+their password, and one moved to the Admin role at their next sign-in, so an Admin locked until an Admin unlocks them
+(AOI-USR-007) signs in again with it when no other Admin can. Save to File… offers a file named for the Admin. Without
+the code, another Admin resets the password. An Admin moved to the role, or one whose password is older than recovery
+codes, counts as one who can sign in once their code is made, at their next sign-in: until then, the Admin before them
+cannot step down (AOI-USR-013).
 
 A lock never stops the Operator view; where Operators have PINs, wrong ones lock only that Operator's name. `lock_after` and `lock_minutes` in `settings.json` set
-the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, key or touch, an
-Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited `user.idle_end`; never
-while a board is being inspected (a run under way stops after its board, as at any sign-in), never in the demo
-workspace, and a dialog left open is closed first, as Cancel would. A barcode scanner that types as a keyboard counts as
-input, so one in use keeps the session alive. `operator_pin: true` in `settings.json` asks
-each Operator for a 4 to 6 digit PIN at Switch User, chosen at their first sign-in (AOI-USR-008 for one that is not); a
-start still signs the Operator in, so the Operator view is never held.
+the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, wheel turn, key or
+touch, an Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited
+`user.idle_end`, and Inspection opens. A board being inspected does not wait: it is recorded under the user who started
+it, and a run under way stops after it, as at any sign-in, so a run never keeps the session; the status bar and the line
+under the verdict tell the Operator why, and Start carries on with the queue under their name. Never in the demo
+workspace, and a dialog left open is closed first, as Cancel would. If it ends while the first-run guide shows a new
+store's recovery key, the Operator signed in sees no key: the guide keeps it, hidden, until an Admin signs in again with
+**Sign In as Admin…**, and the station does nothing else until the key is kept. A recovery key's or code's dialog left
+open still keeps the session (#499). Every key counts as input, a page's keys such as F1, F5 or Enter and Hangul typed
+through the input method too, and so does a barcode scanner that types as a keyboard, so one in use keeps the session
+alive. `operator_pin: true` in `settings.json` asks each Operator for a 4 to 6 digit PIN at Switch User, chosen at their
+first sign-in (AOI-USR-008 for one that is not); a start still signs the Operator in, so the Operator view is never
+held.
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
@@ -223,11 +236,12 @@ away from the station, not the one that brings the images: the dialog opens on t
 Windows lists as a fixed disk, as many USB SSDs are, does not count) or **Print…** (Ctrl+P), and the line beside them
 says where it went; then **I Have Saved the Key** (Enter), which until then says to save or print the key first. While
 the key shows, the sidebar, the top bar, the page keys and the window's close do nothing, and a press on them says why
-on the status bar. F1 lists the step's keys. A refusal, such as a folder under `images` that holds files already
-(AOI-TRN-044) or a key saved into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and
-opens no dialog. The board model made is then chosen in the top bar, and the guide goes on to its images. **Show All
-Steps ›** leaves the guide for Home without it, which with no board model yet is the empty state with **+ New board
-model**, and **Show the Guide ›** brings it back, until the next sign-in.
+on the status bar; if the session ends for idle time meanwhile, the key is hidden until an Admin signs in again. F1
+lists the step's keys. A refusal, such as a folder under `images` that holds files already (AOI-TRN-044) or a key saved
+into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and opens no dialog. The board
+model made is then chosen in the top bar, and the guide goes on to its images. **Show All Steps ›** leaves the guide for
+Home without it, which with no board model yet is the empty state with **+ New board model**, and **Show the Guide ›**
+brings it back, until the next sign-in.
 
 **The guide's images.** Screen 2 takes the board model's images, for a board model in a customer's store that has
 not inspected a board yet. Put them in one folder with two folders in it: `ok`, with the good boards' images, and

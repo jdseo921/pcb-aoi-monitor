@@ -963,7 +963,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+473"/>
+        <location line="+485"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -983,7 +983,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+82"/>
+        <location line="+96"/>
         <source>Unlocking a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1018,12 +1018,12 @@
     </message>
     <message>
         <location line="+190"/>
-        <location line="+2583"/>
+        <location line="+2623"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2552"/>
+        <location line="-2592"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1145,7 +1145,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+211"/>
+        <location line="+241"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1205,7 +1205,7 @@
         <translation>검토할 OK 라벨 추출</translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+52"/>
         <source>Making a calibration set</source>
         <translation>보정 세트 만들기</translation>
     </message>
@@ -1270,19 +1270,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+1329"/>
+        <location line="+1333"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4851"/>
-        <location line="+3536"/>
+        <location line="-4917"/>
+        <location line="+3598"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3626"/>
+        <location line="-3688"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1382,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1650"/>
+        <location line="+1676"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1397,7 +1397,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+488"/>
+        <location line="+524"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1589,7 +1589,7 @@
         <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+38"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1609,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4287"/>
+        <location line="-4353"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1634,12 +1634,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1541"/>
+        <location line="+1567"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1553"/>
+        <location line="+1583"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1654,7 +1654,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+441"/>
+        <location line="+447"/>
         <source>{file} has changed since the version was frozen</source>
         <translation>{file}이(가) 버전이 동결된 뒤에 바뀌었습니다</translation>
     </message>
@@ -1699,7 +1699,7 @@
         <translation>이 뷰의 가장 최근 일치도 검사가 목표에 도달하지 못했습니다</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+51"/>
         <source>Rolling back an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,14 +1751,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4733"/>
+        <location line="-4799"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+164"/>
-        <location filename="../ui/main_window.py" line="+1302"/>
+        <location filename="../ui/main_window.py" line="+1330"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3501,12 +3501,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Ask an Admin to unlock it with Unlock User on Settings.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+10"/>
         <source>PIN not allowed</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3551,7 +3546,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+38"/>
         <source>Recovery code not accepted</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4081,7 +4076,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1568"/>
+        <location line="-1576"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4271,7 +4266,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+29"/>
+        <source>Ask an Admin to unlock it with Unlock User on Settings. An Admin with no other Admin to do it signs in with Use Recovery Code… at Switch User.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Ask an Admin to sign in (on a new station, the Admin chooses theirs first), then choose {name} under Switch User and type the new password twice.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4312,11 +4312,11 @@
     </message>
     <message>
         <location line="+5"/>
-        <source>Add another Admin and hand the account over to them first.</source>
+        <source>First add another Admin and have them sign in once, to choose their password and get their recovery code, or unlock a locked Admin.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+9"/>
         <source>Last Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4606,7 +4606,7 @@
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
     <message>
-        <location filename="../core/demo.py" line="+108"/>
+        <location filename="../core/demo.py" line="+109"/>
         <source>it has no readable bundle.json</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4617,7 +4617,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3778"/>
+        <location filename="../core/services.py" line="+3840"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4652,7 +4652,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/passwords.py" line="+30"/>
+        <location filename="../core/passwords.py" line="+32"/>
         <source>is shorter than {length} characters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4664,6 +4664,11 @@
     <message>
         <location line="+1"/>
         <source>is the name of a user, a customer or the product</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>is the demo workspace&apos;s published password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4843,7 +4848,7 @@
         <translation type="unfinished">학습</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+48"/>
         <source>Show All Steps ›</source>
         <translation type="unfinished">모든 단계 보기 ›</translation>
     </message>
@@ -4898,17 +4903,27 @@
         <translation type="unfinished">이 스테이션과 떨어져 보관하는 USB 드라이브(이미지를 가져오는 드라이브 말고)에 저장하거나 인쇄하십시오.</translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+9"/>
+        <source>Sign In as Admin…  Enter</source>
+        <translation type="unfinished">관리자로 로그인…  Enter</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Sign In as Admin…</source>
+        <translation type="unfinished">관리자로 로그인…</translation>
+    </message>
+    <message>
+        <location line="-4"/>
         <source>I Have Saved the Key</source>
         <translation type="unfinished">키를 저장했습니다</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+9"/>
         <source>I Have Saved the Key  Enter</source>
         <translation type="unfinished">키를 저장했습니다  Enter</translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+53"/>
         <source>Set up your first board model</source>
         <translation type="unfinished">첫 보드 모델 설정</translation>
     </message>
@@ -4918,7 +4933,7 @@
         <translation type="unfinished">{board_model} 설정</translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+42"/>
         <source>✓ {name} can be used.</source>
         <translation type="unfinished">✓ {name}을(를) 쓸 수 있습니다.</translation>
     </message>
@@ -4939,12 +4954,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+38"/>
+        <location line="+66"/>
         <source>Board model {name} is set up for {customer}.</source>
         <translation type="unfinished">보드 모델 {name}이(가) {customer}용으로 설정되었습니다.</translation>
     </message>
     <message>
-        <location line="-25"/>
+        <location line="-52"/>
         <source>✓ {name} · for {customer}</source>
         <translation type="unfinished">✓ {name} · {customer}용</translation>
     </message>
@@ -4952,6 +4967,11 @@
         <location line="+4"/>
         <source>If this station&apos;s own key is ever lost, this key opens the images of {customer} again. It is shown only now.</source>
         <translation type="unfinished">이 스테이션의 키를 잃어버리면 이 키로 {customer}의 이미지를 다시 열 수 있습니다. 지금 한 번만 표시됩니다.</translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in to save it. The station does nothing else until then.</source>
+        <translation type="unfinished">{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 키는 보관되며, 그때까지 스테이션은 다른 작업을 하지 않습니다.</translation>
     </message>
 </context>
 <context>
@@ -5481,7 +5501,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1156"/>
+        <location filename="../ui/main_window.py" line="-1183"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5566,7 +5586,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+30"/>
         <source>{board_model} is still being set up</source>
         <translation type="unfinished">{board_model}은(는) 아직 설정 중입니다</translation>
     </message>
@@ -5591,7 +5611,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-239"/>
+        <location line="-243"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5621,7 +5641,7 @@
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+56"/>
+        <location line="+60"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5852,14 +5872,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+102"/>
+        <location filename="../ui/pages/inspection.py" line="+104"/>
         <location line="+110"/>
-        <location line="+228"/>
+        <location line="+229"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-337"/>
+        <location line="-338"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5941,7 +5961,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+204"/>
+        <location line="+205"/>
         <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
         <translation type="unfinished">✓ 교대 점검: 모든 판정이 올바름 · {until}까지 보드를 검사할 수 있습니다</translation>
     </message>
@@ -5956,17 +5976,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-210"/>
+        <location line="-211"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-154"/>
+        <location line="-156"/>
         <source>Save Image… needs the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+35"/>
         <source>Shift Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6011,7 +6031,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+23"/>
+        <location line="+24"/>
         <source>Stopping after this board…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6146,12 +6166,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+31"/>
+        <source>Run stopped: the session of {starter} ended after {minutes} minutes without input, and {user} is signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+32"/>
         <source>AI model {version} of {board_model} is trained but not active: only the Golden board comparison judges its boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6791,7 +6816,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+172"/>
+        <location line="+183"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6861,12 +6886,17 @@
         <translation type="unfinished">보드 모델 {name}이(가) {customer}의 암호화된 데이터셋 저장소에 있습니다.</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+32"/>
+        <source>An Admin signs in with Sign In as Admin… on Home and saves the recovery key first.</source>
+        <translation type="unfinished">먼저 관리자가 홈에서 관리자로 로그인…을 눌러 로그인하고 복구 키를 저장하십시오.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Save the recovery key to a file or print it, then press I Have Saved the Key.</source>
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+74"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6876,12 +6906,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-40"/>
+        <location line="-48"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+183"/>
+        <location line="+191"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7756,7 +7786,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1113"/>
+        <location filename="../ui/main_window.py" line="-1140"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7891,7 +7921,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-654"/>
+        <location filename="../ui/pages/inspection.py" line="-677"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8508,7 +8538,7 @@
 <context>
     <name>RecoveryCodeDialog</name>
     <message>
-        <location filename="../ui/recovery_code_dialog.py" line="+29"/>
+        <location filename="../ui/recovery_code_dialog.py" line="+30"/>
         <source>Recovery code for {user}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8538,7 +8568,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+27"/>
         <source>Save Recovery Code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8586,7 +8616,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+53"/>
         <source>Store {uuid} · key id {key_id}</source>
         <translation type="unfinished">저장소 {uuid} · 키 ID {key_id}</translation>
     </message>
@@ -9812,7 +9842,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3862"/>
+        <location filename="../core/services.py" line="-3924"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

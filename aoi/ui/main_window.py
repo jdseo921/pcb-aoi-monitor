@@ -11,6 +11,7 @@ from PySide6.QtGui import (
     QAction,
     QCloseEvent,
     QColor,
+    QInputMethodEvent,
     QKeySequence,
     QMouseEvent,
     QPainter,
@@ -304,6 +305,10 @@ class HomePage(Page):
             go.setToolTip("" if allowed else self.shell.needs_role(target))  # the page and the roles that open it
 
     def on_show(self) -> None:
+        with self.ctx.reading():  # What is missing read once as Home opens, the guide's screens and steps too (UI-5)
+            self._show()
+
+    def _show(self) -> None:
         self._sync_links()
         bm = self.board_model
         guided = self.guided(bm)
@@ -458,17 +463,28 @@ class _HeldPress(QObject):
 
 
 class _InputWatch(QObject):
-    """A press, key, wheel or touch in the app: an Engineer's or Admin's idle time starts again (REQ-USR-004). One for
-    the application, whatever windows it opens (`watch_input`), so no event passes through a filter per window."""
+    """A press, key, wheel or touch in the app: an Engineer's or Admin's idle time starts again (REQ-USR-004). A key
+    that fires a shortcut (F1, Inspection's F5 to F11, Enter on the guide's key step) reaches no widget as `KeyPress`,
+    only its action as `Shortcut`, and Hangul typed through the input method arrives as `InputMethod`, so both count
+    too, the second once it carries text (senior review 2026-11-06, UI-2). A trigger from code, a timer or a mouse
+    moved without a press counts as none. One for the application, whatever windows it opens (`watch_input`), so no
+    event passes through a filter per window."""
 
-    INPUT = {QEvent.Type.MouseButtonPress, QEvent.Type.KeyPress, QEvent.Type.Wheel, QEvent.Type.TouchBegin}
+    INPUT = {
+        QEvent.Type.MouseButtonPress,
+        QEvent.Type.KeyPress,
+        QEvent.Type.Shortcut,
+        QEvent.Type.Wheel,
+        QEvent.Type.TouchBegin,
+    }
 
     def __init__(self, app: QObject | None) -> None:
         super().__init__(app)
         self.last = time.monotonic()
 
     def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
-        if e.type() in self.INPUT:
+        typed = isinstance(e, QInputMethodEvent) and bool(e.commitString() or e.preeditString())
+        if e.type() in self.INPUT or typed:
             self.last = time.monotonic()
         return False
 
@@ -813,7 +829,10 @@ class MainWindow(QMainWindow):
         self.header.setEnabled(not on)
 
     def held_text(self) -> str:
-        """What the frame says while the guide holds it."""
+        """What the frame says while the guide holds it: to an Admin, what to do with the key; to anyone else, signed in
+        by an idle end while the key showed, that an Admin signs in first."""
+        if self.ctx.role != "Admin":
+            return self.tr("An Admin signs in with Sign In as Admin… on Home and saves the recovery key first.")
         return self.tr("Save the recovery key to a file or print it, then press I Have Saved the Key.")
 
     def _on_board_model(self, name: str) -> None:
@@ -829,7 +848,8 @@ class MainWindow(QMainWindow):
     # --- users / roles (spec 8) -------------------------------------------------------
     def switch_user(self, name: str | None = None) -> None:
         """Pick a user, `name` first if given; an Engineer or Admin signs in with their password (`SignInDialog`,
-        REQ-USR-002). A first Admin, or one who used their recovery code, then sees their new code once
+        REQ-USR-002). An Admin outside the demo with no code, as one who chose their password, used their recovery
+        code, was moved to the role or has a password older than codes, then sees their new code once
         (`RecoveryCodeDialog`, REQ-USR-005)."""
         dialog = SignInDialog(self, name)
         dialog.exec()
@@ -861,13 +881,16 @@ class MainWindow(QMainWindow):
 
     def check_idle(self) -> bool:
         """End an Engineer's or Admin's session after `idle_minutes` without input, back to the shift's operator
-        (`AppContext.end_idle`, REQ-USR-004). Never while a board is being inspected: the next check, 30 s on, ends it,
-        and a run under way then stops after its board as at any sign-in (#177). Never in the demo, where the presenter
-        talks. A dialog left open is closed first, as Cancel would; one that will not close (a recovery key waiting to
-        be kept) keeps the session. Returns whether it ended one."""
-        busy = getattr(self.pages["Inspection"], "worker", None) is not None
+        (`AppContext.end_idle`, REQ-USR-004), on Inspection, the run screen (`landing`, D25). A board being inspected
+        does not wait: it is recorded under the user who started it, and a run under way stops after it, as at any
+        sign-in, saying why (#177, `InspectionPage.idle_end`), so no run keeps a session open (senior review 2026-11-06,
+        SEC-4). Never in the demo, where the presenter talks. A dialog left open is closed first, as Cancel would; one
+        that will not close (a recovery key waiting to be kept) keeps the session. While the first-run guide holds the
+        frame on a new store's recovery key (`hold_frame`), the session ends as at any other time, on Home, and the
+        guide hides the key, still held, until an Admin signs in again (senior review 2026-11-06, UI-1). Returns
+        whether it ended one."""
         idle = time.monotonic() - self.input.last >= self.ctx.settings.idle_minutes * 60
-        if self.ctx.role == "Operator" or self.in_demo or busy or not idle:
+        if self.ctx.role == "Operator" or self.in_demo or not idle:
             return False
         for _ in range(5):  # a dialog over a dialog, the top one first
             modal = QApplication.activeModalWidget()
@@ -879,6 +902,11 @@ class MainWindow(QMainWindow):
         if operator is None:
             return False
         self.set_user(operator)
+        inspection = cast(InspectionPage, self.pages["Inspection"])
+        if inspection.running:  # stops after the board in hand, saying why; a sign-in after clears it
+            inspection.idle_end = self.ctx.settings.idle_minutes
+        if not self.held:
+            self.navigate(self.landing(""))
         said = self.tr("The session of {user} ended after {minutes} minutes without input; {operator} is signed in.")
         self.status(said.format(user=before, minutes=self.ctx.settings.idle_minutes, operator=self.ctx.user))
         return True

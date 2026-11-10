@@ -92,6 +92,7 @@ class FirstRunGuide(QFrame):
         self.status = page.shell.status
         self.shown = 1  # the screen shown: 1 Board model, 2 Images, 3 Train
         self.made_board_model = self.made_customer = ""  # the board model whose recovery key shows, its customer
+        self.key_admin = ""  # the Admin who made it, picked first at Sign In as Admin… after an idle end (UI-1)
         lay = QVBoxLayout(self)
         top = QHBoxLayout()
         self.heading = QLabel()
@@ -207,25 +208,45 @@ class FirstRunGuide(QFrame):
             shortcut.setShortcut(QKeySequence(key))
             shortcut.triggered.connect(slot)
             self.key_step.addAction(shortcut)  # while the key step shows
-        away = QLabel(
+        self.away = away = QLabel(
             self.tr(
                 "Save it on a USB drive that stays away from this station, not the one that brings the images, or"
                 " print it."
             )
         )
         away.setWordWrap(True)
+        self.key_hidden = QLabel()  # after an idle end, while no Admin is signed in: the key hidden, and why (UI-1)
+        self.key_hidden.setWordWrap(True)
+        self.key_hidden.hide()
+        # plain, not blue: the step's one blue button stays I Have Saved the Key (REQ-SET-018)
+        self.btn_key_admin = size_class(button(self.tr("Sign In as Admin…  Enter"), slot=self._admin_again), "T")
+        self.btn_key_admin.hide()
         self.key_refused = Said()  # a save or print refused (AOI-LOG-002), in the guide's words with its code (Q78)
         kept = QAction(self.tr("I Have Saved the Key"), self.key_step)
         kept.setShortcuts([QKeySequence("Enter"), QKeySequence("Return")])  # F1 names the first, "Enter", as the button
         kept.triggered.connect(self.key_kept)
         self.key_step.addAction(kept)
+        self.admin_action = QAction(self.tr("Sign In as Admin…"), self.key_step)  # on only while the key is hidden
+        self.admin_action.setShortcuts([QKeySequence("Enter"), QKeySequence("Return")])
+        self.admin_action.triggered.connect(self._admin_again)
+        self.admin_action.setEnabled(False)
+        self.key_step.addAction(self.admin_action)
         self.btn_kept = size_class(button(self.tr("I Have Saved the Key  Enter"), "primary", self.key_kept), "T")
         PressSays(self.btn_kept, self.recovery.unsaved, self.status)
-        for w in (self.made_line, self.key_title, self.key_note, self.recovery, away, self.key_refused):
+        for w in (
+            self.made_line,
+            self.key_title,
+            self.key_note,
+            self.recovery,
+            away,
+            self.key_hidden,
+            self.key_refused,
+        ):
             lay.addWidget(w)
         row = QHBoxLayout()
         row.addStretch(1)
         row.addWidget(self.btn_kept)
+        row.addWidget(self.btn_key_admin)
         lay.addLayout(row)
         self.key_step.hide()
 
@@ -235,7 +256,7 @@ class FirstRunGuide(QFrame):
             return self.images.keys()
         if not self.train_step.isHidden():
             return self.train_step.keys()
-        return self.key_step.actions() if not self.key_step.isHidden() else []
+        return [a for a in self.key_step.actions() if a.isEnabled()] if not self.key_step.isHidden() else []
 
     def holding(self) -> bool:
         """The recovery key shows and I Have Saved the Key was not pressed: the frame holds still."""
@@ -285,6 +306,7 @@ class FirstRunGuide(QFrame):
             )
         )
         self.btn_cards.setEnabled(not holding)
+        self._sync_key(holding)
         if not holding:
             self.customer_names.setStringList([s["customer"] for s in self.ctx.stores() if not s["shredded_at"]])
         self._sync()
@@ -362,6 +384,7 @@ class FirstRunGuide(QFrame):
         """The new store's recovery key on screen 1, this once, the frame held until I Have Saved the Key."""
         customer = str(store["customer"])
         self.made_board_model, self.made_customer = board_model, customer
+        self.key_admin = self.ctx.user
         self.recovery.show_key(store)
         self.made_line.setText(self.tr("✓ {name} · for {customer}").format(name=board_model, customer=customer))
         self.key_title.setText(self.recovery.title())
@@ -375,6 +398,33 @@ class FirstRunGuide(QFrame):
         self.show_for(None)
         self.recovery.btn_save.setFocus()
         self.holding_changed.emit(True)
+
+    def _sync_key(self, holding: bool) -> None:
+        """While the key is held for anyone but an Admin, signed in by an idle end (`MainWindow.check_idle`), its text,
+        its buttons and keys are off the screen, kept, and Sign In as Admin… shows them again, to an Admin only: only an
+        Admin may save or print it (senior review 2026-11-06, UI-1)."""
+        hidden = holding and self.ctx.role != "Admin"
+        if hidden == self.key_hidden.isHidden():  # hidden now, or shown again
+            self.recovery.hide_text(hidden)
+            if not hidden and holding:
+                self.recovery.btn_save.setFocus()
+        for w in (self.recovery, self.away, self.btn_kept):
+            w.setVisible(not hidden)
+        for action in self.key_step.actions():  # Ctrl+S, Ctrl+P and Enter for the key; Enter for Sign In as Admin…
+            action.setEnabled(hidden if action is self.admin_action else not hidden)
+        said = self.tr(
+            "The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in"
+            " to save it. The station does nothing else until then."
+        )
+        self.key_hidden.setText(said.format(admin=self.key_admin, customer=self.made_customer) if hidden else "")
+        self.key_hidden.setVisible(hidden)
+        self.btn_key_admin.setVisible(hidden)
+        if hidden:
+            self.btn_key_admin.setFocus()
+
+    def _admin_again(self) -> None:
+        """Sign In as Admin…: Switch User, with the Admin who made the key picked first; an Admin signed in sees it."""
+        self.page.shell.switch_user(self.key_admin or None)
 
     def key_kept(self) -> None:
         """I Have Saved the Key: the key forgotten, the frame free, the board model selected; while the key was neither
