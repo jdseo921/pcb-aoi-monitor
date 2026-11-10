@@ -55,7 +55,7 @@ the next time it is shown. The imaging station writes each board image into the 
 Inspection page's Watch Input Folder and Start run the line on it: `working/`, `done/` and `failed/` are made inside
 it, and nothing in them is ever deleted (size the share for the originals). A board is never inspected twice: by its
 name in `done/`, and by the SHA-256 of its image, which its record keeps. One station per input folder. The start-up
-self-check writes and removes a hidden file in each folder set, and alarms with AOI-SET-025 for one it cannot.
+self-check writes and removes a hidden file in each folder set, and alarms with AOI-SET-026 for one it cannot.
 
 **Result files (REQ-INSP-021).** With an output folder set, each board saved from then on is written there as
 `<board ID>_<record UUID>.json` and a one-line `.csv`, and added to `shift_<date>.csv` (the local date, with a header).

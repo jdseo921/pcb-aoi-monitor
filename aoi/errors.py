@@ -395,7 +395,7 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
-            "AOI-INSP-020",
+            "AOI-INSP-025",
             QT_TRANSLATE_NOOP("Errors", "Input file name not in the contract"),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -409,7 +409,7 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
-            "AOI-INSP-021",
+            "AOI-INSP-026",
             QT_TRANSLATE_NOOP("Errors", "Board image already inspected"),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -423,7 +423,7 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
-            "AOI-INSP-022",
+            "AOI-INSP-027",
             QT_TRANSLATE_NOOP("Errors", "Input image cannot be read"),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -436,7 +436,7 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
-            "AOI-INSP-024",
+            "AOI-INSP-029",
             QT_TRANSLATE_NOOP("Errors", "Board image of another board model"),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -450,7 +450,7 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
-            "AOI-INSP-023",
+            "AOI-INSP-028",
             QT_TRANSLATE_NOOP("Errors", "Input folder not reachable"),
             QT_TRANSLATE_NOOP(
                 "Errors",
@@ -1820,7 +1820,7 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
-            "AOI-SET-025",
+            "AOI-SET-026",
             QT_TRANSLATE_NOOP("Errors", "Line folder not usable"),
             QT_TRANSLATE_NOOP(
                 "Errors",

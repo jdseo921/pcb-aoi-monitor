@@ -1,4 +1,4 @@
-"""The watched input folder (REQ-INSP-020, ADR 0024 D26): a complete file is inspected within 2 s and moved to done/,
+"""The watched input folder (REQ-INSP-020, ADR 0024 D30): a complete file is inspected within 2 s and moved to done/,
 a partial one waited for, one that breaks the naming contract, was inspected before or cannot be read moved to
 failed/ with its code, one of another board model left where it is, and a board never inspected twice."""
 
@@ -80,7 +80,7 @@ def test_req_insp_020_a_complete_file_is_inspected_within_2_s_and_moved_to_done(
     assert {a["level"] for a in trained_ctx.alarms()} <= {"NG"}
     arrive(srcs[0], inbox, NAMES[0].replace("_0000_", "_0100_"))
     assert taken(watch) is None  # the same image under another name: its record keeps its SHA-256
-    assert [a["code"] for a in trained_ctx.alarms() if a["level"] == "WARN"] == ["AOI-INSP-021"]
+    assert [a["code"] for a in trained_ctx.alarms() if a["level"] == "WARN"] == ["AOI-INSP-026"]
 
 
 def test_req_insp_020_a_file_still_being_written_is_waited_for(synthetic_dataset: Path, tmp_path: Path) -> None:
@@ -116,10 +116,10 @@ def test_req_insp_020_a_file_that_breaks_the_contract_or_cannot_be_read_goes_to_
     (inbox / "notes.txt").write_text("not a board")  # not an image file: never touched
     assert taken(watch) is None
     assert sorted(p.name for p in (inbox / FAILED).iterdir()) == sorted([*bad, unread])
-    assert sorted(e.code for e in told) == ["AOI-INSP-020"] * 3 + ["AOI-INSP-022"]
+    assert sorted(e.code for e in told) == ["AOI-INSP-025"] * 3 + ["AOI-INSP-027"]
     assert any("not a real date" in e.what for e in told) and (inbox / "notes.txt").is_file()
     arrive(src, inbox, OTHER)
-    with pytest.raises(AoiError, match="AOI-INSP-024"):  # another board model's board: the line pauses on it
+    with pytest.raises(AoiError, match="AOI-INSP-029"):  # another board model's board: the line pauses on it
         taken(watch)
     assert (inbox / OTHER).is_file()
 
@@ -138,7 +138,7 @@ def test_req_insp_020_a_board_is_never_inspected_twice_by_name_or_image(
     watch.finish(got[1], saved=True)
     arrive(other, inbox, NAMES[0])  # the same name, another image
     arrive(first, inbox, NAMES[1])  # the same image, another name
-    assert taken(watch) is None and [e.code for e in told] == ["AOI-INSP-021"] * 2
+    assert taken(watch) is None and [e.code for e in told] == ["AOI-INSP-026"] * 2
     assert any(NAMES[0] in e.what for e in told if "same image" in e.what)
     assert len(list((inbox / FAILED).iterdir())) == 2 and [p.name for p in (inbox / DONE).iterdir()] == [NAMES[0]]
 
@@ -168,7 +168,7 @@ def test_req_insp_020_a_folder_gone_is_alarmed_once(tmp_path: Path) -> None:
     inbox.mkdir()
     watch, told, _ = bare(inbox)
     shutil.rmtree(inbox)  # the share went
-    assert watch.grab(BOARD) is None and watch.grab(BOARD) is None and [e.code for e in told] == ["AOI-INSP-023"]
+    assert watch.grab(BOARD) is None and watch.grab(BOARD) is None and [e.code for e in told] == ["AOI-INSP-028"]
     inbox.mkdir()
     (inbox / WORKING).mkdir()
     assert watch.grab(BOARD) is None and watch.lost is False
@@ -181,12 +181,12 @@ def test_req_insp_020_the_context_never_makes_the_folder_and_its_self_check_name
     ctx: AppContext, tmp_path: Path
 ) -> None:
     ctx.settings.input_folder = str(tmp_path / "gone")
-    with pytest.raises(AoiError, match="AOI-INSP-023"):
+    with pytest.raises(AoiError, match="AOI-INSP-028"):
         ctx.folder_watch()
     assert not (tmp_path / "gone").exists()
     ctx.settings.output_folder = str(tmp_path / "out gone")
     assert ctx.self_check()["line_folders"] == ["input_folder", "output_folder"]  # the start-up self-check
-    assert "AOI-SET-025" in {a["code"] for a in ctx.alarms()}
+    assert "AOI-SET-026" in {a["code"] for a in ctx.alarms()}
     ctx.settings.input_folder = ""
     assert ctx.folder_watch() is None
     Settings.check("input_folder", "")
@@ -204,5 +204,5 @@ def test_req_insp_020_the_contract_names_the_board() -> None:
         board_id("C:/line/done/TBOX-A1_R3_0001_Top_20261106T103000Z.png") == "0001" and board_id("x/A_1.png") == "A_1"
     )
     for name in ("TBOX_R3_Top_20261106T103000Z.png", "TBOX_R3_1_Top_20261106T1030Z.png", "TBOX_R3_1_Top_x.bmp"):
-        with pytest.raises(AoiError, match="AOI-INSP-020"):
+        with pytest.raises(AoiError, match="AOI-INSP-025"):
             parse(name)

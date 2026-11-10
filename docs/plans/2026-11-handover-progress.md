@@ -192,9 +192,9 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   D25 (each role lands on its own work), confirmed, then built in `feat/REQ-USR-005-claim-and-landing`, stacked on
   `fix/usability-sweep-low-risk` (#478), the same day's train.
 - 2026-11-06: Jay: "Factory isnt involved for now", then chose "Define our own contract, build E.2" (decision card):
-  ADR 0024 D26 takes the Engineering standard's capture name as the input-file naming contract
+  ADR 0024 D30 takes the Engineering standard's capture name as the input-file naming contract
   (`docs/schemas/input-file-naming.md`). E.2 is four PRs stacked on `main`: E.2a `docs/REQ-INSP-020-naming-contract`
-  (D26, the schema page, AOI-INSP-020 to -024 and AOI-SET-025), E.2b `feat/REQ-INSP-020-folder-watch` (`FolderWatch`),
+  (D30, the schema page, AOI-INSP-025 to -024 and AOI-SET-026), E.2b `feat/REQ-INSP-020-folder-watch` (`FolderWatch`),
   E.2c `feat/REQ-INSP-020-line-cycle` (`InspectionCycle.watched`, the image's SHA-256 in its record, migration 0031,
   the settings and the self-check) and E.2d `feat/REQ-INSP-020-line-page` (the Inspection page's line, the Settings
   fields, the manuals).

@@ -3,7 +3,7 @@ written atomically after its record commits, and a line in the shift CSV of the 
 the day. The fields are those of `docs/schemas/result-file.schema.json`; the CSV columns are `COLUMNS`. Its CSV files
 are for machines: UTF-8 with no byte order mark and cells as they are, with no formula guard, unlike the CSV export a
 person opens in Excel (`AppContext.csv_bytes`, #113), since a guard would change a board ID. A board's ID is the one
-its file name gives under the input-file naming contract (REQ-INSP-020, ADR 0024 D26), or its image file's stem for a
+its file name gives under the input-file naming contract (REQ-INSP-020, ADR 0024 D30), or its image file's stem for a
 file that keeps no contract, such as one an operator loaded by hand."""
 
 from __future__ import annotations

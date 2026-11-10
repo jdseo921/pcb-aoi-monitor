@@ -1,4 +1,4 @@
-# Input-file naming contract (REQ-INSP-020, ADR 0024 D26)
+# Input-file naming contract (REQ-INSP-020, ADR 0024 D30)
 
 How a board image must be named and written so the station inspects it from its watched input folder
 (`Settings.input_folder`) without an operator's action. No factory has agreed a contract yet (Jay, 2026-11-06), so the
@@ -37,19 +37,19 @@ is, in `done/`, and keeps the SHA-256 of its bytes.
 A file written in place is taken once two looks of the folder, 0.25 s apart (`LOOK_S`), found the same size and
 modification time and it has held them for 0.5 s (`SETTLE_S`), counted from the look that saw its last change. A
 writer that pauses longer than that mid-file hands over half an image, which is then
-usually refused with AOI-INSP-022. Files whose names start with `.` or `~`, and files with any other extension, are never touched.
+usually refused with AOI-INSP-027. Files whose names start with `.` or `~`, and files with any other extension, are never touched.
 
 ## What the station does with it
 
 | Outcome | Where the file goes | Alarm |
 |---|---|---|
 | Inspected and its record saved | `done/` | NG boards: AOI-INSP-003, as any board |
-| Its name breaks the contract | `failed/` | AOI-INSP-020, with the reason |
-| A file of its name is in `done/`, or a record already judged the same image (by SHA-256) under any name | `failed/` | AOI-INSP-021 |
-| It cannot be read as an image, or is over the station's image limits | `failed/` | AOI-INSP-022, with the reader's reason |
-| It names another board model than the line runs | stays in the input folder; the line pauses | AOI-INSP-024 |
+| Its name breaks the contract | `failed/` | AOI-INSP-025, with the reason |
+| A file of its name is in `done/`, or a record already judged the same image (by SHA-256) under any name | `failed/` | AOI-INSP-026 |
+| It cannot be read as an image, or is over the station's image limits | `failed/` | AOI-INSP-027, with the reader's reason |
+| It names another board model than the line runs | stays in the input folder; the line pauses | AOI-INSP-029 |
 | Its record could not be saved, or the inspection failed | back to the input folder; the line pauses and takes it again on Start | the save's or the inspection's own code |
-| The input folder cannot be read (a share gone) | stays where it is | AOI-INSP-023, once until the folder answers |
+| The input folder cannot be read (a share gone) | stays where it is | AOI-INSP-028, once until the folder answers |
 
 - `working/`, `done/` and `failed/` are made inside the input folder; the input folder itself is never made, so a
   share that is not connected is never replaced by a folder on the station's own disk.

@@ -488,7 +488,7 @@ def _writable(folder: str) -> bool:
     return True
 
 
-# The folders of the line the self-check looks at (REQ-INSP-020, -021), named as AOI-SET-025 says them
+# The folders of the line the self-check looks at (REQ-INSP-020, -021), named as AOI-SET-026 says them
 LINE_FOLDERS = {
     "input_folder": QT_TRANSLATE_NOOP("Errors", "input folder"),
     "output_folder": QT_TRANSLATE_NOOP("Errors", "output folder"),
@@ -2050,7 +2050,7 @@ class AppContext:
         """The watched input folder of `Settings.input_folder` as a frame source (REQ-INSP-020), None when none is set.
         A board is never inspected twice: by its name in done/, or by its image's SHA-256, which every record of a
         board the line took keeps (migration 0031), whichever folder it came in. File work: call it off the UI thread.
-        AOI-INSP-023 when the folder cannot be opened; it is never made on the station's own disk."""
+        AOI-INSP-028 when the folder cannot be opened; it is never made on the station's own disk."""
         folder = self.settings.input_folder
         if not folder:
             return None
@@ -2058,7 +2058,7 @@ class AppContext:
             load, seen = self._load_image_sha256, self.db.image_inspected
             return folder_watch.FolderWatch(Path(folder), load, seen, self._line_alarm)
         except OSError as e:
-            raise AoiError("AOI-INSP-023", system_detail(e), folder=folder, reason=system_reason(e)) from e
+            raise AoiError("AOI-INSP-028", system_detail(e), folder=folder, reason=system_reason(e)) from e
 
     def _line_alarm(self, e: AoiError) -> None:
         """A file the line refused, or its folder lost: a WARN alarm with its code; never raises (#179)."""
@@ -4602,7 +4602,7 @@ class AppContext:
                 folder = getattr(self.settings, name)
                 if folder and not _writable(folder):
                     found["line_folders"].append(name)
-                    self._check_alarm("WARN", "AOI-SET-025", setting=setting, folder=folder)
+                    self._check_alarm("WARN", "AOI-SET-026", setting=setting, folder=folder)
 
         def drive() -> None:
             space = self.check_disk()

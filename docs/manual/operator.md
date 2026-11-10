@@ -69,10 +69,10 @@ arrives is judged within 2 s, in the view its file name gives, whatever the View
 line: no new board is taken, and the board in hand, if one is, is still judged and recorded. The top bar then reads
 **Line paused**, and Start resumes the line. Next Board is grey while the page watches the folder, and Load Images… and
 Load Folder… while the line runs. A file the station cannot take is moved aside to the folder's `failed/` with an
-alarm: its name is not as the imaging station must write it (AOI-INSP-020), the board was inspected before
-(AOI-INSP-021), or it is not a whole image (AOI-INSP-022); tell an Engineer, the line goes on. A board of another board
-model pauses the line (AOI-INSP-024): pick its board model in the top bar and press Start. If the folder cannot be
-reached, AOI-INSP-023 is shown once and the line goes on by itself when it answers. If a board cannot be inspected or
+alarm: its name is not as the imaging station must write it (AOI-INSP-025), the board was inspected before
+(AOI-INSP-026), or it is not a whole image (AOI-INSP-027); tell an Engineer, the line goes on. A board of another board
+model pauses the line (AOI-INSP-029): pick its board model in the top bar and press Start. If the folder cannot be
+reached, AOI-INSP-028 is shown once and the line goes on by itself when it answers. If a board cannot be inspected or
 recorded, the line pauses with the coded message and the image goes back to the folder: press Start once the message's
 step is done. Load Images… or Load Folder… on a paused line leaves it for a queue again.
 

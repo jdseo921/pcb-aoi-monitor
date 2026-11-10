@@ -1,4 +1,4 @@
--- REQ-INSP-020 (ADR 0024 D26): the SHA-256 of the image file a record judged, for a board taken from the watched input
+-- REQ-INSP-020 (ADR 0024 D30): the SHA-256 of the image file a record judged, for a board taken from the watched input
 -- folder, saved with the record in its transaction, so the line never inspects the same image twice; NULL for a board
 -- loaded by hand and for every record before this migration.
 

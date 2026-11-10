@@ -1,4 +1,4 @@
-"""The watched input folder (REQ-INSP-020, ADR 0024 D26): a frame source for the inspection cycle that takes each
+"""The watched input folder (REQ-INSP-020, ADR 0024 D30): a frame source for the inspection cycle that takes each
 complete image file the imaging station writes to the input folder, oldest first. Its name keeps the Engineering
 standard's capture name (`NAME`, `docs/schemas/input-file-naming.md`). A file is complete once two looks found the same
 size and modification time and it has held them for `SETTLE_S`. It is claimed by moving it to `working/`, so no other
@@ -60,14 +60,14 @@ class BoardName:
 
 
 def parse(name: str) -> BoardName:
-    """The contract's fields of a file name; AOI-INSP-020 with the reason when it breaks the contract."""
+    """The contract's fields of a file name; AOI-INSP-025 with the reason when it breaks the contract."""
     m = NAME.fullmatch(name)
     if m is None:
-        raise AoiError("AOI-INSP-020", file=name, reason=NOT_THE_PATTERN.fill(example=EXAMPLE))
+        raise AoiError("AOI-INSP-025", file=name, reason=NOT_THE_PATTERN.fill(example=EXAMPLE))
     try:
         at = datetime.strptime(m["time"].upper(), "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
     except ValueError:
-        raise AoiError("AOI-INSP-020", file=name, reason=NOT_A_TIME.fill(time=m["time"])) from None
+        raise AoiError("AOI-INSP-025", file=name, reason=NOT_A_TIME.fill(time=m["time"])) from None
     return BoardName(m["board_model"], m["revision"], m["serial"], VIEWS[m["view"].lower()], at.isoformat())
 
 
@@ -106,14 +106,14 @@ class FolderWatch:
     def grab(self, board_model: str) -> tuple[np.ndarray, FrameMeta] | None:
         """The next complete file of `board_model`, read and claimed, with the done/ path its record names, the view its
         name gives and its SHA-256; None while none is complete (never the end: the line waits). A file of another
-        board model stays where it is and stops the line with AOI-INSP-024: a line runs one board model."""
+        board model stays where it is and stops the line with AOI-INSP-029: a line runs one board model."""
         try:
             self._tidy()
             files = self._look()
         except OSError as e:
             if not self.lost:
                 self.lost = True
-                self.refused(AoiError("AOI-INSP-023", str(e), folder=str(self.folder), reason=system_reason(e)))
+                self.refused(AoiError("AOI-INSP-028", str(e), folder=str(self.folder), reason=system_reason(e)))
             return None
         self.lost = False
         for name in files:
@@ -121,12 +121,12 @@ class FolderWatch:
             try:
                 board = parse(name)
                 if done.exists():
-                    raise AoiError("AOI-INSP-021", file=name, reason=SAME_NAME)
+                    raise AoiError("AOI-INSP-026", file=name, reason=SAME_NAME)
             except AoiError as e:
                 self._refuse(src, e)
                 continue
             if board.board_model != board_model:
-                raise AoiError("AOI-INSP-024", file=name, named=board.board_model, board_model=board_model)
+                raise AoiError("AOI-INSP-029", file=name, named=board.board_model, board_model=board_model)
             work = self.folder / WORKING / name
             try:
                 os.replace(src, work)  # the claim; refused while the imaging station still holds the file open
@@ -136,16 +136,16 @@ class FolderWatch:
             try:
                 frame, sha = self.load(work)
             except AoiError as e:
-                self._refuse(work, AoiError("AOI-INSP-022", str(e), file=name, reason=e.what))
+                self._refuse(work, AoiError("AOI-INSP-027", str(e), file=name, reason=e.what))
                 continue
             except Exception as e:  # a decoder's own failure: the file is the cause, the line goes on
-                self._refuse(work, AoiError("AOI-INSP-022", repr(e), file=name, reason=NOT_DECODED))
+                self._refuse(work, AoiError("AOI-INSP-027", repr(e), file=name, reason=NOT_DECODED))
                 continue
             if (earlier := self.inspected(sha)) == done:  # saved before a stop moved it: done now, nothing repeated
                 self.unmoved[work] = done
                 continue
             if earlier is not None:
-                self._refuse(work, AoiError("AOI-INSP-021", file=name, reason=SAME_IMAGE.fill(earlier=earlier.name)))
+                self._refuse(work, AoiError("AOI-INSP-026", file=name, reason=SAME_IMAGE.fill(earlier=earlier.name)))
                 continue
             self.claimed[done] = work
             return frame, FrameMeta(done, board.view, sha)

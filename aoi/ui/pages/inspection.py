@@ -263,7 +263,7 @@ class InspectionPage(Page):
 
     def watch_folder(self) -> None:
         """Ctrl+Shift+I: the input folder an Admin set, in place of the queue (REQ-INSP-020); Start runs the line, which
-        inspects each board image that arrives, and Stop pauses it. A folder that cannot be opened is AOI-INSP-023."""
+        inspects each board image that arrives, and Stop pauses it. A folder that cannot be opened is AOI-INSP-028."""
         if self.running or self.worker is not None or self._bg is not None:
             return
         self.run_in_background(self.ctx.folder_watch, on_result=self._watching)  # file work, never on the UI thread

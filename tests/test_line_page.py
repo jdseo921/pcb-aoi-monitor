@@ -51,6 +51,6 @@ def test_req_insp_020_an_operator_runs_pauses_and_resumes_the_line(
         p.name for p in (inbox / "done").iterdir()
     ) == sorted([NAMES[0], NAMES[1], NAMES[3]])
     page._refresh_alarms()
-    assert any("AOI-INSP-020" in page.alarms.item(i).text() for i in range(page.alarms.count()))
+    assert any("AOI-INSP-025" in page.alarms.item(i).text() for i in range(page.alarms.count()))
     page.act_stop.trigger()
     qtbot.waitUntil(lambda: page.worker is None, timeout=10000)
