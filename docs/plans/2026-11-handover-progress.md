@@ -208,3 +208,7 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   install, demo walkthrough and own-photo check with a tick column; `install.md` names the pilot-signed artifact that
   builds of `main` make and its UAC publisher. Nothing under `aoi/` changed and the regression set is unchanged. One PR
   on `main`.
+- 2026-11-10: Jay answered ADR 0024 D29 with (A) on a decision card and asked to "push everything to main". The senior
+  review's train (#491 to #498 and #500) lands on `main` through #491: each PR merged into its base, then `main`
+  merged into #491's branch, with the register's status column and the progress file taking both sides' lines and
+  `aoi/i18n/aoi_ko.ts` regenerated. D26 to D28 stay proposed.
