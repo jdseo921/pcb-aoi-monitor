@@ -933,7 +933,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+196"/>
+        <location filename="../core/services.py" line="+197"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1017,8 +1017,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+190"/>
-        <location line="+2583"/>
+        <location line="+200"/>
+        <location line="+2580"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1270,19 +1270,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+1329"/>
+        <location line="+1339"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4851"/>
-        <location line="+3536"/>
+        <location line="-4868"/>
+        <location line="+3543"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3626"/>
+        <location line="-3634"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1307,7 +1307,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+26"/>
+        <source>its AI model file {file} cannot be loaded ({reason})</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1382,7 +1387,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1650"/>
+        <location line="+1657"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1594,7 +1599,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+464"/>
+        <location line="+474"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1609,7 +1614,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4287"/>
+        <location line="-4305"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1619,7 +1624,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+40"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1634,12 +1639,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1541"/>
+        <location line="+1551"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1553"/>
+        <location line="+1550"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1704,7 +1709,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+132"/>
+        <location line="+142"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1751,7 +1756,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4733"/>
+        <location line="-4750"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4617,7 +4622,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3778"/>
+        <location filename="../core/services.py" line="+3785"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -9812,7 +9817,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3862"/>
+        <location filename="../core/services.py" line="-3870"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10109,13 +10114,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+855"/>
+        <location line="+861"/>
         <location line="+42"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-893"/>
+        <location line="-899"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10345,7 +10350,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+49"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10391,12 +10396,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-545"/>
+        <location line="-551"/>
         <source>No samples for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+369"/>
+        <location line="+375"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>

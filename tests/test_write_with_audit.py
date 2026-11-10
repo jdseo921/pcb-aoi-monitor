@@ -23,7 +23,7 @@ from aoi.core.services import AppContext
 from aoi.data import atomic
 from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import cell_text
-from tests.conftest import listed
+from tests.conftest import another_version, listed
 from tests.test_req_done_in_v01 import BOARD, _window
 from tests.test_roles_and_audit import (
     WRITES,
@@ -62,14 +62,15 @@ def _state(ctx: AppContext, out: Path) -> set[str]:
 
 
 def _second_version(ctx: AppContext) -> None:
-    """v1.1 active, so activating v1.0 (WRITES) changes which AI model judges."""
-    v10 = ctx.models("TINY")[0]
-    ctx.db.register_model("TINY", "v1.1", v10["path"], {}, activate=True)
+    """v1.1 inactive beside v1.0, with its own AI model file and card, so activating it (WRITES, the newest) changes
+    which AI model judges; activating the active one changes nothing to undo (review TRN-1)."""
+    another_version(ctx, "TINY", "v1.1")
 
 
 def _rolled_back_to_v10(ctx: AppContext) -> None:
-    """v1.0 activated in place of v1.1, so rolling back (WRITES) makes v1.1 active again (REQ-TRN-010)."""
-    _second_version(ctx)
+    """v1.0 activated in place of v1.1, so rolling back (WRITES) makes v1.1 active again (REQ-TRN-010), its file one
+    that loads as its own (review TRN-5)."""
+    ctx.activate_model(another_version(ctx, "TINY", "v1.1"))
     ctx.activate_model(next(m["id"] for m in ctx.models("TINY") if m["version"] == "v1.0"))
 
 
