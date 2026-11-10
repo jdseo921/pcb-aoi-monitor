@@ -50,7 +50,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin (`feat/REQ-USR-005-recovery-sign-in`) |
 | E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | #447 (two PRs) | in review |
 | E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | planned |
-| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | in review |
+| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | merged 2026-11-04 (#450); the senior review's fixes, a dotted board ID and a shift CSV held open, in review (`fix/REQ-INSP-021-result-files-keep-every-board`) |
 | F.1 | Korean for the operator: `QTranslator`, `.qm` shipped, operator path translated | REQ-SET-006 (operator scope) | planned |
 | F.2 | Offline licence key and the EULA page | REQ-SET-010, REQ-SET-022 | planned |
 | F.3 | Station hardening: autostart with restart on failure, kiosk guidance, self-check alarms | REQ-SET-024 | planned |

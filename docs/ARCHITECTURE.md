@@ -98,7 +98,9 @@ The Inspection page runs `board()` on the pool thread and `settle()` on the UI t
 Each saved board's result files (REQ-INSP-021), `aoi/core/result_files.py`, are written by `log_result` after its row
 commits, into `Settings.output_folder` when one is set: `<board ID>_<record UUID>.json` and `.csv`, and a line in
 `shift_<local date>.csv`, each replaced whole (`aoi/data/atomic.py`); `docs/schemas/result-file.schema.json` gives the
-fields.
+fields. A shift CSV that refuses its line keeps it in the context's `_shift_lines`, added in board order by the next
+write or by the heartbeat's timer once the file takes it, a last time at close (`result_files.flush`), with AOI-INSP-020
+raised once while any line is kept (`ShiftNotWritten.first`).
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
 and `aoi/hal` too, and since S56 on `aoi/selftest.py`, with no flag relaxed (`pyproject.toml`). PySide6 enums are
