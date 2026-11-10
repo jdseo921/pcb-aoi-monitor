@@ -73,6 +73,9 @@ build above, with Inno Setup 6.7.1: `iscc /DAppVersion=<version in aoi\config.py
 
 ## Try the demo in 5 minutes
 
+Not a developer? Install the Windows build and follow [docs/install/tester-guide.md](docs/install/tester-guide.md),
+which needs no Python. From source:
+
 ```powershell
 python tools\make_demo_bundle.py    # draws the demo's boards and trains its AI model (a few minutes, once)
 python main.py --demo

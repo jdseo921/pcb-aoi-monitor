@@ -3,8 +3,10 @@
 **For our own tests only.** The installer CI builds is not signed and is not a release: it must never go to a
 customer, onto a customer's station or into a customer demo (Engineering standard, "Signing"; Customers & Launch,
 "Demos"). A release is a signed installer built by CI from a tagged commit after two approvals, and it does not exist
-yet (REQ-SET-012 stays Partial; the certificate is plan item J6). Because the installer is unsigned, Windows
-SmartScreen warns about it and the User Account Control prompt names no publisher. See ADR 0007 for how it is built.
+yet (REQ-SET-012 stays Partial; the certificate is plan item J6). A tester with no technical background follows
+[tester-guide.md](tester-guide.md) instead of this page. Because the installer is unsigned, or signed by
+the pilot CA that only pilot stations trust, Windows SmartScreen warns about it and the User Account Control prompt
+names no publisher. See ADR 0007 for how it is built.
 Builds of main and of `v*` tags signed with the pilot certificate are named `…-pilot-signed` instead of `…-unsigned`
 and installed as [Trusting the pilot build](pilot-signing.md) says (REQ-SET-023).
 
@@ -32,8 +34,10 @@ The station PC, as Customers & Launch publishes it ("One published PC spec"):
 
 1. On GitHub, open **Actions → Windows build** and pick a green run: the latest on `main`, or the run of a `v*` tag.
    **Run workflow** builds any branch.
-2. Under **Artifacts**, download `AOI-PoC-Inspector-<version or tag>-g<commit>-windows-x64-unsigned-installer`
-   and unzip it: it holds `AOI-PoC-Inspector-<version>-setup-x64-unsigned.exe`. Artifacts are kept for 30 days.
+2. Under **Artifacts**, download `AOI-PoC-Inspector-<version or tag>-g<commit>-windows-x64-pilot-signed-installer`
+   (a run of `main` or a tag) or `…-windows-x64-unsigned-installer` (any other branch) and unzip it: it holds
+   `AOI-PoC-Inspector-<version>-setup-x64-pilot-signed.exe` or `…-unsigned.exe`. Artifacts are kept for 30 days, and
+   GitHub lets only signed-in users download them.
 3. A green run means CI installed this installer silently on a clean Windows runner, ran the installed app's
    `--self-test` (one synthetic board, the expected verdict) and uninstalled it, and the workspace stayed untouched
    (`tools/check_installer.py`). The `…-windows-x64-unsigned` artifact beside it is the same build as a folder, with
@@ -42,9 +46,11 @@ The station PC, as Customers & Launch publishes it ("One published PC spec"):
 ## Install
 
 1. Start the setup file. If SmartScreen shows **Windows protected your PC**, choose **More info → Run anyway**. The
-   User Account Control prompt shows *Unknown publisher*: choose **Yes**. Any publisher name there means the file is
-   not ours; stop.
-2. The welcome page says it is an internal test build, not signed. Keep the folder offered, tick **Create a desktop
+   User Account Control prompt shows *Unknown publisher*: choose **Yes**. A pilot-signed build on a station that
+   trusts the pilot CA names "AOI PoC Inspector pilot" there instead ([pilot-signing.md](pilot-signing.md)); any other
+   publisher name means the file is not ours; stop.
+2. The welcome page says it is a pilot build signed with the pilot certificate, or, for an unsigned build, an
+   internal test build, not signed. Keep the folder offered, tick **Create a desktop
    shortcut** if you want one (off by default), then **Install** and **Finish**.
 
 An install over an earlier build replaces its program files and keeps the workspace. For a script, from an
