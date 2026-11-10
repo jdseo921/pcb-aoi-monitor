@@ -196,3 +196,8 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-06: Jay said "Set H1 and H2 rules using industry norms": ADR 0024 D24 (no account claimed at a station) and
   D25 (each role lands on its own work), confirmed, then built in `feat/REQ-USR-005-claim-and-landing`, stacked on
   `fix/usability-sweep-low-risk` (#478), the same day's train.
+- 2026-11-10: tester readiness check (Jay's request: can people who know little about technology run and test Stage 1
+  with sample uploads). `docs/REQ-SET-012-tester-guide`, docs only: `docs/install/tester-guide.md`, a plain-language
+  install, demo walkthrough and own-photo check with a tick column; `install.md` names the pilot-signed artifact that
+  builds of `main` make and its UAC publisher. Nothing under `aoi/` changed and the regression set is unchanged. One PR
+  on `main`.
