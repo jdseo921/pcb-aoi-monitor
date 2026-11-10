@@ -10,18 +10,20 @@ import json
 import shutil
 import sqlite3
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
 
-from aoi.core import crypto, stores
+from aoi.core import anomaly, crypto, stores
+from aoi.core.cycle import FrameMeta
 from aoi.core.imaging import image_header, save_image
-from aoi.core.services import AppContext
+from aoi.core.services import TEST_RUNS, AppContext
 from aoi.data import atomic, credentials
 from aoi.errors import AoiError
-from tests.conftest import plain
+from tests.conftest import another_version, plain
 from tests.test_datasets import agree, ready
 from tests.test_labeller_agreement import CAL
 from tools.trainable import trainable
@@ -423,3 +425,171 @@ def test_req_trn_017_no_plain_file_while_training(
         data = f.read_bytes()
         assert not any(s in data for s in secrets), f
     assert all(Path(s["path"]).read_bytes().startswith(crypto.MAGIC) for s in ctx.samples("TRN"))
+
+
+def shredded(ctx: AppContext, call: Any, *args: Any) -> AoiError:
+    """The AOI-TRN-058 that `call(*args)` raises for a board model of a shredded store, its what naming the day."""
+    with pytest.raises(AoiError) as refused:
+        call(*args)
+    assert refused.value.code == "AOI-TRN-058", refused.value
+    day = str((ctx.store_of(str(refused.value.params["board"])) or {})["shredded_at"])[:10]
+    assert f"was shredded on {day}, and nothing learned from its images judges boards again" in refused.value.what
+    return refused.value
+
+
+def test_req_trn_017_a_store_shredded_while_training_keeps_nothing_learned_from_it(
+    ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A store shredded while a training of its board model ran, once the run had read its images, left the run to make
+    models/TRN again, save its AI model and Golden board there, plain, register the version and make it live (review
+    TRN-2). Now the run is refused as it registers, with AOI-TRN-058 audited as training.refused, and removes what it
+    wrote: no file or folder under models/, no version, none active."""
+    board(ctx, "TRN", tmp_path / "trn", 20, 6)  # the 20 OK training needs
+    store, dataset, train = moved_in(ctx, "TRN", "Acme"), trainable(ctx, "TRN", "Acme"), anomaly.train
+
+    def shredded_meanwhile(*args: Any, **kwargs: Any) -> anomaly.AnomalyModel:  # every image read and in memory
+        shred = threading.Thread(target=as_admin, args=(ctx, ctx.shred_store, store["uuid"]))  # as the UI thread does
+        shred.start()
+        shred.join()
+        return train(*args, **kwargs)
+
+    monkeypatch.setattr(anomaly, "train", shredded_meanwhile)
+    refused = shredded(ctx, ctx.train, dataset, 1, 32)
+    assert str(refused.params["refused"]) == "the AI model just trained was not kept as a version"
+    assert not (ctx.settings.models_dir / "TRN").exists()
+    assert (ctx.models("TRN"), ctx.active_model("TRN"), ctx.audit_entries(action="model.train")) == ([], None, [])
+    [entry] = ctx.audit_entries(action="training.refused")
+    day = str((ctx.store_of("TRN") or {})["shredded_at"])[:10]
+    assert (entry["object_uuid"], entry["after"]["code"], entry["reason"]) == (
+        dataset,
+        "AOI-TRN-058",
+        f"its dataset store was shredded on {day}",
+    )
+
+
+def test_req_trn_017_a_shred_deletes_an_ai_model_registered_while_it_ran_and_none_goes_live_again(
+    ctx: AppContext, keys: credentials.MemoryCredentials, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A shred listed the files under models/ before it recorded itself, so the AI model of a training registered in
+    between stayed there, plain, its store.shred entry counting none of them, and a version of the shredded store could
+    be made active again (review TRN-2). Now the shred lists them in the transaction that records it, counts and deletes
+    them; Activate refuses a version of its board model with AOI-TRN-058, its files put back too, and neither the active
+    version's weights, held in memory before, nor its file put back judge a board."""
+    board(ctx, "TRN", tmp_path / "trn", 20, 6)
+    store, dataset = moved_in(ctx, "TRN", "Acme"), trainable(ctx, "TRN", "Acme")
+    models, kept, delete = ctx.settings.models_dir / "TRN", tmp_path / "kept", keys.delete
+    made: dict[str, Any] = {}
+
+    def trained_meanwhile(name: str) -> None:  # after the shred listed what it deletes, before it is recorded
+        ctx.train(dataset, 1, 32)  # live, as the board model's first
+        assert ctx.load_model("TRN") is not None  # its weights in memory, as a station judging boards holds them
+        made.update(live=ctx.active_model("TRN"), waiting=another_version(ctx, "TRN", "v9.0"))
+        shutil.copytree(models, kept)
+        delete(name)
+
+    monkeypatch.setattr(keys, "delete", trained_meanwhile)
+    counts = as_admin(ctx, ctx.shred_store, store["uuid"])
+    [entry] = ctx.audit_entries(action="store.shred")
+    assert counts["models"] == entry["after"]["models"] == len([f for f in kept.rglob("*") if f.is_file()]) > 0
+    assert not models.exists()
+    shutil.copytree(kept, models)  # a copy kept elsewhere, put back
+    refused = shredded(ctx, ctx.activate_model, made["waiting"])
+    assert str(refused.params["refused"]) == "AI model v9.0 was not made active"
+    assert ctx.active_model("TRN") == made["live"]
+    judged = shredded(ctx, ctx.load_model, "TRN")  # neither the weights in memory nor the copy put back judge a board
+    assert str(judged.params["refused"]) == f"no board was judged with AI model {made['live']['version']}"
+
+
+def test_req_trn_017_an_inspection_run_judges_no_board_after_a_shred(ctx: AppContext, tmp_path: Path) -> None:
+    """The engine an Inspection run keeps, with its AI model's weights and Golden board in memory, went on judging the
+    boards of a board model whose store was shredded meanwhile, and saved their records: a shred changes none of the
+    inputs `engine_is_current` compares (review TRN-2). Now the next board builds the engine again, which is refused
+    with AOI-TRN-058, and no record is saved."""
+    board(ctx, "TRN", tmp_path / "trn", 20, 6)
+    store, dataset = moved_in(ctx, "TRN", "Acme"), trainable(ctx, "TRN", "Acme")
+    ctx.train(dataset, 1, 32)  # live, as the board model's first
+    frame = np.random.default_rng(1).integers(0, 256, (32, 32, 3), dtype=np.uint8)
+    first, second = tmp_path / "b1.png", tmp_path / "b2.png"
+    for p in (first, second):
+        save_image(p, frame)
+    cycle = ctx.inspection_cycle()
+    out = cycle.settle(cycle.board("TRN", FrameMeta(first), frame)(), "TRN", in_run=True)
+    assert out.kept and out.engine.model is not None and out.record_id is not None
+    as_admin(ctx, ctx.shred_store, store["uuid"])
+    refused = shredded(ctx, cycle.board("TRN", FrameMeta(second), frame))
+    version = (ctx.active_model("TRN") or {})["version"]
+    assert str(refused.params["refused"]) == f"no board was judged with AI model {version}"
+    assert ctx.db.inspection_counts("TRN")[0] == 1  # the first board's record only
+
+
+@pytest.mark.parametrize("images", [2, 1], ids=["at-the-next-image", "as-it-stores"])
+def test_req_trn_017_an_ai_model_test_judges_no_image_after_a_shred(
+    ctx: AppContext, tmp_path: Path, images: int
+) -> None:
+    """An AI Model Test builds its engine once, so a run under way went on judging its images with the shredded store's
+    AI model and stored the run (review TRN-2). Now the image after the shred, or the run's store after its last image,
+    is refused with AOI-TRN-058, and neither the run nor its overlays are kept."""
+    board(ctx, "TRN", tmp_path / "trn", 20, 6)
+    store, dataset = moved_in(ctx, "TRN", "Acme"), trainable(ctx, "TRN", "Acme")
+    ctx.train(dataset, 1, 32)  # live, as the board model's first
+    frame = np.random.default_rng(1).integers(0, 256, (32, 32, 3), dtype=np.uint8)
+    for n in range(images):
+        save_image(tmp_path / "run" / "ok" / f"b{n}.png", frame)
+    rows: list[dict[str, Any]] = []
+
+    def shred_after_first(row: dict[str, Any]) -> None:
+        rows.append(row)
+        if len(rows) == 1:
+            shred = threading.Thread(target=as_admin, args=(ctx, ctx.shred_store, store["uuid"]))  # as the UI does
+            shred.start()
+            shred.join()
+
+    refused = shredded(ctx, ctx.batch_test, "TRN", str(tmp_path / "run"), None, shred_after_first)
+    assert str(refused.params["refused"]) == "the AI Model Test judged no image after it and stored no run"
+    assert len(rows) == 1 and ctx.test_runs("TRN") == []
+    assert not (ctx.settings.results_dir / TEST_RUNS / rows[0]["run_uuid"]).exists()
+
+
+def test_req_trn_017_a_load_the_shred_meets_keeps_no_weights(
+    ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A load of the active AI model's file under way when a shred took the weights out of the cache put them in after
+    it, so they went on judging boards (review TRN-2). Now the load asks the store again before it caches them, and is
+    refused with AOI-TRN-058, as is every load after."""
+    board(ctx, "TRN", tmp_path / "trn", 20, 6)
+    store, dataset = moved_in(ctx, "TRN", "Acme"), trainable(ctx, "TRN", "Acme")
+    ctx.train(dataset, 1, 32)  # live, its weights not loaded yet, as after a restart
+    load = anomaly.AnomalyModel.load
+
+    def shredded_meanwhile(path: str | Path, device: str = "cpu") -> anomaly.AnomalyModel:
+        model = load(path, device)  # the file read; the shred lands before load_model caches the weights
+        as_admin(ctx, ctx.shred_store, store["uuid"])
+        return model
+
+    monkeypatch.setattr(anomaly.AnomalyModel, "load", staticmethod(shredded_meanwhile))
+    shredded(ctx, ctx.load_model, "TRN")
+    monkeypatch.setattr(anomaly.AnomalyModel, "load", load)
+    shredded(ctx, ctx.load_model, "TRN")  # nothing was cached for a later load to take
+
+
+def test_req_trn_017_a_first_version_a_shred_kept_from_going_live_is_refused(
+    ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A store shredded after a board model's first version registered and before it went live left Training to say the
+    version was trained but not made active, to be activated once the cause is fixed, which no step can fix (review
+    TRN-2). Now the training raises AOI-TRN-058 for it, the version not made active."""
+    board(ctx, "TRN", tmp_path / "trn", 20, 6)
+    store, dataset = moved_in(ctx, "TRN", "Acme"), trainable(ctx, "TRN", "Acme")
+    first_live = ctx._first_live
+
+    def shredded_first(board_model: str, model_id: int) -> Exception | None:  # registered, not live yet
+        shred = threading.Thread(target=as_admin, args=(ctx, ctx.shred_store, store["uuid"]))  # as the UI thread does
+        shred.start()
+        shred.join()
+        return first_live(board_model, model_id)
+
+    monkeypatch.setattr(ctx, "_first_live", shredded_first)
+    refused = shredded(ctx, ctx.train, dataset, 1, 32)
+    version = ctx.models("TRN")[0]["version"]
+    assert str(refused.params["refused"]) == f"AI model {version} was not made active"
+    assert ctx.active_model("TRN") is None and not (ctx.settings.models_dir / "TRN").exists()
