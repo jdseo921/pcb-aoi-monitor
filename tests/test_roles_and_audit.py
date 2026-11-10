@@ -289,6 +289,7 @@ UNCHECKED = {
     "note_window",  # the window's handle beside the lock, for a second start (A6): any role's window, not the database
     "inspection_cycle",  # the cycle a page or a headless driver inspects through, as inspect_file (#447)
     "folder_watch",  # the watched input folder the line takes boards from (REQ-INSP-020): moves files, judges none
+    "engine_may_judge",  # whether the engine the cycle keeps may judge the next board: a read (REQ-TRN-017)
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",
@@ -316,6 +317,7 @@ UNCHECKED = {
     "retention_confirmed",  # the Admin's confirmation the sweep deletes under, read (D20)
     "end_idle",  # an idle Engineer's or Admin's session ends: a system action on the window's timer (REQ-USR-004)
     "users_with_pins",  # which Operators have a PIN, read for Switch User (REQ-USR-003)
+    "reading",  # one screen's reads share What is missing while nothing is written; it writes nothing (REQ-SET-020)
 }  # fmt: skip
 CALLS = {**{name: call for name, (_, call) in WRITES.items()}, **CHECKED_READS}
 # The lowest role allowed each call, copied from the write table of docs/ARCHITECTURE.md §5 and REQ-CMP-005, never read

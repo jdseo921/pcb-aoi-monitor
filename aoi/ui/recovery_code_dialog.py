@@ -1,9 +1,10 @@
-"""The first Admin's recovery code, shown once as a store's key is (REQ-USR-005; ADR 0002, decision 6): Save to File…,
+"""An Admin's recovery code, shown once as a store's key is (REQ-USR-005; ADR 0002, decision 6): Save to File…,
 Print…, and Done, which (with Esc and the window's close) waits until it was saved or printed. The code's label cannot
 be selected, so it never reaches the clipboard, and the code is forgotten as the dialog closes."""
 
 from __future__ import annotations
 
+import hashlib
 import html
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -64,6 +65,17 @@ class RecoveryCodeDialog(QDialog):
         self.saved_line.setText(said)
         self.btn_done.setEnabled(True)
 
+    def file_name(self) -> str:
+        """The file name offered, the Admin's own, so a second Admin's sheet on the same USB drive is never offered over
+        the first's (senior review 2026-11-06, SEC-2): a name of lowercase letters and digits as it is; any other with
+        each other character a hyphen and 8 hex digits of the name's SHA-256 after it, so "kim.a" and "kim_a", or "Kim"
+        and "kim" on a drive that ignores case, are offered apart."""
+        user = self.ctx.user
+        name = "".join(c if c.isalnum() else "-" for c in user).strip("-") or "admin"
+        if name != user or user != user.casefold():
+            name = f"{name}-{hashlib.sha256(user.encode()).hexdigest()[:8]}"
+        return f"recovery-code-{name}.txt"
+
     def save_file(self) -> None:
         """The sheet as UTF-8 text, offered on the USB drive plugged in last, else in the home folder; written and
         audited by `AppContext.save_code_sheet`, whose refusal (AOI-LOG-002) is shown."""
@@ -71,7 +83,7 @@ class RecoveryCodeDialog(QDialog):
             QStandardPaths.writableLocation(QStandardPaths.StandardLocation.HomeLocation)
         )
         f, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Save Recovery Code"), str(start / "recovery-code-admin.txt"), self.tr("Text (*.txt)")
+            self, self.tr("Save Recovery Code"), str(start / self.file_name()), self.tr("Text (*.txt)")
         )
         if not f:
             return

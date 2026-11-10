@@ -28,6 +28,18 @@ COLUMNS = (
 )  # fmt: skip
 SHIFT_PREFIX = "shift_"
 _shift_lock = threading.Lock()  # one line at a time into a shift CSV, whichever cycle saved the board
+Held = dict[Path, list[str]]  # the lines shift CSVs refused, in board order, by shift CSV: one per AppContext
+
+
+class ShiftNotWritten(Exception):
+    """The board's own result files were written, but a shift CSV, `shift`, still refuses the lines kept back for it
+    (`cause`), this board's or an earlier one's: they stay kept, for the next write or `flush` that it takes. `first`:
+    `shift` kept no line before this board's, so its refusal is new and is alarmed; a file newly refused is named
+    before one refused already."""
+
+    def __init__(self, shift: Path, cause: Exception, first: bool) -> None:
+        super().__init__(str(cause))
+        self.shift, self.cause, self.first = shift, cause, first
 
 
 def document(
@@ -68,18 +80,63 @@ def csv_row(doc: dict[str, Any]) -> str:
     return out.getvalue()
 
 
-def write(folder: Path, doc: dict[str, Any], day: str, stem: str) -> list[Path]:
+def write(folder: Path, doc: dict[str, Any], day: str, stem: str, held: Held) -> list[Path]:
     """Write the board's `<stem>_<record UUID>.json` and `.csv` together or not at all, then add its line to
     `shift_<day>.csv` (with the header first in a new one), replacing the file whole, so a reader never sees half of
-    one. The folder must exist: one gone (a share or drive not there) is never made again on the station's own disk.
-    The shift CSV is this station's: two stations never share an output folder. Returns the paths."""
+    one. The names are put together whole, so a stem with a dot in it (a revision R1.2) keeps its record UUID. The
+    folder must exist: one gone (a share or drive not there) is never made again on the station's own disk. The shift
+    CSV is this station's: two stations never share an output folder. A shift CSV that refuses the write (Windows
+    refuses to replace a file a spreadsheet holds open) keeps the line back in `held`, and every line kept back for any
+    shift CSV goes in with the next write it takes (`ShiftNotWritten` while one is still kept). Returns the paths."""
     if not folder.is_dir():
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), str(folder))
-    name, row = folder / f"{stem}_{doc['record_uuid']}", csv_row(doc)
+    name, row = f"{stem}_{doc['record_uuid']}", csv_row(doc)
     body = (json.dumps(doc, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-    atomic.write_all([(name.with_suffix(".json"), body), (name.with_suffix(".csv"), row.encode("utf-8"))])
+    files = [folder / f"{name}.json", folder / f"{name}.csv"]
+    atomic.write_all([(files[0], body), (files[1], row.encode("utf-8"))])
     shift = folder / f"{SHIFT_PREFIX}{day}.csv"
     with _shift_lock:
-        before = shift.read_text(encoding="utf-8") if shift.is_file() else ",".join(COLUMNS) + "\n"
-        atomic.write_text(shift, before + row)
-    return [name.with_suffix(".json"), name.with_suffix(".csv"), shift]
+        kept = set(held)  # the shift CSVs that kept lines before this board's
+        held.setdefault(shift, []).append(row)
+        refused = _add(held)
+    if refused:
+        new = [r for r in refused if r[0] not in kept]
+        raise ShiftNotWritten(*(new or refused)[0], first=bool(new))
+    return [*files, shift]
+
+
+def flush(held: Held) -> tuple[Path, Exception] | None:
+    """Add the lines kept back in `held` to the shift CSVs that take them now (the heartbeat's timer, and close): the
+    first that still refuses and why, else None."""
+    with _shift_lock:
+        refused = _add(held)
+    return refused[0] if refused else None
+
+
+def _add(held: Held) -> list[tuple[Path, Exception]]:
+    """Each shift CSV's kept lines added after what it holds, in board order, and dropped from `held` once in: a file
+    whose folder is gone is never made again, and one a spreadsheet saved in another encoding, or that refuses the
+    write, keeps them. A write refused after the file took the lines (a folder that cannot be synced) counts as in, so
+    no line goes in twice. Under `_shift_lock`. Returns each file that keeps lines, with why, in board order."""
+    refused: list[tuple[Path, Exception]] = []
+    for shift, lines in list(held.items()):
+        text = None
+        try:
+            if not shift.parent.is_dir():
+                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), str(shift.parent))
+            before = shift.read_text(encoding="utf-8") if shift.is_file() else ",".join(COLUMNS) + "\n"
+            text = before + "".join(lines)
+            atomic.write_text(shift, text)
+        except (OSError, UnicodeError) as e:
+            if text is None or not _holds(shift, text):
+                refused.append((shift, e))
+                continue
+        del held[shift]
+    return refused
+
+
+def _holds(path: Path, text: str) -> bool:
+    try:
+        return path.read_text(encoding="utf-8") == text
+    except (OSError, UnicodeError):
+        return False

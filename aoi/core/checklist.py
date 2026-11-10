@@ -25,14 +25,15 @@ class Cover:
 
 def coverage(recipe: Recipe) -> list[Cover]:
     """Each mandatory check, in the table's order, with how `recipe` covers it. A check judged in an ROI (ROI_FOR) is
-    covered only by an enabled ROI of its type; the others a Stage 1 station judges are covered by the whole board
-    while the recipe runs the AI check or the Golden board comparison."""
+    covered only by an enabled ROI of its type while the recipe runs the AI check, which ROIs are judged by; the others
+    a Stage 1 station judges are covered by the whole board while the recipe runs the AI check or the Golden board
+    comparison."""
     out = []
     for check in MANDATORY_AOI_SET:
         if check in REQUIRES_3D_OR_SIDE:
             out.append(Cover(check, STAGE_2))
         elif check in ROI_FOR:
-            names = tuple(r.name for r in recipe.rois if r.enabled and r.type == ROI_FOR[check])
+            names = tuple(r.name for r in recipe.rois if r.enabled and r.type == ROI_FOR[check] and recipe.use_ai)
             out.append(Cover(check, ROI if names else NOT_COVERED, names))
         else:
             out.append(Cover(check, WHOLE_BOARD if recipe.use_ai or recipe.use_compare else NOT_COVERED))

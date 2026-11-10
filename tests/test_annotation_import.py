@@ -6,6 +6,7 @@ read, is left out and the sheet says why."""
 from __future__ import annotations
 
 import shutil
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -169,3 +170,52 @@ def test_req_trn_019_the_sheet_shows_each_file_s_boxes_and_how_many_came_in(
     qtbot.waitUntil(lambda: page._bg is None and not page.sheet.running, timeout=60000)
     assert [r[STATUS] for r in _rows(page.sheet.table)] == ["copied with 1 box(es)", "copied with 2 box(es)"]
     assert "label_on_silk" in cell_item(page.sheet.table, 0, STATUS).toolTip()
+
+
+@pytest.mark.parametrize(
+    ("text", "why"),
+    [
+        (_voc(640, 480, ("mouse_bite", 1, 1, 9, 9)).replace("<xmin>1<", "<xmin>nan<"), "'nan' where a number belongs"),
+        (_voc(640, 480, ("mouse_bite", 1, 1, 9, 9)).replace("<width>640<", "<width>inf<"), "'inf' where a number"),
+        (_voc(640, 480, ("mouse_bite", 1, 1, 9, 9)).replace("<xmax>9<", "<xmax>1e999<"), "'1e999' where a number"),
+        (_voc(640, 480, ("mouse_bite", 1, 1, 9, 9)).replace("<ymax>9<", "<ymax>nine<"), "'nine' where a number"),
+        ("0 nan 0.5 0.1 0.1\n", "'nan' where a number belongs"),
+        ("1.5 0.5 0.5 0.1 0.1\n", "no YOLO box: '1.5 0.5 0.5 0.1 0.1'"),
+        ("0 0.5 0.5\n", "no YOLO box: '0 0.5 0.5'"),
+        (f"{'9' * 5000} 0.5 0.5 0.1 0.1\n", "no YOLO box: '99999"),
+    ],
+    ids=["voc-nan", "voc-inf", "voc-1e999", "voc-word", "yolo-nan", "yolo-class-1.5", "yolo-short", "yolo-long"],
+)
+def test_req_trn_019_an_annotation_number_that_is_not_one_gives_no_box_and_stops_no_import(
+    ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, text: str, why: str
+) -> None:
+    """Before, `nan`, `inf` or `1e999` in a box or a size raised an uncoded ValueError or OverflowError: the import
+    stopped at that file, part of the folder in and the rest not, and listing the folder raised on the window's thread;
+    a word where a number belongs, a class number of thousands of digits, or a line of fewer than five cells gave
+    Python's own message. Now the file gives no box (`read` says why in this app's words), and the folder's other images
+    come in; a box reaching far past a known image is cut at its edge, never an error and never dropped."""
+    ngs = list_images(synthetic_dataset / "train" / "ng")
+    _, w, h = file_header(ngs[0]) or ("", 0, 0)
+    root, voc = tmp_path / "set", text.startswith("<")
+    root.mkdir()
+    for name, src in (("a", ngs[0]), ("b", ngs[1])):
+        shutil.copy(src, root / f"{name}.png")
+    good = _voc(w, h, ("mouse_bite", 1, 1, 9, 9)) if voc else "0 0.5 0.5 0.1 0.1\n"
+    if not voc:
+        (root / "classes.txt").write_text("mouse_bite\n")
+    for name, body in (("a", text.replace("640", str(w)).replace("480", str(h))), ("b", good)):
+        (root / f"{name}.{'xml' if voc else 'txt'}").write_text(body)
+    files = {Path(f.path).stem: f for f in folder_files(root)}
+    found = annotation_files.read(root / "a.png", (w, h), root)
+    assert found is not None and not found.boxes and why in found.why, found.why
+    assert files["a"].label is None, "no type from a file that gives none: the sheet asks for one"
+    report = ctx.import_files(BOARD, [replace(files["a"], label="NG", defect_type="Mousebite"), files["b"]])
+    assert len(report.added) == 2 and not report.refused and report.stopped is None
+    assert [(Path(f.path).stem, n, str(said)) for f, n, said in report.boxes] == [("b", 1, "")]
+    if voc:  # finite, but past any image: the box runs to the image's right edge
+        (root / "b.xml").write_text(_voc(w, h, ("mouse_bite", 1, 1, 9, 9)).replace("<xmax>9<", "<xmax>1e308<"))
+    else:  # in pixels, a box 1e308 images wide centred on the image: it runs from edge to edge
+        (root / "b.txt").write_text("0 0.5 0.5 1e308 0.1\n")
+    far = annotation_files.read(root / "b.png", (w, h), root)
+    assert far is not None and not far.why and len(far.boxes) == 1, far
+    assert (far.boxes[0].x, far.boxes[0].x + far.boxes[0].w) == ((1, w) if voc else (0, w)), far.boxes

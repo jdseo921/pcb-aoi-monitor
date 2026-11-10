@@ -84,6 +84,8 @@ class InspectionPage(Page):
         self.running = False
         self.run_board_model: str | None = None  # the board model a run started under: its boards are judged under it
         self.run_actor: Actor = ctx.actor  # who pressed Start: every board of the run is recorded under them (#177)
+        self.idle_end: int | None = None  # the minutes after which the session of who pressed Start ended (SEC-4)
+        self.stop_line: str | None = None  # the line under the verdict saying why the run stopped (SEC-4)
         self.last: InspectionResult | None = None
         self.last_path: Path | None = None
         self.last_id: int | None = None  # the record of the last result, for Compare (REQ-INSP-009)
@@ -316,6 +318,7 @@ class InspectionPage(Page):
         if self.pace_s is not None and self.queue_pos + 1 >= len(self.queue):
             self.queue_pos = -1
         self.running, self.run_board_model, self.run_actor = True, self.board_model, self.ctx.actor
+        self.idle_end = None
         self.cycle.start_run()
         self._update_buttons()
         self._show_line()
@@ -781,17 +784,37 @@ class InspectionPage(Page):
         self._refresh_alarms()
 
     def _stop_for_user(self) -> None:
-        """Another user signed in with Switch User during a run: the run stops after the board in hand, which is
-        recorded under the user who pressed Start, so no board is recorded under a user who did not start it (#177)."""
+        """Another user signed in during a run, with Switch User or at an idle end (`idle_end`): the run stops after
+        the board in hand, which is recorded under the user who pressed Start, so no board is recorded under a user who
+        did not start it (#177). The line says why on the status bar and under the verdict, until the next board, so
+        the user now signed in sees why the run stopped (senior review 2026-11-06, SEC-4)."""
         self.running = False
         self._look_timer.stop()
         self._update_buttons()
         self._show_line()
-        msg = self.tr(
-            "Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to"
-            " carry on with the queue as {user}."
-        ).format(user=self.ctx.user, starter=self.run_actor.name)
-        self.shell.status(msg, ms=0)  # until the next message, so the user now signed in sees why the run stopped
+        if self.idle_end is not None:
+            msg = self.tr(
+                "Run stopped: the session of {starter} ended after {minutes} minutes without input, and {user} is"
+                " signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with"
+                " the queue as {user}."
+            ).format(user=self.ctx.user, starter=self.run_actor.name, minutes=self.idle_end)
+        else:
+            msg = self.tr(
+                "Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start"
+                " to carry on with the queue as {user}."
+            ).format(user=self.ctx.user, starter=self.run_actor.name)
+        self.summary.setText("\n".join([self.summary.text(), msg]))
+        self.stop_line = msg
+        self.shell.status(msg, ms=0)  # until the next message
+
+    def on_user_changed(self) -> None:
+        """A sign-in: an idle end before it is no longer why a run would stop, and the line under the verdict that named
+        who should press Start goes, as it would name the wrong user now (senior review 2026-11-06, SEC-4). The window
+        marks an idle end after its sign-in (`MainWindow.check_idle`)."""
+        self.idle_end = None
+        if self.stop_line is not None:
+            self.summary.setText(self.summary.text().replace(f"\n{self.stop_line}", ""))
+            self.stop_line = None
 
     def _show_waiting(self) -> dict[str, Any] | None:
         """The line that names the header's board model's trained AI model while none is active, with Activate; hidden

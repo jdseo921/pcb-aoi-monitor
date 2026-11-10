@@ -1,9 +1,10 @@
 """The inspection cycle (#447; production plan PR 3.1): one board from its frame to its saved record, with no screen.
-For each board it checks that the engine it keeps is still what is active and builds it again when not (#243), loads
-the image unless the source gave the frame, inspects the board, saves its record with `AppContext.log_result`
-(REQ-INSP-008) and tells a run judged by two engines (#243, S29). It stores the four operational alarms: AOI-TRN-003
-and AOI-TRN-051 (no active AI model), AOI-INSP-012 (a run stopped by a board model change) and AOI-INSP-013 (a run
-whose engine changed). The Inspection page drives it board by board; a driver with no screen calls `run`."""
+For each board it checks that the engine it keeps is still what is active and that no shred ended its board model's
+dataset store (REQ-TRN-017), and builds it again when not (#243), loads the image unless the source gave the frame,
+inspects the board, saves its record with `AppContext.log_result` (REQ-INSP-008) and tells a run judged by two
+engines (#243, S29). It stores the four operational alarms: AOI-TRN-003 and AOI-TRN-051 (no active AI model),
+AOI-INSP-012 (a run stopped by a board model change) and AOI-INSP-013 (a run whose engine changed). The Inspection page
+drives it board by board; a driver with no screen calls `run`."""
 
 from __future__ import annotations
 
@@ -160,8 +161,9 @@ class InspectionCycle:
         report: Callable[[InspectionResult], None] | None,
     ) -> Outcome:
         ctx = self.ctx
-        # a training run, an activation or a recipe saved meanwhile makes the kept engine stale (#243)
-        current = kept is not None and ctx.engine_is_current(board_model, kept)
+        # a training run, an activation or a recipe saved meanwhile makes the kept engine stale (#243), and a shred
+        # of its board model's dataset store ends it: the engine built again is refused (AOI-TRN-058; review TRN-2)
+        current = kept is not None and ctx.engine_may_judge(board_model, kept)
         engine = kept if kept is not None and current else ctx.inspector(board_model, side=meta.view)
         engine.side = meta.view  # one job at a time per cycle, so nothing else reads it meanwhile
         res = engine.inspect(ctx.load_image(meta.path) if frame is None else frame)

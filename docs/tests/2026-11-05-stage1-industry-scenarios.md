@@ -325,6 +325,44 @@ comparison with the live version is not built yet (REQ-TRN-012, Partial, release
 tell the versions apart when every good board is NG. 1 of 15 against 0 of 15 escapes cannot show whether either new
 version is worse; on the commissioned station the escape came already with v1.1, which added only false calls.
 
+## Addendum, 2026-11-06: the scenarios again on pcb2
+
+Jay asked for the scenarios at the largest scale this machine allows. The plan was S2 to S11 on pcb2, pcb3 and pcb4,
+then S1 again with seeds 1 and 2. Only pcb2 got through: S2 to S5, S7, S8, S10 and S11 in both configurations and S6
+as shipped, seed 0, with the tool as merged in #477 (`0cf6f24`). The cloud machine restarts when its session is idle
+and holds a run for at most 2 h, and both configurations shared its 4 cores. S6 as commissioned and S9 on pcb2,
+everything on pcb3 and pcb4, and the extra seeds did not run. Jay chose to stop at pcb2; the scale run is to be repeated once #460 is fixed.
+The station is built as in Set-up, from pcb2's own images; S8 changes over to pcb3. These are counts, never accuracy.
+
+| Scenario | pcb2, shipped | pcb2, commissioned | Against pcb1 |
+|---|---|---|---|
+| S2 slow drift, 2,000 boards at 1 % | 0 of 20 defective escape (upper 13.9 %); 250 of 250 distinct good boards flagged | the same | the same |
+| S2 drift monitor | 0 alarms | 0 alarms | commissioned pcb1 had 1, at board 1,544 (#464) |
+| S3 placement, 247 good and 30 defective | good all NG; 0 of 30 escape (upper 9.5 %) | good 216 WARN, 31 NG; defective 27 NG, 3 WARN; 0 of 30 escape | 1 of 30 escaped on pcb1 (upper 14.9 %); commissioned good 3 NG |
+| S3 loaded backwards, 23 good and 10 defective | all NG; 0 of 10 escape (upper 25.9 %) | good 20 WARN, 3 NG; defective 10 NG | none OK, as on pcb1 |
+| S4 bad images, 5 of each | none OK; truncated and zero-byte files refused | none OK; 22 of 60 judged images WARN (out of focus 3; duplicate, 16-bit TIFF and CMYK 5 each; EXIF 4), the rest NG | none OK, as on pcb1, where motion blur was also 4 WARN |
+| S5 legitimate variation, 50 of each kind | 250 of 250 NG | 250 of 250 flagged, 134 of them NG | commissioned pcb1: 86 of 250 NG |
+| S6 few NG samples, 200 good and 30 defective | threshold 12.11 at 0, 3, 10 and 30 NG; every board NG; 0 of 30 escape (upper 9.5 %) | not run | pcb1: 18.50 at every count (#454) |
+| S7 repeatability, 30 good and 30 defective, 10 shots each | 0 of 60 flip | good 3 of 30 flip (upper 23.9 %), defective 1 of 30 (upper 14.9 %) | commissioned pcb1: 3 of 30 and 11 of 30 |
+| S8 changeover to pcb3 and to a pcb2 revision | wrong model never OK; 0 escapes in every step (0 of 30 after the changeover to PCB2R2, upper 9.5 %) | the same | pcb1: 1 and 2 of 30 revision defects off their masks |
+| S8 time from first image to a working model | 953 s (PCB3), 1,025 s (PCB2R2) | 1,453 s, 789 s | different load: not a comparison |
+| S10 killed mid-save, 30 boards | 31 records, 0 lost, 1 stored twice (the 0.2 s kill) | the same | shipped pcb1: 2 orphaned files instead (#466 either way) |
+| S10 disk at 95 %, output unwritable | disk: 50 of 50 recorded, every flagged board kept its overlay; unwritable: 0 result files for the 25 boards (#465) | the same | the same |
+| S11 review loop, 100 good and 15 defective | 100 of 100 false calls with v1.0, v1.1 and v1.2; 0 of 15 escape each (upper 18.1 %); both new versions went live | the same | pcb1: 1 of 15 escaped with v1.2 (shipped), and with v1.1 and v1.2 (commissioned) |
+
+- **Nothing in the Summary changes.** Every good pcb2 board was flagged in every scenario that ran, in both
+  configurations, so first-pass yield stays 0 and the station still cannot replace inspectors. The false calls come
+  from the engine (#453, #460), not from pcb1's photos.
+- **The commissioned station calls more good pcb2 boards NG than pcb1's** (S3: 31 of 247 against 3; S5: 134 of 250
+  against 86). That is NG, not just the region rule's WARN, so #460 alone would gain less on pcb2 than the pcb1 what-if
+  suggests. The regrade was not run on pcb2.
+- **The calibrated AI threshold does not move on pcb2 either** (S6, shipped: 12.11 at every count), which adds to #454.
+- **The drift monitor raised nothing on pcb2 in either configuration**, which adds to #464.
+- **#466 shows on both configurations here:** a board saved just before the kill is stored again when the operator
+  re-presents it.
+- pcb2 has 1,101 images and the other boards about the same, so a larger sample per board model needs a longer shift
+  from the same images (repeats, bounded by distinct boards as in S1) or more data, and none usable was found.
+
 ## Reproduce
 
 On `test/459-record` (the tool is complete at the top of the stack), with VisA extracted outside the repository:

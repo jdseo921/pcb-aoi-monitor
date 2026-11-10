@@ -5,19 +5,25 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import re
+import shutil
 import time
 from pathlib import Path
 from typing import Any
+from unittest.mock import ANY
 
 import pytest
 
 from aoi.config import Settings
+from aoi.core import result_files
 from aoi.core.cycle import FrameMeta
 from aoi.core.imaging import list_images
 from aoi.core.result_files import COLUMNS, SHIFT_PREFIX, csv_row
 from aoi.core.services import AppContext
+from aoi.data import atomic
 from aoi.errors import AoiError
+from tests.conftest import log_rows
 from tests.test_req_done_in_v01 import BOARD
 
 SCHEMA = json.loads((Path(__file__).parents[1] / "docs" / "schemas" / "result-file.schema.json").read_text("utf-8"))
@@ -84,6 +90,164 @@ def test_req_insp_021_every_board_has_its_result_files_within_1_s_of_its_verdict
     assert len(rows) == 10 and list(rows[0]) == list(COLUMNS)
     singles = {f.stem.rsplit("_", 1)[1]: f.read_text("utf-8") for f in out.glob("*.csv") if f != shift}
     assert shift.read_text("utf-8").splitlines(keepends=True)[1:] == [singles[r["record_uuid"]] for r in rows]
+
+
+def test_req_insp_021_a_board_id_with_a_dot_keeps_its_own_result_files(
+    trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path
+) -> None:
+    """A revision such as R1.2 in the image's name: each board keeps its own `<board ID>_<record UUID>` files."""
+    out, boards = tmp_path / "out", tmp_path / "boards"
+    out.mkdir()
+    boards.mkdir()
+    trained_ctx.settings.output_folder = str(out)
+    cycle = trained_ctx.inspection_cycle()
+    for n, path in enumerate(sorted(list_images(synthetic_dataset / "test"))[:3], 1):
+        cycle.board(BOARD, FrameMeta(shutil.copy(path, boards / f"TBOXA1_R1.2_SN000{n}_TOP.png")))()
+    stored = {r["uuid"] for r in trained_ctx.inspections(board_model=BOARD)}
+    docs = [json.loads(f.read_text("utf-8")) for f in out.glob("TBOXA1_*.json")]
+    names = {f"{d['board_id']}_{d['record_uuid']}" for d in docs}
+    assert len(docs) == 3 and {d["record_uuid"] for d in docs} == stored
+    assert {d["board_id"] for d in docs} == {f"TBOXA1_R1.2_SN000{n}_TOP" for n in (1, 2, 3)}
+    files = {f.name for f in out.iterdir() if not f.name.startswith(SHIFT_PREFIX)}
+    assert files == {f"{n}{e}" for n in names for e in (".json", ".csv")}
+
+
+def _refusing(monkeypatch: pytest.MonkeyPatch, refused: list[str]) -> None:
+    """Windows refuses to replace a file a spreadsheet holds open: os.replace on a file whose name starts with one of
+    `refused` fails, as long as it is listed there."""
+    replace = os.replace
+
+    def refusing(src: str, dst: str) -> None:
+        if any(Path(dst).name.startswith(name) for name in refused):
+            raise PermissionError(13, "Access is denied", str(dst))
+        replace(src, dst)
+
+    monkeypatch.setattr(atomic.os, "replace", refusing)
+
+
+def test_req_insp_021_a_shift_csv_held_open_loses_no_line_and_says_so(
+    trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The board's own files are written, its line is kept and goes in with the next board's, and the alarm names the
+    shift file, not the board's files: once while lines are kept, and again for a refusal after they all went in."""
+    out, refused = tmp_path / "out", list[str]()
+    out.mkdir()
+    trained_ctx.settings.output_folder = str(out)
+    _refusing(monkeypatch, refused)
+    paths, cycle = sorted(list_images(synthetic_dataset / "test"))[:6], trained_ctx.inspection_cycle()
+    for n, path in enumerate(paths):
+        refused[:] = [SHIFT_PREFIX] if n in (1, 2, 4) else []  # open in a spreadsheet for boards 2 and 3, then 5
+        assert cycle.board(BOARD, FrameMeta(path))().record_id is not None
+    (shift,) = out.glob(f"{SHIFT_PREFIX}*.csv")
+    rows = list(csv.DictReader(shift.read_text("utf-8").splitlines()))
+    stored = sorted(trained_ctx.inspections(board_model=BOARD), key=lambda r: r["id"])
+    assert [r["record_uuid"] for r in rows] == [r["uuid"] for r in stored] and len(rows) == 6
+    assert len(list(out.glob("*.json"))) == 6 and not trained_ctx._shift_lines
+    alarms = [a for a in trained_ctx.alarms() if a["code"] in ("AOI-INSP-019", "AOI-INSP-020")]
+    assert sorted(a["code"] for a in alarms) == ["AOI-INSP-020"] * 2, "once per refusal, never AOI-INSP-019"
+    named = {p.name for p in paths for a in alarms if p.name in a["message"]}
+    assert named == {paths[1].name, paths[4].name} and all(shift.name in a["message"] for a in alarms)
+
+
+def test_req_insp_021_a_line_kept_back_goes_in_by_the_timer_or_at_close(
+    trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no board after it, a kept line goes in from the heartbeat's timer once the file takes it, and at close."""
+    out, refused = tmp_path / "out", list[str]()
+    out.mkdir()
+    trained_ctx.settings.output_folder = str(out)
+    _refusing(monkeypatch, refused)
+    cycle = trained_ctx.inspection_cycle()
+    for step, path in enumerate(sorted(list_images(synthetic_dataset / "test"))[:2]):
+        refused[:] = [SHIFT_PREFIX]
+        cycle.board(BOARD, FrameMeta(path))()
+        trained_ctx._add_shift_lines()  # the timer, while the file is still refused: kept
+        assert [len(lines) for lines in trained_ctx._shift_lines.values()] == [1]
+        refused.clear()
+        if step == 0:  # one beat of the heartbeat's timer: stopping is set, so it beats once and returns
+            trained_ctx._stopping.set()
+            trained_ctx._beat()
+        else:
+            trained_ctx.close()
+        (shift,) = out.glob(f"{SHIFT_PREFIX}*.csv")
+        assert len(shift.read_text("utf-8").splitlines()) == step + 2 and not trained_ctx._shift_lines
+
+
+def test_req_insp_021_a_line_still_refused_at_close_is_logged_with_its_record(
+    trained_ctx: AppContext, synthetic_dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A line the shift CSV still refuses when the app closes is not added: the log names its file and record."""
+    out = tmp_path / "out"
+    out.mkdir()
+    trained_ctx.settings.output_folder = str(out)
+    _refusing(monkeypatch, [SHIFT_PREFIX])
+    record = trained_ctx.inspection_cycle().board(
+        BOARD, FrameMeta(sorted(list_images(synthetic_dataset / "test"))[0])
+    )()
+    uuid = trained_ctx.db.inspection(record.record_id)["uuid"]
+    trained_ctx.close()
+    (lost,) = [r for r in log_rows(trained_ctx.settings.root / "logs") if r["event"] == "result_file.shift_lines_lost"]
+    assert list(lost["records"].values()) == [[uuid]]
+
+
+def _doc(uuid: str) -> dict[str, Any]:
+    return {c: c for c in COLUMNS} | {"record_uuid": uuid, "model_version": None, "recipe_rev": None, "defects": []}
+
+
+def _uuids(shift: Path) -> list[str]:
+    return [line.rsplit(",", 1)[-1] for line in shift.read_text("utf-8").splitlines()[1:]]
+
+
+def test_req_insp_021_kept_lines_survive_a_day_change_a_resave_and_a_gone_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Yesterday's file still refused keeps the alarm standing (no new one) while today's takes its line; a file a
+    spreadsheet saved in another encoding keeps the lines until it is moved away, then starts again with them; a write
+    that fails after the file took the lines adds them once; and a held file's folder gone is never made again."""
+    folder, refused, kept = tmp_path / "out", ["shift_2026-11-05"], result_files.Held()
+    folder.mkdir()
+    yesterday, today = folder / "shift_2026-11-05.csv", folder / "shift_2026-11-06.csv"
+    _refusing(monkeypatch, refused)
+    with pytest.raises(result_files.ShiftNotWritten) as first:
+        result_files.write(folder, _doc("u1"), "2026-11-05", "b1", kept)
+    assert first.value.first and first.value.shift == yesterday
+    with pytest.raises(result_files.ShiftNotWritten) as standing:
+        result_files.write(folder, _doc("u2"), "2026-11-06", "b2", kept)
+    assert not standing.value.first and standing.value.shift == yesterday and _uuids(today) == ["u2"]
+    refused[:] = [SHIFT_PREFIX]  # today's file opened too: a refusal of its own, named and alarmed
+    with pytest.raises(result_files.ShiftNotWritten) as also:
+        result_files.write(folder, _doc("u3"), "2026-11-06", "b3", kept)
+    assert also.value.first and also.value.shift == today
+    refused[:] = ["shift_2026-11-06"]  # yesterday's closed: its lines go in from the timer, today's stay kept
+    assert result_files.flush(kept) == (today, ANY) and _uuids(yesterday) == ["u1"]
+    with pytest.raises(result_files.ShiftNotWritten) as still:
+        result_files.write(folder, _doc("u4"), "2026-11-06", "b4", kept)
+    assert not still.value.first and still.value.shift == today
+    refused.clear()
+    assert result_files.flush(kept) is None and not kept and _uuids(today) == ["u2", "u3", "u4"]
+    today.unlink()
+    today.write_bytes("board_id,뷰\n".encode("cp949"))  # saved over by a spreadsheet, in the Korean code page
+    with pytest.raises(result_files.ShiftNotWritten) as resaved:
+        result_files.write(folder, _doc("u5"), "2026-11-06", "b5", kept)
+    assert resaved.value.first and isinstance(resaved.value.cause, UnicodeError)
+    today.rename(tmp_path / "saved_over.csv")
+    sync, syncs = atomic._sync_folder, [0]
+
+    def shift_sync_fails(path: Path) -> None:  # the board's own files' sync first, then the shift CSV's, refused
+        syncs[0] += 1
+        if syncs[0] == 2:
+            raise OSError(5, "Input/output error")
+        sync(path)
+
+    monkeypatch.setattr(atomic, "_sync_folder", shift_sync_fails)
+    result_files.write(folder, _doc("u6"), "2026-11-06", "b6", kept)
+    assert syncs[0] == 2 and _uuids(today) == ["u5", "u6"] and not kept
+    refused.append(SHIFT_PREFIX)
+    with pytest.raises(result_files.ShiftNotWritten):
+        result_files.write(folder, _doc("u7"), "2026-11-06", "b7", kept)
+    shutil.rmtree(folder)
+    refused.clear()
+    assert result_files.flush(kept) is not None and not folder.exists() and kept
 
 
 def test_req_insp_021_a_csv_line_leaves_an_empty_cell_for_none_and_quotes_a_comma() -> None:

@@ -16,10 +16,10 @@ then on is recorded under your name, which the Operator column of Logs & Export 
 not in the list, ask an Admin to add it (Settings › Users & roles). Where the station asks for a PIN, the first time you
 choose 4 to 6 digits and type them twice, and after that you type your PIN; five wrong PINs in a row lock your name for
 5 minutes (AOI-USR-006). An Engineer or Admin left without input for 15 minutes is signed out back to you, the operator
-of the shift, but never while a board is being inspected. The sidebar greys the pages your
-role cannot open, and pointing at one names the role it needs: an Operator opens Home, Inspection, Compare and Logs &
-Export. The app opens on Inspection for an Operator, at a start and when you sign in with Switch User, as the run
-screen is your work (ADR 0024 D25); Home shows you the six cards, each greyed card naming the role it needs.
+of the shift, and Inspection opens; a board being inspected then is still recorded under them. The sidebar greys the
+pages your role cannot open, and pointing at one names the role it needs: an Operator opens Home, Inspection, Compare
+and Logs & Export. The app opens on Inspection for an Operator, at a start and when you sign in with Switch User, as the
+run screen is your work (ADR 0024 D25); Home shows you the six cards, each greyed card naming the role it needs.
 
 **Keys to move around.** Ctrl+1 to Ctrl+9 open the sidebar's pages in its order from any page: Ctrl+1 Home, Ctrl+2
 Inspection, Ctrl+3 Compare, Ctrl+8 Logs & Export (pointing at a sidebar entry shows its key). Press **F1** on any page
@@ -98,23 +98,22 @@ the line under the banner names it, its verdict and the board model it was saved
 record is on Logs & Export when it was saved (a failed save shows AOI-INSP-008); in a run with boards left, the line
 also says to press Start to carry on with the queue. "Compare with Golden board ›" is grey while there is no result to open: before the first
 board, after a board that was not inspected and after a board model change.
-A run also belongs to the user who pressed Start. If another user signs in with Switch User during a run, the run stops
-after the board in hand, which is recorded under the user who pressed Start, and the status bar says so; the user now
-signed in presses Start to carry on with the queue, and those boards are recorded under their name.
-Each board is judged with the AI model, recipe, scale and Golden board in use when it starts. If an Engineer trains or
-activates an AI model version, saves a recipe, sets a scale or sets a Golden board while the Inspection page is open,
-the next board
-uses it, whether you press Next Board or Start or load a new queue. During a run, the board in hand finishes with what it
-started with and the boards after it use the new one; the line under the banner and the alarm log say so with
-AOI-INSP-013. Each record names the AI model version active when its board was judged, the recipe revision that
-judged it (which says whether the AI check ran) and the Golden board it was judged against. When the recipe turns the
-AI check off, no AI model judges the boards, so an AI model version activated during a run changes nothing that judges
-them while the Golden board stays, and the run goes on with no AOI-INSP-013 (the boards after it name the version now
-active); a saved recipe or a Golden board set still moves the run, and so does a board model's first training run, as
-its AI model goes live with a new Golden board (a later one installs inactive and moves nothing), and the line then
-says the AI check was off in place of naming an AI model.
-A scale set changes nothing that judges a board while the recipe holds its sizes in px, so the run then goes on with no
-AOI-INSP-013.
+A run also belongs to the user who pressed Start. If another user signs in with Switch User during a run, or the session
+of the Engineer or Admin who pressed Start ends after 15 minutes without input, the run stops after the board in hand,
+which is recorded under the user who pressed Start, and the status bar and the line under the verdict say so, the line
+until the next sign-in; the user now signed in presses Start to carry on with the queue, and those boards are recorded
+under their name. Each board is judged with the AI model, recipe, scale and Golden board in use when it starts. If an
+Engineer trains or activates an AI model version, saves a recipe, sets a scale or sets a Golden board while the
+Inspection page is open, the next board uses it, whether you press Next Board or Start or load a new queue. During a
+run, the board in hand finishes with what it started with and the boards after it use the new one; the line under the
+banner and the alarm log say so with AOI-INSP-013. Each record names the AI model version active when its board was
+judged, the recipe revision that judged it (which says whether the AI check ran) and the Golden board it was judged
+against. When the recipe turns the AI check off, no AI model judges the boards, so an AI model version activated during
+a run changes nothing that judges them while the Golden board stays, and the run goes on with no AOI-INSP-013 (the
+boards after it name the version now active); a saved recipe or a Golden board set still moves the run, and so does a
+board model's first training run, as its AI model goes live with a new Golden board (a later one installs inactive and
+moves nothing), and the line then says the AI check was off in place of naming an AI model. A scale set changes nothing
+that judges a board while the recipe holds its sizes in px, so the run then goes on with no AOI-INSP-013.
 
 Reading the verdict: while a board is being inspected the banner turns grey and reads "Inspecting…", and the status
 bar at the bottom names the board and its place in the queue, such as "Inspecting board_07.png (3 of 12)…". The
@@ -126,8 +125,9 @@ and what happened, so the verdict of the board before is never shown beside it. 
 queue; when it was the last board, the view says so and offers Load Images… to queue more. A board is never passed on
 no evidence: the run stops the
 same way when the Golden board's file is gone or damaged (AOI-INSP-009), when nothing can judge the board because the
-board model has neither a Golden board nor an AI model yet, or the recipe turns both off (AOI-INSP-010), and for a
-picture under 11 px on a side (AOI-INSP-011); for the first two, call an Engineer. At the end of the queue the status bar reads "End of
+board model has neither a Golden board nor an AI model yet, or the recipe turns both off (AOI-INSP-010), when one of
+the recipe's ROIs is not wholly on the picture (AOI-INSP-021), and for a picture under 11 px on a side (AOI-INSP-011);
+for the first three, call an Engineer. At the end of the queue the status bar reads "End of
 queue".
 
 ## 3. When a board is NG or WARN
@@ -232,7 +232,9 @@ keeps.
 **Result files.** Where an Admin has set an output folder, the station writes each board's result there as it is saved,
 for the line's systems to read: one JSON file and one CSV line per board, and a shift CSV for the day that lists every
 board under a header. You do nothing for it. If the folder refuses them (a network drive gone, a full disk), the alarm
-list shows AOI-INSP-019: the board is still judged and recorded, so carry on and tell an Engineer or Admin.
+list shows AOI-INSP-019: the board is still judged and recorded, so carry on and tell an Engineer or Admin. AOI-INSP-020
+usually means someone has the day's shift file open, in a spreadsheet say: close it there, and while the app stays open
+the station adds the lines it kept, with the next board or within a minute.
 
 **Handing over.** Let the queue run to its end, or press ■ Stop: the board in hand is still judged and recorded. For
 your counts, set **From** and **To** to the days of your shift, pick your name under **Operator**, press **Filter** and

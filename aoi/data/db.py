@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+import shutil
 import sqlite3
 import threading
 import uuid
@@ -19,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from ..errors import AoiError, Phrase, system_detail, system_reason
+from ..errors import FULL, NOT_READ, AoiError, Phrase, system_detail, system_reason
 from ..times import local_day_bounds_utc, now_utc
 from .errors import WorkspaceError
 from .migrate import migrate
@@ -53,6 +54,9 @@ def is_busy(e: BaseException | None) -> bool:
     """SQLite's refusal while another program holds the lock a statement needs (SQLITE_BUSY, SQLITE_LOCKED)."""
     code = getattr(e, "sqlite_errorcode", 0) if isinstance(e, sqlite3.Error) else 0
     return (code & 0xFF) in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED)
+
+
+NO_ROOM = 1 << 20  # bytes free under which a disk I/O error at opening is taken to be a full drive's (1 MiB)
 
 
 class Database:
@@ -98,10 +102,25 @@ class Database:
 
     def refusal(self, e: DbError) -> WorkspaceError:
         """The start-up refusal the folder picker follows (REQ-SET-016): AOI-SET-012 while another program holds the
-        database's lock, else AOI-SET-011 with SQLite's reason (read-only, disk full, damaged)."""
+        database's lock, AOI-SET-025 when SQLite says the drive is full, or gives a disk I/O error on a drive that is
+        (`_full`), else AOI-SET-011 with SQLite's reason (read-only, damaged, not opened)."""
         if is_busy(e):
             return WorkspaceError("AOI-SET-012", system_detail(e), path=str(self.path), error=system_reason(e))
-        return WorkspaceError("AOI-SET-011", system_detail(e), path=str(self.workspace), error=system_reason(e))
+        reason = system_reason(e)
+        if reason == FULL or (reason == NOT_READ and self._full()):
+            return WorkspaceError("AOI-SET-025", system_detail(e), path=str(self.workspace))
+        return WorkspaceError("AOI-SET-011", system_detail(e), path=str(self.workspace), error=reason)
+
+    def _full(self) -> bool:
+        """Whether the database's drive has under NO_ROOM bytes free (False when it cannot be measured). A WAL database
+        opened after a clean close (no -shm file left) fails with a disk I/O error (SQLITE_IOERR_SHMSIZE) when no byte
+        is free for its shared-memory file; said as AOI-SET-011's "could not be read or written", whose remedy restores
+        a backup and loses the records since it (senior review 2026-11-06, DAT-1). Only that error is read so: a full
+        drive does not make SQLite misread a file, so a damaged or read-only database keeps its own reason."""
+        try:
+            return shutil.disk_usage(self.path.parent).free < NO_ROOM
+        except OSError:
+            return False
 
     # --- primitives --------------------------------------------------------
     @contextmanager
@@ -174,6 +193,13 @@ class Database:
     def query(self, sql: str, params: Iterable[Any] = ()) -> list[dict[str, Any]]:
         with self._lock:
             return [dict(r) for r in self._conn.execute(sql, tuple(params)).fetchall()]
+
+    def changes(self) -> int | None:
+        """How many rows this connection has inserted, changed or deleted since it opened, rolled back ones too: a
+        reader that kept an answer reads again once it moves (`AppContext.reading`). None while a transaction is open,
+        whose rows read may yet be rolled back, so nothing read then is kept."""
+        with self._lock:
+            return None if self._conn.in_transaction else self._conn.total_changes
 
     # --- paths (REQ-SET-001) -----------------------------------------------
     def resolve_path(self, stored: str) -> str:
@@ -250,12 +276,25 @@ class Database:
         )
         return self._resolved(rows[0], "path") if rows else None
 
-    def samples(self, board_model: str, label: str | None = None) -> list[dict[str, Any]]:
-        """A board model's samples, oldest first, each with its current label (REQ-TRN-002); `label` filters by it."""
+    def samples(self, board_model: str, label: str | None = None, *, paths: bool = True) -> list[dict[str, Any]]:
+        """A board model's samples, oldest first, each with its current label (REQ-TRN-002); `label` filters by it.
+        With `paths` off, each path as stored, relative to the workspace, for a caller that opens no file: resolving
+        every path is most of the read's time (REQ-SET-020; senior review 2026-11-06, UI-5)."""
         sql, p = f"{SAMPLES} WHERE s.board_model=?", [board_model]
         if label:
             sql, p = f"{sql} AND l.label=?", [board_model, label]
-        return [self._resolved(r, "path") for r in self.query(f"{sql} ORDER BY s.id", p)]
+        rows = self.query(f"{sql} ORDER BY s.id", p)
+        return [self._resolved(r, "path") for r in rows] if paths else rows
+
+    def sample_counts(self, board_model: str) -> dict[str, int]:
+        """How many of a board model's samples carry each current label, as `samples` labels them, counted in the
+        database: no row is read and no path resolved, so a page that shows only the counts opens as fast with
+        thousands of samples (REQ-SET-020; senior review 2026-11-06, UI-5)."""
+        sql = (
+            "SELECT l.label, COUNT(*) n FROM samples s JOIN labels l ON l.sample_uuid = s.uuid AND l.superseded_by IS"
+            " NULL WHERE s.board_model=? GROUP BY l.label"
+        )
+        return {str(r["label"]): int(r["n"]) for r in self.query(sql, (board_model,))}
 
     def sample(self, sample_id: int) -> dict[str, Any]:
         """One sample by id, with its absolute path and its current label."""
@@ -1100,8 +1139,9 @@ class Database:
         r = self.query("SELECT recovery_hash FROM users WHERE uuid=?", (uuid,))
         return str(r[0]["recovery_hash"]) if r and r[0]["recovery_hash"] else None
 
-    def set_recovery_hash(self, uuid: str, recovery_hash: str) -> None:
-        """Store the hash of the Admin's new recovery code, which replaces any code before it (REQ-USR-005)."""
+    def set_recovery_hash(self, uuid: str, recovery_hash: str | None) -> None:
+        """Store the hash of the Admin's new recovery code, which replaces any code before it (REQ-USR-005); None for a
+        code used up."""
         self.execute("UPDATE users SET recovery_hash=? WHERE uuid=?", (recovery_hash, uuid))
 
     def count_failure(self, uuid: str, lock_after: int, until: str, limit: int, for_good: str) -> str | None:

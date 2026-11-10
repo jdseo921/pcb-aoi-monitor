@@ -25,7 +25,8 @@ SCREENS = {  # the codes each screen raises: the sketch's table less a role's an
         "AOI-TRN-015", "AOI-TRN-016", "AOI-TRN-008", "AOI-TRN-009", "AOI-TRN-010", "AOI-TRN-011", "AOI-TRN-025",
         "AOI-TRN-030", "AOI-TRN-031", "AOI-TRN-032"),
     3: ("AOI-TRN-027", "AOI-TRN-022", "AOI-TRN-040", "AOI-TRN-041", "AOI-TRN-042", "AOI-TRN-047", "AOI-TRN-045",
-        "AOI-TRN-043", "AOI-TRN-004", "AOI-TRN-052", "AOI-TRN-048", "AOI-TRN-049", "AOI-TST-003", "AOI-TRN-057"),
+        "AOI-TRN-043", "AOI-TRN-004", "AOI-TRN-052", "AOI-TRN-048", "AOI-TRN-049", "AOI-TST-003", "AOI-TRN-057",
+        "AOI-TRN-058"),
 }  # fmt: skip
 NOT_THE_GUIDES = ("dataset", "version", "freeze", "split", "lock", "manifest", "store", "epoch", "seed")  # sketch
 PLACEHOLDER = re.compile(r"\{[^}]*\}")

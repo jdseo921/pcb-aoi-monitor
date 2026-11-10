@@ -419,12 +419,12 @@
     <message>
         <location line="+3"/>
         <location line="+132"/>
-        <location line="+685"/>
+        <location line="+686"/>
         <source>Golden board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-816"/>
+        <location line="-817"/>
         <source>AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -490,12 +490,12 @@
     </message>
     <message>
         <location line="+12"/>
-        <location line="+1018"/>
+        <location line="+1019"/>
         <source>Test board</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1012"/>
+        <location line="-1013"/>
         <source>Inspecting…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -565,7 +565,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+144"/>
+        <location line="+145"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again with today&apos;s Golden board.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -616,7 +616,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1098"/>
+        <location line="-1099"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -673,7 +673,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+72"/>
         <source>{file} was not inspected: its Golden board cannot be opened.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -726,7 +726,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-624"/>
+        <location line="-625"/>
         <source>Inspection time (ms)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -741,7 +741,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+785"/>
+        <location line="+786"/>
         <source>Test board: {file} (stored result)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -933,7 +933,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+199"/>
+        <location filename="../core/services.py" line="+207"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -973,7 +973,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+384"/>
+        <location line="+401"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -993,7 +993,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+82"/>
+        <location line="+96"/>
         <source>Unlocking a user</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1027,18 +1027,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+190"/>
-        <location line="+2547"/>
+        <location line="+235"/>
+        <location line="+2670"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2516"/>
+        <location line="-2642"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+58"/>
+        <location line="+91"/>
         <source>it has no Golden board; set one on Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1058,18 +1058,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+113"/>
+        <location line="+124"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+198"/>
+        <location line="+218"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+243"/>
+        <location line="+247"/>
         <source>Recording a customer&apos;s targets</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1155,7 +1155,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+206"/>
+        <location line="+241"/>
         <source>Creating a board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1165,7 +1165,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+31"/>
         <source>Changing the reference image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1215,7 +1215,7 @@
         <translation>검토할 OK 라벨 추출</translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+52"/>
         <source>Making a calibration set</source>
         <translation>보정 세트 만들기</translation>
     </message>
@@ -1280,19 +1280,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+1332"/>
+        <location line="+1372"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4832"/>
-        <location line="+3514"/>
+        <location line="-5057"/>
+        <location line="+3699"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3604"/>
+        <location line="-3797"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1317,7 +1317,32 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+26"/>
+        <source>its AI model file {file} cannot be loaded ({reason})</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>no board was judged with AI model {version}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the AI Model Test judged no image after it and stored no run</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>AI model {version} was not made active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the AI model just trained was not kept as a version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1392,7 +1417,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1631"/>
+        <location line="+1737"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1402,12 +1427,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1098"/>
+        <location line="+1135"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+482"/>
+        <location line="+524"/>
         <source>a blind label is OK, or NG with one of the 37 defect types</source>
         <translation>블라인드 라벨은 OK이거나, 37개 결함 유형 중 하나를 지정한 NG입니다</translation>
     </message>
@@ -1422,7 +1447,7 @@
         <translation>OK 이미지가 {ok}개이며, 검증 세트에는 {least}개가 들어갑니다</translation>
     </message>
     <message>
-        <location line="+71"/>
+        <location line="+70"/>
         <source>{customer} allowed only {uses}</source>
         <translation>{customer}이(가) {uses}만 허용했습니다</translation>
     </message>
@@ -1525,18 +1550,18 @@
         <translation>고객 데이터셋 저장소 파기</translation>
     </message>
     <message>
-        <location line="+12"/>
-        <location line="+32"/>
+        <location line="+18"/>
+        <location line="+35"/>
         <source>the workspace holds no such store</source>
         <translation>작업 공간에 해당 저장소가 없습니다</translation>
     </message>
     <message>
-        <location line="-24"/>
+        <location line="-27"/>
         <source>this station&apos;s key store did not delete the key</source>
         <translation>이 스테이션의 키 저장소가 키를 삭제하지 않았습니다</translation>
     </message>
     <message>
-        <location line="+57"/>
+        <location line="+62"/>
         <source>the workspace holds no such store, or it is shredded</source>
         <translation>작업 공간에 그런 저장소가 없거나 파기되었습니다</translation>
     </message>
@@ -1581,30 +1606,30 @@
         <translation>이 뷰에 OK 또는 NG로 라벨링된 이미지가 없습니다</translation>
     </message>
     <message>
-        <location line="-506"/>
-        <location line="+517"/>
+        <location line="-516"/>
+        <location line="+527"/>
         <source>its images are in no customer&apos;s dataset store; an Admin moves them in</source>
         <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
     </message>
     <message>
-        <location line="-515"/>
-        <location line="+517"/>
+        <location line="-4305"/>
+        <location line="+4307"/>
         <source>its dataset store was shredded on {date}</source>
         <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
     </message>
     <message>
-        <location line="-514"/>
-        <location line="+517"/>
+        <location line="-525"/>
+        <location line="+528"/>
         <source>its images are in the dataset store of {store}, not of {customer}</source>
         <translation>이미지가 {customer}이(가) 아니라 {store}의 데이터셋 저장소에 있습니다</translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+38"/>
         <source>Activating an AI model version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+467"/>
+        <location line="+493"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1614,12 +1639,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-527"/>
+        <location line="-539"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4265"/>
+        <location line="-4486"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1629,7 +1654,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+47"/>
         <source>no defect type was given</source>
         <translation>결함 유형이 지정되지 않았습니다</translation>
     </message>
@@ -1644,12 +1669,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1555"/>
+        <location line="+1631"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1517"/>
+        <location line="+1620"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1664,7 +1689,7 @@
         <translation>{label}(으)로 다시 라벨링</translation>
     </message>
     <message>
-        <location line="+441"/>
+        <location line="+446"/>
         <source>{file} has changed since the version was frozen</source>
         <translation>{file}이(가) 버전이 동결된 뒤에 바뀌었습니다</translation>
     </message>
@@ -1674,12 +1699,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+114"/>
+        <location line="+123"/>
         <source>{count} file(s) would not go, {file} first ({reason}); shred it again</source>
         <translation>파일 {count}개가 삭제되지 않았습니다. 첫 파일: {file} ({reason}). 다시 파기하십시오</translation>
     </message>
     <message>
-        <location line="+64"/>
+        <location line="+66"/>
         <source>this station&apos;s key store could not be read</source>
         <translation>이 스테이션의 키 저장소를 읽을 수 없습니다</translation>
     </message>
@@ -1709,12 +1734,12 @@
         <translation>이 뷰의 가장 최근 일치도 검사가 목표에 도달하지 못했습니다</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+51"/>
         <source>Rolling back an AI model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+132"/>
+        <location line="+146"/>
         <source>Changing settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1729,7 +1754,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+216"/>
+        <location line="+228"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1761,14 +1786,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4714"/>
+        <location line="-4939"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
-        <location filename="../ui/errors.py" line="+163"/>
-        <location filename="../ui/main_window.py" line="+1302"/>
+        <location filename="../ui/errors.py" line="+164"/>
+        <location filename="../ui/main_window.py" line="+1330"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1868,7 +1893,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/inspector.py" line="+36"/>
+        <location filename="../core/inspector.py" line="+37"/>
         <source>no Golden board is set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1888,7 +1913,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+284"/>
+        <location line="+285"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1898,7 +1923,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+144"/>
+        <location line="+153"/>
         <source>the recipe turns the Golden board comparison off</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1923,7 +1948,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../errors.py" line="+172"/>
+        <location filename="../errors.py" line="+173"/>
         <source>Image cannot be read</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2118,7 +2143,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+77"/>
+        <location line="+112"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2324,12 +2349,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-383"/>
+        <location line="-418"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-214"/>
+        <location line="-215"/>
         <source>the drive is full</source>
         <translation>드라이브가 가득 찼습니다</translation>
     </message>
@@ -2424,6 +2449,11 @@
         <translation>시스템이 거부했습니다</translation>
     </message>
     <message>
+        <location line="+1"/>
+        <source>it is no longer UTF-8 text, as when a spreadsheet has saved over it</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+164"/>
         <source>An Engineer sets a Golden board, or trains or activates an AI model, on Training, or turns on the Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.</source>
         <translation type="unfinished"></translation>
@@ -2495,6 +2525,36 @@
     </message>
     <message>
         <location line="+16"/>
+        <source>Shift file not updated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} was judged and its record saved, and its own result files were written to the output folder {folder}, but its line could not be added to the shift file {shift}: {reason}. The line, and any after it, is kept and added once the file takes it again, with the next board or within a minute, while the app stays open; this alarm is not repeated meanwhile.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Close the shift file in any app that has it open, such as a spreadsheet. If a spreadsheet saved over it, move that copy out of the output folder: the station starts the file again with the lines it kept, and the boards before them are in the copy and in Logs &amp; Export. For any other reason, an Admin makes the output folder take files again. Lines still kept when the app closes are not added; every record is in Logs &amp; Export.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <source>ROI off the image</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>ROI {roi} of board model {board} is not wholly on the image it is judged on: its box is {x}, {y}, {w} × {h} px and the image {width} × {height} px, so part of it would go unjudged. The board gets no verdict.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Tell an Engineer. After a camera change, they calibrate the scale on its new Golden board; else, in the Recipe Editor, they move the ROI inside the Golden board, or turn it off, and save the recipe. Then judge the board again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>Input file name not in the contract</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3141,6 +3201,21 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>Board model&apos;s dataset store shredded</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The dataset store of board model {board} was shredded on {date}, and nothing learned from its images judges boards again: {refused}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Nothing of board model {board} can be trained or made active again. To inspect these boards again, an Admin makes a new board model under another name with + New, naming its customer, which puts it in a dataset store that is not shredded; an Engineer then imports its images on Training, freezes a dataset version, locks its validation set and trains from it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3347,6 +3422,36 @@
     </message>
     <message>
         <location line="+8"/>
+        <source>ROI off the Golden board</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>ROI {roi} of board model {board_model} is not wholly on its Golden board: at the board model&apos;s scale its box is {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Nothing was saved. Move the ROI inside the Golden board in the Recipe Editor, or turn it off, then save the recipe again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>ROI would be off the image</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The new scale would leave ROI {roi} of board model {board_model} not wholly on its Golden board: its box would be {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px, so every board would get no verdict (AOI-INSP-021).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Nothing was changed. Check the length and the distance measured. If they are right, move the ROI to fit {width} × {height} px in the Recipe Editor, or turn it off, and save the recipe; then calibrate the scale again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>Export stopped part-way</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3521,12 +3626,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
-        <source>Ask an Admin to unlock it with Unlock User on Settings.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+5"/>
+        <location line="+10"/>
         <source>PIN not allowed</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3571,7 +3671,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+38"/>
         <source>Recovery code not accepted</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3806,6 +3906,21 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+9"/>
+        <source>Workspace drive full</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The workspace folder {path} could not be opened: its drive is full, with no room for the database&apos;s working files.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Restore no backup: the database is not damaged, only out of room. Free space on that drive, for example by moving old exports off it, and start the app again. Or choose another workspace folder in the window that opens next; Cancel there closes the app.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+20"/>
         <source>Leave out / : * ? &quot; &lt; &gt; \ | and control characters, end with no dot or space, and use no device name such as CON or NUL.</source>
         <translation type="unfinished">/ : * ? &quot; &lt; &gt; \ | 와 제어 문자를 빼고, 점이나 공백으로 끝내지 말고, CON이나 NUL 같은 장치 이름은 쓰지 마십시오.</translation>
@@ -3962,11 +4077,16 @@
     </message>
     <message>
         <location line="+5"/>
+        <source>The images of {board} were shredded on {date}, so no AI model trained from them judges boards. An Admin makes a board model under another name with + New, naming its customer; then add its images.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>Not tested: {reason}. The AI model judges boards; AI Model Test tests it again.</source>
         <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
     </message>
     <message>
-        <location line="-340"/>
+        <location line="-360"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4101,7 +4221,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1572"/>
+        <location line="-1661"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4116,7 +4236,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+168"/>
+        <location line="+203"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4246,7 +4366,7 @@
         <translation type="unfinished">같은 보드라면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니라면 새 보드 모델에 A~Z 문자나 0~9 숫자가 &quot;{existing}&quot;과(와) 다른 이름(예: 숫자를 하나 더 붙인 이름)을 지정하십시오. 아무것도 만들지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+70"/>
+        <location line="+86"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4276,7 +4396,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+85"/>
+        <location line="+115"/>
         <source>The drive that holds the workspace is {used} % full, with {free} GB free. Inspection goes on; at 95 % the app stops keeping the overlay and maps of OK boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4291,7 +4411,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+29"/>
+        <source>Ask an Admin to unlock it with Unlock User on Settings. An Admin with no other Admin to do it signs in with Use Recovery Code… at Switch User.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <source>Ask an Admin to sign in (on a new station, the Admin chooses theirs first), then choose {name} under Switch User and type the new password twice.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4332,11 +4457,11 @@
     </message>
     <message>
         <location line="+5"/>
-        <source>Add another Admin and hand the account over to them first.</source>
+        <source>First add another Admin and have them sign in once, to choose their password and get their recovery code, or unlock a locked Admin.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+9"/>
         <source>Last Operator</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4516,7 +4641,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+67"/>
+        <location filename="../ui/pages/model_test.py" line="+71"/>
         <source>AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4626,7 +4751,7 @@
         <translation>매니페스트가 없고, 파일 {changed}개가 변경되고 {missing}개가 없습니다</translation>
     </message>
     <message>
-        <location filename="../core/demo.py" line="+108"/>
+        <location filename="../core/demo.py" line="+109"/>
         <source>it has no readable bundle.json</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4637,7 +4762,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3756"/>
+        <location filename="../core/services.py" line="+3940"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4657,7 +4782,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/annotation_files.py" line="+42"/>
+        <location filename="../core/annotation_files.py" line="+43"/>
         <source>it is not a YOLO or Pascal VOC label file this app reads</source>
         <translation>이 앱이 읽는 YOLO 또는 Pascal VOC 라벨 파일이 아닙니다</translation>
     </message>
@@ -4672,7 +4797,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/passwords.py" line="+30"/>
+        <location filename="../core/passwords.py" line="+32"/>
         <source>is shorter than {length} characters</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4684,6 +4809,11 @@
     <message>
         <location line="+1"/>
         <source>is the name of a user, a customer or the product</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>is the demo workspace&apos;s published password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4720,7 +4850,7 @@
 <context>
     <name>Explain</name>
     <message>
-        <location filename="../core/explain.py" line="+33"/>
+        <location filename="../core/explain.py" line="+34"/>
         <source>Similarity to the Golden board is {value}, below its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4831,6 +4961,11 @@
     </message>
     <message>
         <location line="+15"/>
+        <source>The recipe&apos;s ROIs are judged on the AI model&apos;s map, and the AI check did not run, so no ROI was judged on this board.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>The drive was at least 95 % full when the board was saved, so its overlay and maps were not kept, only its verdict and checks: an Admin frees space on the drive.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4883,7 +5018,7 @@
         <translation type="unfinished">학습</translation>
     </message>
     <message>
-        <location line="+47"/>
+        <location line="+48"/>
         <source>Show All Steps ›</source>
         <translation type="unfinished">모든 단계 보기 ›</translation>
     </message>
@@ -4938,17 +5073,27 @@
         <translation type="unfinished">이 스테이션과 떨어져 보관하는 USB 드라이브(이미지를 가져오는 드라이브 말고)에 저장하거나 인쇄하십시오.</translation>
     </message>
     <message>
-        <location line="+6"/>
+        <location line="+9"/>
+        <source>Sign In as Admin…  Enter</source>
+        <translation type="unfinished">관리자로 로그인…  Enter</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Sign In as Admin…</source>
+        <translation type="unfinished">관리자로 로그인…</translation>
+    </message>
+    <message>
+        <location line="-4"/>
         <source>I Have Saved the Key</source>
         <translation type="unfinished">키를 저장했습니다</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+9"/>
         <source>I Have Saved the Key  Enter</source>
         <translation type="unfinished">키를 저장했습니다  Enter</translation>
     </message>
     <message>
-        <location line="+44"/>
+        <location line="+53"/>
         <source>Set up your first board model</source>
         <translation type="unfinished">첫 보드 모델 설정</translation>
     </message>
@@ -4958,7 +5103,7 @@
         <translation type="unfinished">{board_model} 설정</translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+42"/>
         <source>✓ {name} can be used.</source>
         <translation type="unfinished">✓ {name}을(를) 쓸 수 있습니다.</translation>
     </message>
@@ -4979,12 +5124,12 @@
     </message>
     <message>
         <location line="+18"/>
-        <location line="+38"/>
+        <location line="+66"/>
         <source>Board model {name} is set up for {customer}.</source>
         <translation type="unfinished">보드 모델 {name}이(가) {customer}용으로 설정되었습니다.</translation>
     </message>
     <message>
-        <location line="-25"/>
+        <location line="-52"/>
         <source>✓ {name} · for {customer}</source>
         <translation type="unfinished">✓ {name} · {customer}용</translation>
     </message>
@@ -4992,6 +5137,11 @@
         <location line="+4"/>
         <source>If this station&apos;s own key is ever lost, this key opens the images of {customer} again. It is shown only now.</source>
         <translation type="unfinished">이 스테이션의 키를 잃어버리면 이 키로 {customer}의 이미지를 다시 열 수 있습니다. 지금 한 번만 표시됩니다.</translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in to save it. The station does nothing else until then.</source>
+        <translation type="unfinished">{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 키는 보관되며, 그때까지 스테이션은 다른 작업을 하지 않습니다.</translation>
     </message>
 </context>
 <context>
@@ -5521,7 +5671,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1156"/>
+        <location filename="../ui/main_window.py" line="-1183"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5606,7 +5756,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+30"/>
         <source>{board_model} is still being set up</source>
         <translation type="unfinished">{board_model}은(는) 아직 설정 중입니다</translation>
     </message>
@@ -5631,7 +5781,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-239"/>
+        <location line="-243"/>
         <source>Inspect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5661,7 +5811,7 @@
         <translation>학습 중 {percent} % · {left}</translation>
     </message>
     <message>
-        <location line="+56"/>
+        <location line="+60"/>
         <source>{ok} OK · {ng} NG uploaded</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5892,14 +6042,14 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+110"/>
+        <location filename="../ui/pages/inspection.py" line="+112"/>
         <location line="+121"/>
-        <location line="+304"/>
+        <location line="+305"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-424"/>
+        <location line="-425"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5909,12 +6059,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>Watch Input Folder waits for the run to stop or the board in hand to finish.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+7"/>
+        <location line="+13"/>
         <source>View:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5963,12 +6108,12 @@
     <message>
         <location line="+9"/>
         <location line="+32"/>
-        <location line="+304"/>
+        <location line="+305"/>
         <source>▶  Start</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-335"/>
+        <location line="-336"/>
         <location line="+29"/>
         <source>■  Stop</source>
         <translation type="unfinished"></translation>
@@ -5989,7 +6134,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+275"/>
+        <location line="+276"/>
         <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
         <translation type="unfinished">✓ 교대 점검: 모든 판정이 올바름 · {until}까지 보드를 검사할 수 있습니다</translation>
     </message>
@@ -6004,17 +6149,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-283"/>
+        <location line="-284"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-170"/>
+        <location line="-172"/>
         <source>Save Image… needs the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+39"/>
+        <location line="+41"/>
         <source>Shift Check</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6059,7 +6204,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+28"/>
+        <location line="+29"/>
         <source>Stopping after this board…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6100,12 +6245,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-379"/>
+        <location line="-380"/>
         <source>Watch Input Folder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+112"/>
+        <location line="+7"/>
+        <source>Watch Input Folder waits for the run to stop or the board in hand to finish.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+105"/>
         <source>Each board image that arrives in the input folder is inspected while the line runs.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6136,7 +6286,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+217"/>
+        <location line="+218"/>
         <source>Shift check off</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6241,12 +6391,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+32"/>
+        <location line="+35"/>
+        <source>Run stopped: the session of {starter} ended after {minutes} minutes without input, and {user} is signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+32"/>
         <source>AI model {version} of {board_model} is trained but not active: only the Golden board comparison judges its boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6886,7 +7041,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+172"/>
+        <location line="+183"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6956,12 +7111,17 @@
         <translation type="unfinished">보드 모델 {name}이(가) {customer}의 암호화된 데이터셋 저장소에 있습니다.</translation>
     </message>
     <message>
-        <location line="+30"/>
+        <location line="+32"/>
+        <source>An Admin signs in with Sign In as Admin… on Home and saves the recovery key first.</source>
+        <translation type="unfinished">먼저 관리자가 홈에서 관리자로 로그인…을 눌러 로그인하고 복구 키를 저장하십시오.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Save the recovery key to a file or print it, then press I Have Saved the Key.</source>
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+65"/>
+        <location line="+74"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6971,12 +7131,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-40"/>
+        <location line="-48"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+183"/>
+        <location line="+191"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7228,56 +7388,56 @@
 <context>
     <name>ModelTestPage</name>
     <message>
-        <location filename="../ui/pages/model_test.py" line="+54"/>
-        <location line="+728"/>
+        <location filename="../ui/pages/model_test.py" line="+103"/>
+        <location line="+786"/>
         <source>Select Test Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-727"/>
-        <location line="+450"/>
+        <location line="-785"/>
+        <location line="+504"/>
         <location line="+223"/>
         <source>Run Test</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-671"/>
-        <location line="+734"/>
+        <location line="-725"/>
+        <location line="+792"/>
         <location line="+3"/>
         <source>Export CSV</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-735"/>
+        <location line="-793"/>
         <source>Export Report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+4"/>
-        <location line="+379"/>
+        <location line="+433"/>
         <source>No folder selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-350"/>
-        <location line="+227"/>
+        <location line="-404"/>
+        <location line="+281"/>
         <source>Accuracy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-228"/>
-        <location line="+227"/>
+        <location line="-282"/>
+        <location line="+281"/>
         <source>Precision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-228"/>
-        <location line="+227"/>
+        <location line="-282"/>
+        <location line="+281"/>
         <source>Recall</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-208"/>
+        <location line="-262"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7297,12 +7457,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+565"/>
+        <location line="+619"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-690"/>
+        <location line="-793"/>
         <source>Matches label</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7317,18 +7477,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+45"/>
+        <location line="+93"/>
         <source>Exports and Validation Report… need the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
-        <location line="+757"/>
+        <location line="+25"/>
+        <location line="+815"/>
         <source>Export Image Overlays</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-747"/>
+        <location line="-805"/>
         <source>Source</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7339,22 +7499,22 @@
     </message>
     <message>
         <location line="+10"/>
-        <location line="+62"/>
-        <location line="+165"/>
-        <location line="+628"/>
+        <location line="+64"/>
+        <location line="+217"/>
+        <location line="+614"/>
         <source>Missed defects</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-854"/>
-        <location line="+62"/>
-        <location line="+165"/>
-        <location line="+627"/>
+        <location line="-894"/>
+        <location line="+64"/>
+        <location line="+217"/>
+        <location line="+613"/>
         <source>False calls</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-830"/>
+        <location line="-870"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
         <translation type="unfinished"></translation>
@@ -7385,7 +7545,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+14"/>
         <source>Time</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7430,13 +7590,28 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+26"/>
         <source>Validation report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+10"/>
         <source>Validation report saved: {file}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
+        <source>Report not written to {file}: the run is no longer shown</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Writing the report to {file}…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
+        <source>A report is being written to {file}; wait until it is saved.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -7631,7 +7806,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+103"/>
+        <location line="+107"/>
         <source>AI model {version} of {board_model} is not active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7696,19 +7871,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+15"/>
         <location line="+12"/>
         <source>Export report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-633"/>
-        <location line="+623"/>
+        <location line="-691"/>
+        <location line="+681"/>
         <source>PDF (*.pdf)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-560"/>
+        <location line="-567"/>
         <source>Agreed with {who} before testing: recorded by {user} on {date}, before this run started.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7743,12 +7918,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+446"/>
+        <location line="+453"/>
         <source>Export the validation report of {images} images? It shows each of its {misses} missed defects and {false_calls} false calls with its overlay, and the AI model card.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+13"/>
         <source>Report saved: {file}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7779,8 +7954,8 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-577"/>
-        <location line="+621"/>
+        <location line="-563"/>
+        <location line="+607"/>
         <source>{image}: labelled {label}, judged {verdict}, AI score {score}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7851,7 +8026,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1113"/>
+        <location filename="../ui/main_window.py" line="-1140"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7976,7 +8151,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/compare.py" line="-922"/>
+        <location filename="../ui/pages/compare.py" line="-923"/>
         <source>Compare</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7986,7 +8161,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-763"/>
+        <location filename="../ui/pages/inspection.py" line="-786"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7996,7 +8171,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/model_test.py" line="-919"/>
+        <location filename="../ui/pages/model_test.py" line="-960"/>
         <source>AI Model Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8047,7 +8222,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/cycle.py" line="+27"/>
+        <location filename="../core/cycle.py" line="+28"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8603,7 +8778,7 @@
 <context>
     <name>RecoveryCodeDialog</name>
     <message>
-        <location filename="../ui/recovery_code_dialog.py" line="+29"/>
+        <location filename="../ui/recovery_code_dialog.py" line="+30"/>
         <source>Recovery code for {user}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8633,7 +8808,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+27"/>
         <source>Save Recovery Code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8681,7 +8856,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+53"/>
         <source>Store {uuid} · key id {key_id}</source>
         <translation type="unfinished">저장소 {uuid} · 키 ID {key_id}</translation>
     </message>
@@ -9183,7 +9358,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="+1"/>
+        <source>Input folder (empty: none)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Output folder (empty: none)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>AI device</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9317,17 +9502,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-65"/>
-        <source>Input folder (empty: none)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+1"/>
-        <source>Output folder (empty: none)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location line="+66"/>
+        <location line="+2"/>
         <source>Interface</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9928,7 +10103,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3840"/>
+        <location filename="../core/services.py" line="-4032"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10225,13 +10400,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+855"/>
+        <location line="+861"/>
         <location line="+42"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-893"/>
+        <location line="-899"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10461,7 +10636,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+49"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10507,12 +10682,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-545"/>
+        <location line="-551"/>
         <source>No samples for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+369"/>
+        <location line="+375"/>
         <source>Rolled back to AI model {version}</source>
         <translation type="unfinished"></translation>
     </message>

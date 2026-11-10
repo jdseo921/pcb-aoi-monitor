@@ -16,7 +16,8 @@ made. If the copy cannot be made (the disk is full, the folder cannot be written
 changes nothing. To roll back, close the app and copy the backup over `aoi.sqlite`; if `aoi.sqlite-wal` or
 `aoi.sqlite-shm` are there (after a crash), delete them, since they belong to the replaced file. Then start the version
 you upgraded from: this one would upgrade the database again. Results recorded since the upgrade are only in the
-replaced file, so keep a copy of it if they matter. The app never deletes the backups; remove old ones by hand.
+replaced file, so keep a copy of it if they matter. Until an Admin confirms the retention policy the app deletes no
+backup; from then on each retention sweep keeps the newest 3 and deletes the older ones (section 8, Retention sweep).
 
 **A workspace the app refuses.** A workspace created by version 0.1 (AOI-SET-001), written by a newer version
 (AOI-SET-002), recorded with a migration file that has changed since (AOI-SET-003), or on a drive without the
@@ -25,16 +26,17 @@ After the message a window asks for another workspace folder: the folder you cho
 `settings.json`, in the default workspace folder, as the Settings page saves it (if that folder cannot be written, the
 next start asks again); Cancel closes the app. The refused folder is left as it is. The same window follows AOI-SET-011:
 the workspace folder cannot be created or opened (a USB or network drive that is not connected) or its `aoi.sqlite` is
-not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another program holds
-`aoi.sqlite` (a database tool): close it, then choose the same folder. Starting the app while it is already open on the
-same workspace brings the copy that is open to the front and changes nothing, once that copy shows its window if it is
-still starting; so does Load Demo Workspace or Leave Demo Workspace onto a workspace another copy has open, which leaves
-this window as it is. Where Windows cannot do that (the copy is open on another Windows account or PC, or does not
-answer), AOI-SET-019 says in one sentence that the app is already open and to switch to it on the taskbar or have it
-closed, with one OK, and no folder window follows. A copy of the app that crashed, or a power cut, never blocks the next
-start. The workspace folder holds a small file `.aoi.lock` while the app runs, which names the copy that has it open;
-leave it where it is. If another program takes hold of `aoi.sqlite` while the app runs, a change that cannot be stored
-is refused after 5 s with AOI-SET-013: close that program and do the change again.
+not a database the app can open or write (restore the backup, as above); AOI-SET-025: the drive is too full for the
+database to open (free space on it and start the app again; restore no backup, as the database is not damaged); and
+AOI-SET-012: another program holds `aoi.sqlite` (a database tool): close it, then choose the same folder. Starting the
+app while it is already open on the same workspace brings the copy that is open to the front and changes nothing, once
+that copy shows its window if it is still starting; so does Load Demo Workspace or Leave Demo Workspace onto a workspace
+another copy has open, which leaves this window as it is. Where Windows cannot do that (the copy is open on another
+Windows account or PC, or does not answer), AOI-SET-019 says in one sentence that the app is already open and to switch
+to it on the taskbar or have it closed, with one OK, and no folder window follows. A copy of the app that crashed, or a
+power cut, never blocks the next start. The workspace folder holds a small file `.aoi.lock` while the app runs, which
+names the copy that has it open; leave it where it is. If another program takes hold of `aoi.sqlite` while the app runs,
+a change that cannot be stored is refused after 5 s with AOI-SET-013: close that program and do the change again.
 
 **Settings the app cannot read.** A `settings.json` that is not valid JSON, not UTF-8 text or not a JSON object stops
 the start with AOI-SET-010, naming the file and, for JSON, the line and column; correct it, or rename it to start with
@@ -63,7 +65,13 @@ self-check writes and removes a hidden file in each folder set, and alarms with 
 the image file's name without its extension for a board loaded by hand. Empty, the default, writes none. One output folder per station: two
 stations writing to one folder overwrite each other's shift CSV. A folder that is gone or refuses the files raises
 AOI-INSP-019 once (the app never makes the folder again, so files never land on the station's own disk by mistake),
-the boards are still judged and recorded, and the boards missed are not written later: export them from Logs & Export.
+the boards are still judged and recorded, and the boards missed are not written later: export them from Logs & Export. A
+shift CSV that another app holds open (a spreadsheet: Windows will not replace a file open there) raises AOI-INSP-020
+once; each board's own files are still written, and the lines the shift CSV missed are added once it is closed, with the
+next board or within a minute, as long as the app stays open (lines still refused at close are logged as
+`result_file.shift_lines_lost` with their record UUIDs). A shift CSV a spreadsheet saved over in another encoding is
+refused the same way: move it out of the folder and the station starts the file again with the lines it kept. The
+Settings page and the self-check take the folder in a later release.
 
 **Settings and settings.json.** A workspace folder saved on the Settings page is used from the next start; until
 then the app keeps the open workspace, its database, log and folders. The AI device, the default epochs and input
@@ -87,15 +95,17 @@ role you change holds after a restart. Each sign-in is an audit entry: `user.sig
 before, and `user.start` for the user a start signs in. The demo workspace always starts with its first Admin.
 
 **Passwords and locked accounts.** An Engineer or Admin signs in with Switch User and their password; at their first
-sign-in they choose one of 15 to 64 characters and type it twice. Five wrong passwords in a row lock the account for 5
-minutes (AOI-USR-006), and while it is locked even the right password is not checked; the 100th wrong one since the last
-right one locks it until an Admin unlocks it (AOI-USR-007). An Admin sees each user's status under Users & roles and
-ends a lock with **Unlock User**, a forgotten password or PIN with **Reset Password** (for a PIN too; the user chooses a new one
-at their next sign-in), and turns a user off or on again with **Disable / Enable**: a disabled user cannot sign in
+sign-in they choose one of 15 to 64 characters and type it twice; it may not be a user's, a customer's or the product's
+name, nor the demo workspace's published password. Five wrong passwords in a row lock the account for 5 minutes
+(AOI-USR-006), and while it is locked even the right password is not checked; the 100th wrong one since the last right
+one locks it until an Admin unlocks it (AOI-USR-007). An Admin sees each user's status under Users & roles and ends a
+lock with **Unlock User**, a forgotten password or PIN with **Reset Password** (for a PIN too; the user chooses a new
+one at their next sign-in), and turns a user off or on again with **Disable / Enable**: a disabled user cannot sign in
 (AOI-USR-010) and keeps their name on past records. An Engineer's or Admin's first password is chosen only while an
 Admin is signed in to hand the account over (AOI-USR-009): the Admin signs in, then picks the user under Switch User,
 who types the new password twice. No Admin disables or resets their own account (AOI-USR-011), and the station always
-keeps an Admin with a password (AOI-USR-013) and an enabled Operator for a start (AOI-USR-014).
+keeps an Admin with a password and a recovery code who is not locked until an Admin unlocks them (AOI-USR-013) and an
+enabled Operator for a start (AOI-USR-014).
 
 **The first Admin and the recovery code.** On a new station the first-run guide on Home asks first for the Admin's
 password: **Choose the Admin's Password…** opens Switch User with the Admin picked. Until it is chosen, Create and
@@ -105,16 +115,27 @@ is chosen, a recovery
 code of 25 letters and digits shows once, with **Save to File…** and **Print…**; **Done** waits until it is saved or
 printed. Keep the sheet apart from the station. An Admin who loses their password presses **Use Recovery Code…** at
 Switch User, types the code and chooses a new password; the code then works no more, and a new one shows once. A
-wrong code is refused (AOI-USR-015). Without the code, another Admin resets the password.
+wrong code is refused (AOI-USR-015). Every Admin gets a code of their own the same way, one handed over when they choose
+their password, and one moved to the Admin role at their next sign-in, so an Admin locked until an Admin unlocks them
+(AOI-USR-007) signs in again with it when no other Admin can. Save to File… offers a file named for the Admin. Without
+the code, another Admin resets the password. An Admin moved to the role, or one whose password is older than recovery
+codes, counts as one who can sign in once their code is made, at their next sign-in: until then, the Admin before them
+cannot step down (AOI-USR-013).
 
 A lock never stops the Operator view; where Operators have PINs, wrong ones lock only that Operator's name. `lock_after` and `lock_minutes` in `settings.json` set
-the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, key or touch, an
-Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited `user.idle_end`; never
-while a board is being inspected (a run under way stops after its board, as at any sign-in), never in the demo
-workspace, and a dialog left open is closed first, as Cancel would. A barcode scanner that types as a keyboard counts as
-input, so one in use keeps the session alive. `operator_pin: true` in `settings.json` asks
-each Operator for a 4 to 6 digit PIN at Switch User, chosen at their first sign-in (AOI-USR-008 for one that is not); a
-start still signs the Operator in, so the Operator view is never held.
+the two numbers (3 to 20, and 1 to 60 minutes). After `idle_minutes` (15; 1 to 120) without a press, wheel turn, key or
+touch, an Engineer's or Admin's session ends and the Operator signed in last is signed in again, audited
+`user.idle_end`, and Inspection opens. A board being inspected does not wait: it is recorded under the user who started
+it, and a run under way stops after it, as at any sign-in, so a run never keeps the session; the status bar and the line
+under the verdict tell the Operator why, and Start carries on with the queue under their name. Never in the demo
+workspace, and a dialog left open is closed first, as Cancel would. If it ends while the first-run guide shows a new
+store's recovery key, the Operator signed in sees no key: the guide keeps it, hidden, until an Admin signs in again with
+**Sign In as Admin…**, and the station does nothing else until the key is kept. A recovery key's or code's dialog left
+open still keeps the session (#499). Every key counts as input, a page's keys such as F1, F5 or Enter and Hangul typed
+through the input method too, and so does a barcode scanner that types as a keyboard, so one in use keeps the session
+alive. `operator_pin: true` in `settings.json` asks each Operator for a 4 to 6 digit PIN at Switch User, chosen at their
+first sign-in (AOI-USR-008 for one that is not); a start still signs the Operator in, so the Operator view is never
+held.
 
 **Presenter theme (demos).** For a demo, an Admin ticks Presenter theme on the Settings page, in its own group. It
 applies at once, with no restart, and stays on after one: a light background, text of 18 pt or more, the verdict at 48
@@ -225,11 +246,12 @@ away from the station, not the one that brings the images: the dialog opens on t
 Windows lists as a fixed disk, as many USB SSDs are, does not count) or **Print…** (Ctrl+P), and the line beside them
 says where it went; then **I Have Saved the Key** (Enter), which until then says to save or print the key first. While
 the key shows, the sidebar, the top bar, the page keys and the window's close do nothing, and a press on them says why
-on the status bar. F1 lists the step's keys. A refusal, such as a folder under `images` that holds files already
-(AOI-TRN-044) or a key saved into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and
-opens no dialog. The board model made is then chosen in the top bar, and the guide goes on to its images. **Show All
-Steps ›** leaves the guide for Home without it, which with no board model yet is the empty state with **+ New board
-model**, and **Show the Guide ›** brings it back, until the next sign-in.
+on the status bar; if the session ends for idle time meanwhile, the key is hidden until an Admin signs in again. F1
+lists the step's keys. A refusal, such as a folder under `images` that holds files already (AOI-TRN-044) or a key saved
+into the workspace (AOI-LOG-002), is said under the button that met it, with its code, and opens no dialog. The board
+model made is then chosen in the top bar, and the guide goes on to its images. **Show All Steps ›** leaves the guide for
+Home without it, which with no board model yet is the empty state with **+ New board model**, and **Show the Guide ›**
+brings it back, until the next sign-in.
 
 **The guide's images.** Screen 2 takes the board model's images, for a board model in a customer's store that has
 not inspected a board yet. Put them in one folder with two folders in it: `ok`, with the good boards' images, and
@@ -542,7 +564,12 @@ same step, its button then reading Finish Moving In, moves them. A file the app 
 why. When an engagement ends, an Admin ticks Advanced and shreds the store with Shred Store…, which names the board models and the files it
 deletes and waits for the customer's name typed: its key goes first, then its images, versions, AI models and Golden
 boards; nothing of it opens afterwards, a backup included, once the sheet is destroyed. A file that would not go is
-AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010).
+AOI-TRN-044, and Shred Store… again deletes what is left (ADR 0010). From the shred on, a board model of the store judges
+no board: Inspection refuses its next board with AOI-TRN-058, and AI Model Test its next image or the run's store,
+keeping no run; a training of it still running is refused, or loses its AI model's files to the shred if it registered
+first; and no version of it is made active again. To inspect those boards again, an Admin makes a new board model
+under another name with + New, naming the customer, and an Engineer imports its images, freezes a version, locks its
+validation set and trains from it, as AOI-TRN-058 says.
 
 **Training › Datasets freezes, splits and checks versions.** The Working set panel counts each view's OK, NG and UNSURE
 images and the checks a freeze needs, with ✓ once the view can be frozen, and names the customer whose dataset store
@@ -660,7 +687,10 @@ boards, untick Use the self-trained AI model in the Recipe Editor and save the r
 with another Golden board, choose an OK sample with Set Reference (section 3). Test a first version on AI Model Test, on
 the locked validation set, before you rely on its verdicts (section 6). Every activation and rollback is in the audit
 trail with the version and Golden board before and after. A version without an AI model card cannot be made active
-(AOI-TRN-049), nor one whose Golden board cannot be read (AOI-TRN-048); the version in use stays.
+(AOI-TRN-049), nor one whose AI model file is missing, damaged or another AI model's, nor one whose Golden board cannot
+be read (AOI-TRN-048, naming the file and why); the version in use stays, and a refused Roll Back shows its message as
+Activate Selected does. Activate Selected on the version already active changes nothing and writes nothing, so Roll
+Back keeps the version it goes back to.
 
 **AI model card.** Select a version and press AI Model Card to read its card under the list: what it is and what it
 was trained on (dataset version, customer, seed, code, settings, who trained it and when), the set-up, its thresholds,
@@ -730,6 +760,13 @@ removes the selected ROI without asking, since Ctrl+Z undoes each change to the 
 (drawing, moving, resizing, Apply, Delete) and Ctrl+Y does it again. The wheel zooms at the pointer; a drag on the
 board away from an ROI pans, as does a middle-button drag or a drag with Space held (in Draw ROI too); Home or a
 double-click fits the board. Save Recipe stores each ROI where it is shown, its box in mm under a scale (section 2).
+An enabled ROI must lie wholly on the Golden board: Save Recipe refuses one that does not (AOI-RCP-014), and a board
+judged with one gets no verdict (AOI-INSP-021), since part of its place would go unjudged. Calibrate Scale… refuses a
+scale that would leave an enabled ROI held in mm past the board's edge (AOI-RCP-015, naming the ROI and the size it must
+fit), so that no board stops on it. Set Reference and an AI model made active, which brings its own Golden board, check
+no ROI: after a camera change, set the new Golden board, then calibrate the scale on it (section 2) before judging
+boards; until then a board with an ROI off the image says so (AOI-INSP-021). ROIs are judged on the AI model's map: with
+the AI check off, or no AI model active, no ROI is judged, and each board's result says so.
 
 **Try Recipe…** (Ctrl+T) judges a board with the recipe as it stands on screen, changes not saved included, and
 stores nothing: no result and no file. The file dialog opens on the board last inspected under this board model, so
@@ -740,7 +777,8 @@ threshold, rule and result), with the inspection time against the 1 s budget.
 
 **AOI checks** tab. The 10 mandatory AOI checks of the defect classification table, each marked by how the recipe
 on screen covers it: ✓ ROI R1 for Missing Component, Polarity Error and Solder Bridge when an enabled ROI of the
-matching type (Presence, Polarity, Solder Bridge) covers it; • whole board for Misalignment, Tombstone and Cold Joint
+matching type (Presence, Polarity, Solder Bridge) covers it while the AI check is on; • whole board for Misalignment,
+Tombstone and Cold Joint
 while the AI check or the Golden board comparison is on; ○ not covered; and ◌ needs Stage 2 for the 4 checks a 3D or
 side camera makes. The marks follow each edit before it is saved.
 
@@ -818,11 +856,11 @@ validation on a dataset version also stores recall per defect type, by the type 
 
 **History.** The History tab lists every run of the board model, newest first: its time, AI model, dataset version or folder, recipe revision, missed defects and false calls. Select one and press Open (or double-click it) to show it on Run as it was stored, rows, tiles and previews.
 
-**Export Report.** Asks first, naming how many images, missed defects and false calls the report holds; the PDF then gives the rates with their counts and bounds, recall per defect type, each missed defect and false call with its overlay, every row, and the card of the AI model that judged the run. It is written whole or not at all and recorded in the audit trail.
+**Export Report.** Asks first, naming how many images, missed defects and false calls the report holds; the PDF then gives the rates with their counts and bounds, recall per defect type, each missed defect and false call with its overlay, every row, and the card of the AI model that judged the run. It is written whole or not at all and recorded in the audit trail. The window keeps answering while the PDF is made: the status bar says "Writing the report to …" and Export Report and Validation Report… stay greyed, saying why, until it says "Report saved", or that the report was not written because its run is no longer shown; a report the app is closed on before then is not written.
 
 **Agreed Targets.** Before a customer's validation, agree the targets in writing (Customers & Launch, "Validation", step 2) and record them: on Run, the line under Source names the targets the next run is held to, and Agreed Targets… opens a sheet with the most missed Critical defects, the highest false call rate (%) and the longest engine time per image at the 95th percentile (s), the proposed defaults filled in while none were agreed (no missed Critical defect, 5 %, 1 s). Type who at the customer agreed them, and where it is written, then press Save Targets (Esc or Cancel closes the sheet unsaved). They are in force from the next run, which keeps a copy; a run made before keeps the targets it started with, so targets recorded after a run never change its report. Each save is recorded in the audit trail with the targets before it; a value out of its range or no one named is refused with AOI-TST-008.
 
-**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the targets beside the results (those agreed with the customer and in force when the run started, with whom they were agreed, who recorded them and when; else the product's proposed defaults, said to be), the engine's time per image (reading the file, saving and display are not counted), the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007), and neither has a run on a Trial version's validation set or of a Trial AI model (AOI-TST-009, with Start the Checks; section 3). The Korean headings are drafts for native review.
+**Validation Report.** On History, select a run made on a frozen dataset version's locked validation set and press Validation Report…: the PDF follows the validation steps a customer signs: the data and the labeller agreement check, the targets beside the results (those agreed with the customer and in force when the run started, with whom they were agreed, who recorded them and when; else the product's proposed defaults, said to be), the engine's time per image (reading the file, saving and display are not counted), the locked set's manifest SHA-256, the results with counts and bounds, a page for each missed defect and false call, the AI model card, known limits and signature lines for the customer and the AI lead. A run on a folder, or a board model with no agreement check, has none (AOI-TST-007), and neither has a run on a Trial version's validation set or of a Trial AI model (AOI-TST-009, with Start the Checks; section 3). The Korean headings are drafts for native review. It is made as Export Report's is, the window answering meanwhile, and ends with "Validation report saved".
 
 **Export Image Overlays.** Each run keeps the overlay of each of its rows in the workspace, under
 `results/test_runs/<run UUID>`, for its previews, and Export Report and Validation Report… print the overlay of each

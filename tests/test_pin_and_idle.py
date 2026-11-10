@@ -8,8 +8,9 @@ from typing import Any, cast
 
 import pytest
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QInputMethodEvent, QKeySequence
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QDialog
+from PySide6.QtWidgets import QApplication, QDialog, QLineEdit, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
@@ -68,11 +69,10 @@ def test_req_usr_003_the_dialog_asks_an_operator_for_their_pin(qtbot: QtBot, ctx
     win.close()
 
 
-def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator_never_mid_inspection(
-    qtbot: QtBot, ctx: AppContext
-) -> None:
+def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator(qtbot: QtBot, ctx: AppContext) -> None:
     """After idle_minutes without input an Engineer's session ends, back to the Operator signed in last, audited
-    user.idle_end, a dialog left open closed first; input in time, an Operator, or a board being inspected keep it."""
+    user.idle_end, a dialog left open closed first; input in time, or an Operator, keep it. A board being inspected no
+    longer does: it is recorded under who started it (senior review 2026-11-06, SEC-4; `tests/test_acting_user.py`)."""
     ctx.ensure_board_model("B")
     ctx.set_user("admin")
     ctx.add_user("kim", "Operator")
@@ -87,10 +87,6 @@ def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator_never_mid
     QTest.keyClick(win, Qt.Key.Key_Shift)  # input: the idle time starts again
     assert time.monotonic() - win.input.last < 5
     win.input.last = time.monotonic() - 15 * 60
-    inspection = cast(Any, win.pages["Inspection"])
-    inspection.worker = object()  # a board being inspected
-    assert not win.check_idle() and ctx.user == "engineer"
-    inspection.worker = None
     box = QDialog(win)
     box.open()  # a dialog left open is closed first, as Cancel would
     assert QApplication.activeModalWidget() is box
@@ -105,6 +101,58 @@ def test_req_usr_004_an_idle_engineer_goes_back_to_the_shifts_operator_never_mid
     qtbot.addWidget(second)
     watches = QApplication.instance().findChildren(type(win.input))  # one filter for the app, never one per window
     assert watches == [win.input] and second.input is win.input
+    win.close()
+
+
+def test_req_usr_004_a_key_that_fires_a_shortcut_starts_the_idle_time_again(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A key that fires a shortcut (the window's F1, and a page's own: 3D Profile's Esc) reaches no widget as a key
+    press, only its action: it is input all the same, so an Engineer working by keyboard keeps the session (senior
+    review 2026-11-06, UI-2). So is Hangul typed through the input method, and a key no shortcut takes, as before.
+    An action triggered from code, a click from code, time passing and a mouse moved without a press are no input:
+    the session then ends as ever."""
+    ctx.ensure_board_model("B")
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    handed_over(ctx)
+    ctx.sign_in("engineer", password=PASSPHRASE)
+    win.set_user("engineer")
+    win.show()
+    win.activateWindow()  # a window's keys need it active, which the offscreen platform does not make it by itself
+    qtbot.waitUntil(lambda: QApplication.activeWindow() is win)
+    listed: list[str] = []
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda _p, _t, text, *a, **k: listed.append(text)))
+    for page in ("Home", "Inspection"):
+        win.navigate(page)
+        win.nav.setFocus()
+        win.input.last = time.monotonic() - 15 * 60
+        qtbot.keyClick(win.nav, Qt.Key.Key_F1)
+        assert len(listed) == 1 and listed.pop().startswith(f"On {page}:")  # the shortcut fired, as its action
+        assert time.monotonic() - win.input.last < 5
+        assert not win.check_idle() and ctx.user == "engineer"
+    profile = win.pages["3D Profile"]
+    win.navigate("3D Profile")
+    profile.setFocus()
+    win.input.last = time.monotonic() - 15 * 60
+    qtbot.keyClick(profile, Qt.Key.Key_Escape)  # the page's own action, Back to Home
+    assert win.stack.currentWidget() is win.pages["Home"] and time.monotonic() - win.input.last < 5
+    win.input.last = time.monotonic() - 15 * 60
+    qtbot.keyClick(win.nav, Qt.Key.Key_Down)  # no shortcut: a key press, as before
+    assert time.monotonic() - win.input.last < 5
+    edit = QLineEdit(win)
+    hangul = QInputMethodEvent("", [])
+    hangul.setCommitString("한글")
+    win.input.last = time.monotonic() - 15 * 60
+    QApplication.sendEvent(edit, hangul)  # typed through the input method, as a Korean keyboard types
+    assert edit.text() == "한글" and time.monotonic() - win.input.last < 5
+    win.input.last = time.monotonic() - 15 * 60
+    keys = next(a for a in win.actions() if a.shortcut() == QKeySequence(Qt.Key.Key_F1))
+    keys.trigger()  # from code: no key was pressed
+    cast(Any, win.pages["Home"]).btn_guide.click()
+    QTest.mouseMove(win.nav)
+    qtbot.wait(1100)
+    assert len(listed) == 1 and win.check_idle() and ctx.role == "Operator"
     win.close()
 
 

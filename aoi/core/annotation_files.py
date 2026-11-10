@@ -18,6 +18,7 @@ entities would be declared) is refused before it is parsed. No Qt here: the engi
 
 from __future__ import annotations
 
+import math
 import re
 import xml.etree.ElementTree as ET  # nosec B405: a document type is refused before parsing (`_voc`)
 from dataclasses import dataclass, field
@@ -129,7 +130,7 @@ def _parse(image: Path, size: tuple[int, int] | None, root: Path | None) -> Anno
     except (UnicodeDecodeError, ET.ParseError):  # before ValueError, which a decode error is too
         found.why = NOT_LABELS
         return found
-    except ValueError as e:  # this module's own words: the file's size, or the image it was made for
+    except ValueError as e:  # this module's own words: the file's size, the image it was made for, a number or line
         found.why = str(e)
         return found
     for name, (x0, y0, x1, y1) in entries:
@@ -137,10 +138,10 @@ def _parse(image: Path, size: tuple[int, int] | None, root: Path | None) -> Anno
             found.left_out.append(name)
             continue
         found.kinds.append(kind)
-        if size is not None:
+        if size is not None:  # held to the image first: a box far past it rounds to no int (senior review TRN-6)
             sx, sy = scale
-            left, top = max(0, round(x0 * sx)), max(0, round(y0 * sy))
-            right, bottom = min(size[0], round(x1 * sx)), min(size[1], round(y1 * sy))
+            left, top = _on_image(x0 * sx, size[0]), _on_image(y0 * sy, size[1])
+            right, bottom = _on_image(x1 * sx, size[0]), _on_image(y1 * sy, size[1])
             if right > left and bottom > top:
                 found.boxes.append(DefectBox(left, top, right - left, bottom - top, kind))
     return found
@@ -153,11 +154,11 @@ def _voc(data: bytes) -> tuple[tuple[int, int] | None, list[Entry]]:
     root = ET.fromstring(data)  # nosec B314: no document type, so no entity is declared, and at most MAX_BYTES
     if root.tag != "annotation":
         raise ValueError(f"<{root.tag}> is not a Pascal VOC annotation")
-    width, height = (int(float(root.findtext(f"size/{k}") or 0)) for k in ("width", "height"))
+    width, height = (int(_number(root.findtext(f"size/{k}"))) for k in ("width", "height"))
     entries: list[Entry] = []
     for obj in root.iter("object"):
         if (box := obj.find("bndbox")) is not None:
-            x0, y0, x1, y1 = (float(box.findtext(k) or 0) for k in ("xmin", "ymin", "xmax", "ymax"))
+            x0, y0, x1, y1 = (_number(box.findtext(k)) for k in ("xmin", "ymin", "xmax", "ymax"))
             entries.append((obj.findtext("name") or "", (x0, y0, x1, y1)))
     return ((width, height) if width and height else None), entries
 
@@ -168,7 +169,9 @@ def _yolo(text: str, classes: list[str]) -> list[Entry]:
     for line in text.splitlines():
         if not (cells := line.split()):
             continue
-        number, cx, cy, bw, bh = int(cells[0]), *(float(c) for c in cells[1:5])
+        if len(cells) < 5 or not re.fullmatch(r"[+-]?\d{1,9}", cells[0]):
+            raise ValueError(f"it holds a line that is no YOLO box: {line.strip()[:40]!r}")
+        number, cx, cy, bw, bh = int(cells[0]), *(_number(c) for c in cells[1:5])
         name = classes[number] if 0 <= number < len(classes) else f"class {number}"
         entries.append((name, (cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2)))
     return entries
@@ -201,3 +204,20 @@ def _yaml_names(text: str) -> list[str]:
         if item:
             out.append(item.group(1).strip().strip("'\""))
     return out
+
+
+def _number(text: str | None) -> float:
+    """A number an annotation file gives (none, or an empty one, is 0); ValueError in this module's words for one that
+    is not a finite number, as `nan`, `inf` or `1e999`, which would place a box nowhere (senior review TRN-6)."""
+    try:
+        value = float(text or 0)
+    except ValueError:
+        value = math.nan
+    if not math.isfinite(value):
+        raise ValueError(f"it holds {str(text).strip()[:40]!r} where a number belongs")
+    return value
+
+
+def _on_image(value: float, most: int) -> int:
+    """A box's edge in pixels, from 0 to the image's `most`: held to the image first, so one far past it is its edge."""
+    return round(min(max(value, 0.0), float(most)))

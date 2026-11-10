@@ -729,8 +729,9 @@ class ComparePage(Page):
         Today's Golden board gone or damaged comes back as the error to say on its pane, not raised (it was a dialog
         at every start, #176), and is alarmed once (#195); a test board it keeps from being judged comes back with its
         AOI-INSP-009 refusal and no result, so the pane says why whether or not a board was to be judged (#176
-        review); so does AOI-INSP-010, a board model with nothing that can judge it (#247). A refusal is logged here,
-        and alarmed when the run was asked for (not `quiet`), so a run cancelled or replaced loses none (#206)."""
+        review); so do AOI-INSP-010, a board model with nothing that can judge it (#247), and AOI-INSP-021, an enabled
+        ROI not wholly on the image (senior review ENG-2). A refusal is logged here, and alarmed when the run was asked
+        for (not `quiet`), so a run cancelled or replaced loses none (#206)."""
         golden_error = refused = None
         if ref is None and ref_path:
             ref = self.ctx.load_image(ref_path)
@@ -752,7 +753,7 @@ class ComparePage(Page):
         try:
             res = self.ctx.inspect(board_model, test, recipe, reference=ref) if test is not None else None
         except AoiError as e:  # no check can judge the board under this board model: said as AOI-INSP-009 is (#247)
-            if e.code != "AOI-INSP-010":
+            if e.code not in ("AOI-INSP-010", "AOI-INSP-021"):  # an ROI off the image, too (senior review ENG-2)
                 raise
             res, refused = None, e
         report = None

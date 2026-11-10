@@ -49,8 +49,8 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | D.2 | Accounts: Operator shift start with optional PIN, lockout, idle end | REQ-USR-003, REQ-USR-004 | in review: D.2a lockout and Unlock User (#441); D.2b the PIN and the idle end (`feat/REQ-USR-003-pin-idle`) |
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin (`feat/REQ-USR-005-recovery-sign-in`) |
 | E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | #447 (two PRs) | merged 2026-11-04 |
-| E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | in review |
-| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | merged 2026-11-04 |
+| E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | merged 2026-11-10 (#506 to #509, through #506) |
+| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | merged 2026-11-04 (#450); the senior review's fixes, a dotted board ID and a shift CSV held open, merged 2026-11-10 (#492) |
 | F.1 | Korean for the operator: `QTranslator`, `.qm` shipped, operator path translated | REQ-SET-006 (operator scope) | planned |
 | F.2 | Offline licence key and the EULA page | REQ-SET-010, REQ-SET-022 | planned |
 | F.3 | Station hardening: autostart with restart on failure, kiosk guidance, self-check alarms | REQ-SET-024 | planned |
@@ -185,6 +185,11 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   a non-Minor difference region makes a board WARN still flags every good board. Opened, not fixed: #460 to #462 (the
   three ranked changes), #463 to #467 (defects), #468 (commissioning steps the app lacks, for Jay). Nine PRs, one
   train, stacked on `test/452-proxy-record`.
+- 2026-11-06: #459 (REQ-TST-008, test only, Jay's request "run and test in a possible scale"): the scenarios again on
+  pcb2, both configurations, added to `docs/tests/2026-11-05-stage1-industry-scenarios.md` as an addendum; pcb3, pcb4
+  and more seeds did not fit the machine, and Jay chose to stop at pcb2 (S6 as commissioned and S9 did not run there
+  either). Every good pcb2 board was flagged, as on pcb1; nothing under `aoi/` changed and the regression set is
+  unchanged. One PR on `main`.
 - 2026-11-06: usability sweep (project report `reports/2026-11-06-usability-sweep.md`); Jay chose "Yes, one small
   fix PR" for its five low-risk findings: `fix/usability-sweep-low-risk` (greyed buttons say why, Switch User hints,
   the Recipe Editor's ROI form, the status line of a refused page). Its high findings wait for Jay's decisions.
@@ -194,7 +199,26 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-06: Jay: "Factory isnt involved for now", then chose "Define our own contract, build E.2" (decision card):
   ADR 0024 D30 takes the Engineering standard's capture name as the input-file naming contract
   (`docs/schemas/input-file-naming.md`). E.2 is four PRs stacked on `main`: E.2a `docs/REQ-INSP-020-naming-contract`
-  (D30, the schema page, AOI-INSP-025 to -024 and AOI-SET-026), E.2b `feat/REQ-INSP-020-folder-watch` (`FolderWatch`),
+  (D30, the schema page, AOI-INSP-025 to -029 and AOI-SET-026), E.2b `feat/REQ-INSP-020-folder-watch` (`FolderWatch`),
   E.2c `feat/REQ-INSP-020-line-cycle` (`InspectionCycle.watched`, the image's SHA-256 in its record, migration 0031,
   the settings and the self-check) and E.2d `feat/REQ-INSP-020-line-page` (the Inspection page's line, the Settings
   fields, the manuals).
+- 2026-11-06: senior review of the whole app on `3efc292` (Jay: "Proceed with a discretion assuming you are a strict
+  senior dev from a company who is reviewing the whole thing the first time and wants it to work properly"), recorded in
+  `docs/reviews/2026-11-06-senior-review.md`: 32 defects (8 P1, 15 P2, 9 P3), and ADR 0024 D26 (the result file's
+  checks), D27 (what a retrain aligns to), D28 (role checks on every write) and D29 (work on the window's thread),
+  proposed. One P1, UI-1, is in #487, the next train now that #479 has merged, and stops a release until it is fixed.
+  Nine PRs, one train, stacked on #479's head, which main holds since it merged: this record first, then the fixes in
+  the record's order. The regression set is unchanged. Tracking issue #488; follow-ups #480 to #487, #489 and #490.
+- 2026-11-10: tester readiness check (Jay's request: can people who know little about technology run and test Stage 1
+  with sample uploads). `docs/REQ-SET-012-tester-guide`, docs only: `docs/install/tester-guide.md`, a plain-language
+  install, demo walkthrough and own-photo check with a tick column; `install.md` names the pilot-signed artifact that
+  builds of `main` make and its UAC publisher. Nothing under `aoi/` changed and the regression set is unchanged. One PR
+  on `main`.
+- 2026-11-10: Jay answered ADR 0024 D29 with (A) on a decision card and asked to "push everything to main". The senior
+  review's train (#491 to #498 and #500) lands on `main` through #491: each PR merged into its base, then `main`
+  merged into #491's branch, with the register's status column and the progress file taking both sides' lines and
+  `aoi/i18n/aoi_ko.ts` regenerated. D26 to D28 stay proposed.
+- 2026-11-10: E.2's train (#506 to #509) lands on `main` through #506, after the senior review's train. Both trains had
+  taken ADR 0024 D26 and the codes AOI-INSP-020, AOI-INSP-021 and AOI-SET-025, none shipped in a build: E.2's are
+  renumbered D30, AOI-INSP-025 to -029 and AOI-SET-026, and the 2026-11-06 lines above use the new numbers.

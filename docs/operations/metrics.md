@@ -26,7 +26,8 @@ beat is also a `heartbeat` line in the day's log, the history the support bundle
 ## `logs/alerts.jsonl`
 
 One line per alarm, appended as it is raised: `time`, `level` (NG, WARN or ERROR), `code` (an `AOI-…` code from
-`docs/error-codes.md`, or `null`) and `text`, the alarm's English text. Tail it; the file is not rotated.
+`docs/error-codes.md`, or `null`) and `text`, the alarm's English text. An alarm stored with a record, an NG board's
+or a failed shift check's (AOI-INSP-016), is appended once the record is stored. Tail it; the file is not rotated.
 
 ## Start-up self-check
 
@@ -41,4 +42,6 @@ logged as `self_check.step_failed`; the other checks still run. The input and ou
 ## Clean exit
 
 `app.close` is logged on every clean exit. While the app runs the workspace holds `aoi.running`; a start that finds it
-logs `app.not_closed_cleanly`, as after a kill, a crash or a power cut.
+logs `app.not_closed_cleanly`, as after a kill, a crash or a power cut. The marker is written by the last step of a
+start, so a start the app refuses (another program holding the database, say) leaves it as it found it, and the next
+start that opens still says so.
