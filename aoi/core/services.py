@@ -552,13 +552,12 @@ class AppContext:
             # the system's own start-up writes: on a drive too full for them they wait for the next start (REQ-LOG-006)
             self._unless_full("retention.not_archived", self._archive_old)
             self._unless_full("maps.not_swept", self._sweep_ok_maps)  # OK maps past their retention (REQ-INSP-012)
-            self._unless_full("app.not_marked", self._mark_running)  # the next start knows whether this one closed
             self._crash_record()
             for board_model in self.db.board_models():  # before S25 a workspace's results named no stored revision
                 self._unless_full("recipe.not_stored", functools.partial(self._ensure_recipe, board_model))
+            # last, as nothing after it refuses the start: a refused start leaves the marker as it found it (DAT-3)
+            self._unless_full("app.not_marked", self._mark_running)  # the next start knows whether this one closed
         except BaseException as e:
-            with contextlib.suppress(OSError):
-                heartbeat.closed(self.settings.root)  # not opened, so not a run the next start should call unclosed
             logging_setup.crash_release(self.settings.root / "logs")
             self.db.close()  # a refused workspace holds no file open while another folder is chosen (REQ-SET-016)
             logging_setup.close(self.log)
@@ -1776,10 +1775,13 @@ class AppContext:
         that judges (the override, else the active AI model's calibrated value; None with neither), that AI model's
         version and its calibrated value (None while none is active or its calibration cannot be read). A size in mm
         the engine cannot apply is refused with AOI-RCP-011 (`Recipe.mm_refusal`), and any recipe while the board
-        model's scale cannot be read with AOI-RCP-012, nothing stored (S29 review)."""
+        model's scale cannot be read with AOI-RCP-012, nothing stored (S29 review); so is one with an enabled ROI that
+        is not wholly on the Golden board at that scale, AOI-RCP-014 (`_roi_off_golden`)."""
         if (refused := recipe.mm_refusal()) is not None:
             raise refused
         scale = self.db.scale(recipe.board_model)  # AOI-RCP-012 for one that cannot be read
+        if (refused := self._roi_off_golden("AOI-RCP-014", recipe.in_px(scale))) is not None:
+            raise refused
         latest = self.db.latest_recipe(recipe.board_model)
         if (notice := recipe.size_notice(scale)) is not None:  # saved, and kept with it
             reason = f"{reason} {notice}" if reason else str(notice)  # in the audit entry (REQ-INSP-014)
@@ -1798,6 +1800,36 @@ class AppContext:
             after = {"revision": rev, "override": new, "threshold": new or named["calibrated"]}
             self.audit("recipe.ai_threshold", "board_model", recipe.board_model, before | named, after | named, reason)
         return rev
+
+    def _roi_off_golden(self, code: str, recipe: Recipe, golden: str | None = None, **fill: Any) -> AoiError | None:
+        """`code` (AOI-RCP-014 at Save Recipe, AOI-RCP-015 at Calibrate Scale…) for the first enabled ROI
+        of `recipe`, in px, that is not wholly on the image ROIs are drawn and judged on (`Recipe.off_image`): the
+        image `golden`, else its board model's Golden board. None when each is, with no such image, or when its size
+        cannot be read (missing, cut short, a header of no size: `_image_size`, which reads a plain file's header
+        only), as inspecting then refuses every board itself (AOI-INSP-009); senior review 2026-11-06, ENG-2."""
+        golden = golden or self.db.reference(recipe.board_model)
+        try:
+            width, height = self._image_size(golden) if golden else (0, 0)
+        except (OSError, AoiError):
+            return None
+        if not golden or (off := recipe.off_image(width, height)) is None:
+            return None
+        return AoiError(
+            code, roi=off.name, board_model=recipe.board_model, x=off.x, y=off.y, w=off.w, h=off.h, width=width,
+            height=height, **fill,
+        )  # fmt: skip
+
+    def _roi_moved_off(self, board_model: str, scale: float, golden: str | None) -> None:
+        """AOI-RCP-015, before anything is written, when the board model's recipe at the new `scale` would have an
+        enabled ROI held in mm not wholly on its Golden board `golden`, which would leave every board with no verdict
+        (AOI-INSP-021; senior review 2026-11-06, ENG-2: the line stopped at the next board, with no word at Calibrate
+        Scale…). Set Reference checks none: a camera change sets its Golden board first and calibrates the scale on it
+        after (REQ-RCP-006), and until then a board with an ROI off it gets AOI-INSP-021."""
+        if (latest := self.db.latest_recipe(board_model)) is not None:
+            recipe = Recipe.from_dict(latest[1]).in_px(scale)
+            recipe.rois = [r for r in recipe.rois if r.mm is not None]  # one in px no scale moves (review)
+            if (refused := self._roi_off_golden("AOI-RCP-015", recipe, golden)) is not None:
+                raise refused
 
     @requires("Engineer", QT_TRANSLATE_NOOP("Errors", "Setting the comparison's thresholds from labelled boards"))
     def learn_comparison(
@@ -2128,7 +2160,6 @@ class AppContext:
             raise
         # The row has committed: its files are named now and stay, whatever the log lines below meet.
         if alarm is not None:
-            self.log.info("alarm", extra={"alarm_level": alarm[0], "code": alarm[2], "text": alarm[1]})
             self._alert(alarm[0], alarm[2], alarm[1])
         self._write_result_files(iid, board_model, path, res, insp, "none" if skip else "jpeg" if light else "png", day)
         last = {"board_model": board_model, "ai_model": insp.model_version, "recipe_rev": insp.recipe_rev}
@@ -2158,7 +2189,6 @@ class AppContext:
         wait for another program's lock on the database; `log_text` is what the log holds of a `message` that names a
         person (#195)."""
         self.db.alarm(level, message, code, wait_ms)
-        self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": log_text or message})
         self._alert(level, code, log_text or message)
 
     def _write_result_files(
@@ -2908,7 +2938,8 @@ class AppContext:
         """Judge the master samples with the engine in use and store the check (REQ-INSP-017, ADR 0014): a known-OK
         board must come out OK, and each known-NG board NG or WARN, as an AI Model Test counts them. The check, what
         judged it and each sample's verdict are stored and audited together (inspection.shift_check); a failed check
-        also stores an NG alarm AOI-INSP-016, as the line stays stopped. Any role runs it, as the operator starts the
+        also stores an NG alarm AOI-INSP-016 with them, as the line stays stopped, which once they commit reaches the
+        log and `logs/alerts.jsonl` as every alarm does (`_alert`). Any role runs it, as the operator starts the
         shift. AOI-INSP-017, with nothing stored, when the board model has no OK or no NG sample to judge. Returns the
         check as `shift_check` gives it, with `rows`."""
         samples = self.master_samples(board_model)
@@ -2936,7 +2967,8 @@ class AppContext:
         model_uuid, recipe_uuid, reference_path, scale = insp.inputs
         inputs: dict[str, Any] = {"model_uuid": model_uuid, "recipe_uuid": recipe_uuid, "scale": scale}
         inputs["reference_path"] = reference_path
-        with self.db.transaction():  # the check and its entry, or neither (#178)
+        alarm = None
+        with self.db.transaction():  # the check, its entry and its alarm, or none (#178)
             uid = self.db.add_shift_check(board_model, self.user, passed, inputs, rows)
             after = {"uuid": uid, "passed": passed, "model_version": insp.model_version, "recipe_rev": insp.recipe_rev}
             after["rows"] = [{k: r[k] for k in ("sample_uuid", "expected", "verdict", "right")} for r in rows]
@@ -2946,7 +2978,10 @@ class AppContext:
                 text = QT_TRANSLATE_NOOP(
                     "Errors", "Shift check of {board_model}: {wrong} of {count} master samples judged wrongly"
                 )
-                self.db.alarm("NG", text.fill(board_model=board_model, wrong=wrong, count=len(rows)), "AOI-INSP-016")
+                alarm = text.fill(board_model=board_model, wrong=wrong, count=len(rows))
+                self.db.alarm("NG", alarm, "AOI-INSP-016")
+        if alarm is not None:  # committed: the log and alerts.jsonl have it too (review finding DAT-2)
+            self._alert("NG", "AOI-INSP-016", alarm)
         self.log.info("inspection.shift_check", extra={"board_model": board_model, "passed": passed})
         return self.shift_check(board_model)
 
@@ -3172,7 +3207,9 @@ class AppContext:
         verdicts: audited as board_model.scale with the scale before and after, the length, the distance and the Golden
         board file. Refused with AOI-RCP-008, before anything is written, unless both are numbers above 0, not true or
         false, whose ratio is from MIN_SCALE to MAX_SCALE, or for a board model that does not exist. It replaces a
-        stored scale that cannot be read (AOI-RCP-012), which its entry keeps as it was stored (S29 review)."""
+        stored scale that cannot be read (AOI-RCP-012), which its entry keeps as it was stored (S29 review). Refused
+        with AOI-RCP-015, nothing written, when the scale would move an enabled ROI held in mm off the Golden board
+        (`_roi_moved_off`)."""
         numbers = all(isinstance(v, int | float) and not isinstance(v, bool) for v in (length_px, distance_mm))
         scale = length_px / distance_mm if numbers and distance_mm > 0 else math.nan  # a bool is none (S29 review)
         if board_model not in self.db.board_models():
@@ -3185,6 +3222,7 @@ class AppContext:
         except AoiError as e:  # AOI-RCP-012: replaced
             before = e.params["value"]
         golden = self.db.reference(board_model)
+        self._roi_moved_off(board_model, scale, golden)
         self.db.set_scale(board_model, scale)
         image = to_stored(Path(golden), self.settings.root) if golden else None
         after = {"px_per_mm": scale, "length_px": length_px, "distance_mm": distance_mm, "image": image}
@@ -4510,6 +4548,10 @@ class AppContext:
             self.log.error("app.crashed", extra={"record": crashed.name})  # the last run died of a native fault
 
     def _mark_running(self) -> None:
+        """Write the marker `aoi.running` that a clean close removes, and log `app.not_closed_cleanly` when the run
+        before left its own (REQ-SET-024). The last step of a start: a start refused before it (a database another
+        program holds, AOI-SET-012) neither writes the marker nor deletes the one it found, which once deleted left the
+        next start unable to say that the run before did not close (review finding DAT-3)."""
         if heartbeat.started(self.settings.root):  # the run before was killed, crashed, or lost its power (REQ-SET-024)
             self.log.warning("app.not_closed_cleanly")
 
@@ -4624,7 +4666,11 @@ class AppContext:
         return fields
 
     def _alert(self, level: str, code: str | None, text: object) -> None:
-        """Append an alarm to logs/alerts.jsonl (REQ-SET-024); a line the drive refuses is lost, the alarm stays."""
+        """What follows every alarm stored (REQ-SET-024): its `alarm` line in the log and its line in
+        logs/alerts.jsonl; a line the drive refuses is lost, the alarm stays. An alarm stored in a transaction, with an
+        NG board's record or a failed shift check, is followed by it once that commits, so neither line names an alarm
+        rolled back; one stored any other way than through `alarm` must call it (review finding DAT-2)."""
+        self.log.info("alarm", extra={"alarm_level": level, "code": code, "text": text})
         with contextlib.suppress(OSError):
             heartbeat.alert(
                 self.settings.root / "logs", {"time": now_utc(), "level": level, "code": code, "text": text}

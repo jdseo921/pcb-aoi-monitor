@@ -17,6 +17,7 @@ from .inspector import (
     NOT_AI_JUDGED_NOTE,
     NOT_COMPARED_NOTE,
     OK,
+    ROIS_NOT_JUDGED_NOTE,
     WARN,
     Check,
     InspectionResult,
@@ -115,6 +116,11 @@ NOTES = {
         "Explain",
         "The AI check did not run when the board was inspected, so it is not judged again here: inspect the board again"
         " with the AI model in use.",
+    ),
+    ROIS_NOT_JUDGED_NOTE: QT_TRANSLATE_NOOP(  # with the note on why the AI check did not run, which comes first
+        "Explain",
+        "The recipe's ROIs are judged on the AI model's map, and the AI check did not run, so no ROI was judged on this"
+        " board.",
     ),
     SKIPPED_NOTE: QT_TRANSLATE_NOOP(  # REQ-LOG-006: the verdict stands; only its pictures were not kept
         "Explain",

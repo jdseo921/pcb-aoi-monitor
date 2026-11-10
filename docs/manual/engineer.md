@@ -16,7 +16,8 @@ made. If the copy cannot be made (the disk is full, the folder cannot be written
 changes nothing. To roll back, close the app and copy the backup over `aoi.sqlite`; if `aoi.sqlite-wal` or
 `aoi.sqlite-shm` are there (after a crash), delete them, since they belong to the replaced file. Then start the version
 you upgraded from: this one would upgrade the database again. Results recorded since the upgrade are only in the
-replaced file, so keep a copy of it if they matter. The app never deletes the backups; remove old ones by hand.
+replaced file, so keep a copy of it if they matter. Until an Admin confirms the retention policy the app deletes no
+backup; from then on each retention sweep keeps the newest 3 and deletes the older ones (section 8, Retention sweep).
 
 **A workspace the app refuses.** A workspace created by version 0.1 (AOI-SET-001), written by a newer version
 (AOI-SET-002), recorded with a migration file that has changed since (AOI-SET-003), or on a drive without the
@@ -25,16 +26,17 @@ After the message a window asks for another workspace folder: the folder you cho
 `settings.json`, in the default workspace folder, as the Settings page saves it (if that folder cannot be written, the
 next start asks again); Cancel closes the app. The refused folder is left as it is. The same window follows AOI-SET-011:
 the workspace folder cannot be created or opened (a USB or network drive that is not connected) or its `aoi.sqlite` is
-not a database the app can open or write (restore the backup, as above); and AOI-SET-012: another program holds
-`aoi.sqlite` (a database tool): close it, then choose the same folder. Starting the app while it is already open on the
-same workspace brings the copy that is open to the front and changes nothing, once that copy shows its window if it is
-still starting; so does Load Demo Workspace or Leave Demo Workspace onto a workspace another copy has open, which leaves
-this window as it is. Where Windows cannot do that (the copy is open on another Windows account or PC, or does not
-answer), AOI-SET-019 says in one sentence that the app is already open and to switch to it on the taskbar or have it
-closed, with one OK, and no folder window follows. A copy of the app that crashed, or a power cut, never blocks the next
-start. The workspace folder holds a small file `.aoi.lock` while the app runs, which names the copy that has it open;
-leave it where it is. If another program takes hold of `aoi.sqlite` while the app runs, a change that cannot be stored
-is refused after 5 s with AOI-SET-013: close that program and do the change again.
+not a database the app can open or write (restore the backup, as above); AOI-SET-025: the drive is too full for the
+database to open (free space on it and start the app again; restore no backup, as the database is not damaged); and
+AOI-SET-012: another program holds `aoi.sqlite` (a database tool): close it, then choose the same folder. Starting the
+app while it is already open on the same workspace brings the copy that is open to the front and changes nothing, once
+that copy shows its window if it is still starting; so does Load Demo Workspace or Leave Demo Workspace onto a workspace
+another copy has open, which leaves this window as it is. Where Windows cannot do that (the copy is open on another
+Windows account or PC, or does not answer), AOI-SET-019 says in one sentence that the app is already open and to switch
+to it on the taskbar or have it closed, with one OK, and no folder window follows. A copy of the app that crashed, or a
+power cut, never blocks the next start. The workspace folder holds a small file `.aoi.lock` while the app runs, which
+names the copy that has it open; leave it where it is. If another program takes hold of `aoi.sqlite` while the app runs,
+a change that cannot be stored is refused after 5 s with AOI-SET-013: close that program and do the change again.
 
 **Settings the app cannot read.** A `settings.json` that is not valid JSON, not UTF-8 text or not a JSON object stops
 the start with AOI-SET-010, naming the file and, for JSON, the line and column; correct it, or rename it to start with
@@ -726,6 +728,13 @@ removes the selected ROI without asking, since Ctrl+Z undoes each change to the 
 (drawing, moving, resizing, Apply, Delete) and Ctrl+Y does it again. The wheel zooms at the pointer; a drag on the
 board away from an ROI pans, as does a middle-button drag or a drag with Space held (in Draw ROI too); Home or a
 double-click fits the board. Save Recipe stores each ROI where it is shown, its box in mm under a scale (section 2).
+An enabled ROI must lie wholly on the Golden board: Save Recipe refuses one that does not (AOI-RCP-014), and a board
+judged with one gets no verdict (AOI-INSP-021), since part of its place would go unjudged. Calibrate Scale… refuses a
+scale that would leave an enabled ROI held in mm past the board's edge (AOI-RCP-015, naming the ROI and the size it must
+fit), so that no board stops on it. Set Reference and an AI model made active, which brings its own Golden board, check
+no ROI: after a camera change, set the new Golden board, then calibrate the scale on it (section 2) before judging
+boards; until then a board with an ROI off the image says so (AOI-INSP-021). ROIs are judged on the AI model's map: with
+the AI check off, or no AI model active, no ROI is judged, and each board's result says so.
 
 **Try Recipe…** (Ctrl+T) judges a board with the recipe as it stands on screen, changes not saved included, and
 stores nothing: no result and no file. The file dialog opens on the board last inspected under this board model, so
@@ -736,7 +745,8 @@ threshold, rule and result), with the inspection time against the 1 s budget.
 
 **AOI checks** tab. The 10 mandatory AOI checks of the defect classification table, each marked by how the recipe
 on screen covers it: ✓ ROI R1 for Missing Component, Polarity Error and Solder Bridge when an enabled ROI of the
-matching type (Presence, Polarity, Solder Bridge) covers it; • whole board for Misalignment, Tombstone and Cold Joint
+matching type (Presence, Polarity, Solder Bridge) covers it while the AI check is on; • whole board for Misalignment,
+Tombstone and Cold Joint
 while the AI check or the Golden board comparison is on; ○ not covered; and ◌ needs Stage 2 for the 4 checks a 3D or
 side camera makes. The marks follow each edit before it is saved.
 

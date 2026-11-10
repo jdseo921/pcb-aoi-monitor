@@ -415,6 +415,22 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-021",
+            QT_TRANSLATE_NOOP("Errors", "ROI off the image"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "ROI {roi} of board model {board} is not wholly on the image it is judged on: its box is {x}, {y},"
+                " {w} × {h} px and the image {width} × {height} px, so part of it would go unjudged. The board gets no"
+                " verdict.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Tell an Engineer. After a camera change, they calibrate the scale on its new Golden board; else, in"
+                " the Recipe Editor, they move the ROI inside the Golden board, or turn it off, and save the recipe."
+                " Then judge the board again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(
@@ -1304,6 +1320,36 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-RCP-014",
+            QT_TRANSLATE_NOOP("Errors", "ROI off the Golden board"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "ROI {roi} of board model {board_model} is not wholly on its Golden board: at the board model's scale"
+                " its box is {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was saved. Move the ROI inside the Golden board in the Recipe Editor, or turn it off, then"
+                " save the recipe again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-015",
+            QT_TRANSLATE_NOOP("Errors", "ROI would be off the image"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The new scale would leave ROI {roi} of board model {board_model} not wholly on its Golden board: its"
+                " box would be {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px, so every board would"
+                " get no verdict (AOI-INSP-021).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was changed. Check the length and the distance measured. If they are right, move the ROI to"
+                " fit {width} × {height} px in the Recipe Editor, or turn it off, and save the recipe; then calibrate"
+                " the scale again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-LOG-001",
             QT_TRANSLATE_NOOP("Errors", "Export stopped part-way"),
             QT_TRANSLATE_NOOP(
@@ -1779,6 +1825,21 @@ CODES: dict[str, ErrorCode] = {
                 "Choose a folder on a drive of this PC that OneDrive does not copy, such as C:\\AOI_Workspace. To keep "
                 "the records, close the app and move the whole workspace folder there first, then choose it (install "
                 'guide, "Where the workspace goes"); at start, choose it in the window that opens next.',
+            ),
+        ),
+        ErrorCode(
+            "AOI-SET-025",
+            QT_TRANSLATE_NOOP("Errors", "Workspace drive full"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The workspace folder {path} could not be opened: its drive is full, with no room for the database's"
+                " working files.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Restore no backup: the database is not damaged, only out of room. Free space on that drive, for"
+                " example by moving old exports off it, and start the app again. Or choose another workspace folder"
+                " in the window that opens next; Cancel there closes the app.",
             ),
         ),
     )

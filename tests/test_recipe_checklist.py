@@ -22,8 +22,9 @@ STAGE_2_CHECKS = {"Shield Can Gap", "Connector Pin Height", "3D Coplanarity", "S
 
 
 def test_req_rcp_005_each_mandatory_check_is_covered_by_an_roi_the_whole_board_or_stage_2() -> None:
-    """A check judged in an ROI is covered by an enabled ROI of its type alone; the whole-board checks by the AI check
-    or the Golden board comparison; the 4 that need a 3D or side camera are Stage 2 whatever the recipe holds."""
+    """A check judged in an ROI is covered by an enabled ROI of its type alone, while the AI check that judges ROIs
+    runs; the whole-board checks by the AI check or the Golden board comparison; the 4 that need a 3D or side camera
+    are Stage 2 whatever the recipe holds."""
     r = Recipe("B", rois=[Roi("R1", "Presence"), Roi("R2", "Polarity", enabled=False), Roi("R3", "Height")])
     got = {c.check: (c.how, c.rois) for c in checklist.coverage(r)}
     assert list(got) == MANDATORY_AOI_SET
@@ -32,10 +33,11 @@ def test_req_rcp_005_each_mandatory_check_is_covered_by_an_roi_the_whole_board_o
     assert {check for check, (how, _) in got.items() if how == STAGE_2} == STAGE_2_CHECKS
     assert {got[c][0] for c in ("Misalignment", "Tombstone", "Cold Joint")} == {WHOLE_BOARD}
     whole = ["Misalignment", "Tombstone", "Cold Joint"]
-    assert checklist.uncovered(replace(r, use_ai=False)) == ["Polarity Error", "Solder Bridge"]
+    in_rois = ["Missing Component", "Polarity Error", "Solder Bridge"]
+    assert checklist.uncovered(replace(r, use_ai=False)) == in_rois, "an ROI is judged by the AI check alone"
     assert checklist.uncovered(replace(r, use_compare=False)) == ["Polarity Error", "Solder Bridge"]
     off = checklist.uncovered(replace(r, use_ai=False, use_compare=False))
-    assert off == [c for c in MANDATORY_AOI_SET if c in whole or c in ("Polarity Error", "Solder Bridge")]
+    assert off == [c for c in MANDATORY_AOI_SET if c in whole or c in in_rois]
 
 
 def test_req_rcp_005_the_aoi_checks_tab_marks_each_check_as_the_recipe_is_edited(

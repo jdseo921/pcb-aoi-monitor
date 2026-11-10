@@ -29,6 +29,7 @@ from . import front
 # folder or database that cannot be opened, a database another program holds (the same folder, once it lets go).
 ANOTHER_WORKSPACE = {"AOI-SET-001", "AOI-SET-002", "AOI-SET-003", "AOI-SET-005", "AOI-SET-011", "AOI-SET-012"}
 ANOTHER_WORKSPACE |= {"AOI-SET-024"}  # and a folder on a network drive or in OneDrive (REQ-SET-025)
+ANOTHER_WORKSPACE |= {"AOI-SET-025"}  # and one whose drive is full (REQ-LOG-006, senior review DAT-1)
 # The workspace is open in another copy of the app: that copy comes to the front, never a folder picker (F12)
 ALREADY_OPEN = "AOI-SET-019"
 # A Trial version refused by the go-live gate or the customer validation report: the dialog's Start the Checks button
