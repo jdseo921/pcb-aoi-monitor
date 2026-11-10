@@ -1100,7 +1100,7 @@ The writes, their roles and entries:
 | `confirm_retention` | Admin | `retention.confirm` (the policy: OK map days, test-run days, log days 7/30/90, backups kept 3): the Admin action every deleting step of a sweep acts under (ADR 0024 D20) |
 | `support_bundle` | Admin; or `--support-bundle` on the command line, with no user (`aoi/core/support.py`, REQ-LOG-007) | `support.bundle` (the file's name, whether images were asked, how many files, the ones not found; reason `command line` from there): the station's logs, alarms and audit leave it |
 | `sweep_retention` | system, at start and every hour on the context's own thread (`aoi/core/retention.py`, REQ-LOG-010) | `retention.sweep` (a count per kind: OK maps, logs gzipped, archived and deleted, backups, test runs, OK files no record names, skipped; the reason names the `retention.confirm` entry) when anything went; nothing but OK maps is deleted, and logs only packed, until an Admin confirms |
-| `heartbeat` | system, at start and every 60 s on the context's own thread (`aoi/core/heartbeat.py`, REQ-SET-024) | not audited: `heartbeat.json` rewritten whole (docs/operations/metrics.md); each alarm is appended to `logs/alerts.jsonl`, and `aoi.running` marks a run not yet closed |
+| `heartbeat` | system, at start and every 60 s on the context's own thread (`aoi/core/heartbeat.py`, REQ-SET-024) | not audited: `heartbeat.json` rewritten whole (docs/operations/metrics.md); each alarm is appended to `logs/alerts.jsonl` and logged (`_alert`, after the commit for one stored with an NG board's record or a failed shift check), and `aoi.running` marks a run not yet closed, written by the last step of a start, so a refused start leaves it as found |
 | `_sweep_ok_maps` | system, in each retention sweep; no page calls it | `maps.sweep` (days, swept, skipped): the map files of OK results past `map_retention_days_ok` are deleted and forgotten, NG and WARN maps stay; audited, unlike the start-up archive, because it deletes evidence. A file that cannot be deleted, or lies outside results/, is skipped with a warning and kept for the next start |
 | `add_user` | Admin | `user.change` (role); object = user UUID. The last Admin keeps the role: `AOI-USR-002`, nothing written |
 | `unlock_user` | Admin | `user.unlock` (the lock ended and the count); object = user UUID (REQ-USR-004) |
@@ -1214,8 +1214,9 @@ time), written under a temporary name and renamed once whole; a copy that fails 
 nothing migrated, and a brand-new database gets no copy (Engineering, "Upgrade and rollback"). Rolling back is one step
 with the app closed: copy that file over `aoi.sqlite`, deleting `aoi.sqlite-wal` and `aoi.sqlite-shm` if a crash left
 them (they belong to the replaced file), then start the version upgraded from; results recorded since the upgrade are
-only in the replaced file. The app never deletes the copies (nothing is deleted without an Admin action); a one-click
-restore belongs to the installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`, `-011` for a folder
+only in the replaced file. The app deletes no copy until an Admin confirms the retention policy; from then on each
+retention sweep keeps the newest 3 (`retention.sweep_backups`, REQ-LOG-010). A one-click restore belongs to the
+installer. A refused workspace (`AOI-SET-001`, `-002`, `-003`, `-005`, `-011` for a folder
 that cannot be created or a database SQLite cannot open or write at start-up, `-012` for one another program holds
 locked; the database and the log closed first, #171, #204) is
 reported before any window opens, so `open_workspace` in

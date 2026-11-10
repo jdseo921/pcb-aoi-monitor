@@ -54,6 +54,7 @@ ALLOWED_WORDS = {  # (catalogue code or translation context, Not word): why the 
     ("AOI-SET-011", "window"): FOLDER_WINDOW,
     ("AOI-SET-012", "window"): FOLDER_WINDOW,
     ("AOI-SET-024", "window"): FOLDER_WINDOW,
+    ("AOI-SET-025", "window"): FOLDER_WINDOW,
     ("AOI-TRN-005", "window"): "the operating system's name, Windows, whose file names ignore case",
     ("AOI-INSP-014", "window"): "the operating system's name, Windows, whose long paths setting is the step",
     ("AOI-TRN-011", "window"): "the operating system's name, Windows, whose long paths setting is the step",
