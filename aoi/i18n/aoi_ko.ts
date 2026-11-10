@@ -933,7 +933,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+204"/>
+        <location filename="../core/services.py" line="+207"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -963,7 +963,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+485"/>
+        <location line="+102"/>
+        <source>input folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>output folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+401"/>
         <source>Saving a recovery code</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1018,12 +1028,12 @@
     </message>
     <message>
         <location line="+235"/>
-        <location line="+2645"/>
+        <location line="+2670"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2617"/>
+        <location line="-2642"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1048,12 +1058,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+100"/>
+        <location line="+124"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+217"/>
+        <location line="+218"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
         <translation type="unfinished"></translation>
@@ -1270,19 +1280,19 @@
         <translation>검증 세트 잠금</translation>
     </message>
     <message>
-        <location line="+1357"/>
+        <location line="+1372"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4998"/>
-        <location line="+3655"/>
+        <location line="-5057"/>
+        <location line="+3699"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3753"/>
+        <location line="-3797"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1407,7 +1417,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1718"/>
+        <location line="+1737"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1417,7 +1427,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1110"/>
+        <location line="+1135"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1602,8 +1612,8 @@
         <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
     </message>
     <message>
-        <location line="-4261"/>
-        <location line="+4263"/>
+        <location line="-4305"/>
+        <location line="+4307"/>
         <source>its dataset store was shredded on {date}</source>
         <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
     </message>
@@ -1619,7 +1629,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+478"/>
+        <location line="+493"/>
         <source>Exporting an AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1629,12 +1639,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-524"/>
+        <location line="-539"/>
         <source>Changing users</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4442"/>
+        <location line="-4486"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1659,12 +1669,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1612"/>
+        <location line="+1631"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1595"/>
+        <location line="+1620"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1744,7 +1754,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+213"/>
+        <location line="+228"/>
         <source>Confirming the retention policy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1776,7 +1786,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4880"/>
+        <location line="-4939"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2133,7 +2143,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+112"/>
         <source>Result has no stored heatmaps</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2339,7 +2349,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-349"/>
+        <location line="-418"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2544,7 +2554,82 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+9"/>
+        <source>Input file name not in the contract</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} in the input folder was not inspected: {reason}. It is now in failed/ there.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Name it &lt;board model&gt;_&lt;revision&gt;_&lt;serial&gt;_&lt;view&gt;_&lt;UTC time&gt;.png, as the input-file naming contract says, and put it in the input folder again. Ask the imaging station&apos;s owner to name every board image so.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Board image already inspected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} in the input folder was not inspected again: {reason}. It is now in failed/ there; the first record stays as it was.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Nothing is lost. If it is another board, the imaging station must give it its own serial and time; to inspect the same image again, load it with Load Images….</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Input image cannot be read</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} in the input folder was not inspected: {reason} It is now in failed/ there.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Check that the imaging station writes whole image files, under a temporary name it renames once the file is complete, then put the image in the input folder again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Board image of another board model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{file} in the input folder is a board of {named}, and the line runs {board_model}. The line is paused; the image stays in the input folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Pick {named} in the top bar and press Start to inspect it, or move the image out of the input folder if it came there by mistake. A line runs one board model at a time.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Input folder not reachable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The input folder {folder} cannot be read: {reason}. No board is taken from it until it can; this alarm is not repeated meanwhile.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Check that the folder exists, that its drive or share is connected, and that the station may read and write it. The line goes on by itself once the folder answers.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+48"/>
         <source>Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the thresholds on the new result. The maps of OK results are deleted {days} days after inspection, and not saved at all while the drive is 95 % full; NG and WARN maps are kept.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3792,6 +3877,21 @@
     </message>
     <message>
         <location line="+6"/>
+        <source>Line folder not usable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The {setting} {folder} set on Settings cannot be read and written: it is not there, its drive or share is not connected, or the station may not write to it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Connect its drive or share, or have an Admin set another folder on Settings. Until then the line takes no board from an input folder and writes no result file to an output folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
         <source>Workspace folder not allowed</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3986,7 +4086,7 @@
         <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
     </message>
     <message>
-        <location line="-346"/>
+        <location line="-360"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4121,7 +4221,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-1592"/>
+        <location line="-1661"/>
         <source>Board judged NG</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4136,7 +4236,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+134"/>
+        <location line="+203"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4662,7 +4762,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3896"/>
+        <location filename="../core/services.py" line="+3940"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4719,6 +4819,31 @@
     <message>
         <location line="+1"/>
         <source>is not 4 to 6 digits</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../core/folder_watch.py" line="+40"/>
+        <source>its name is not &lt;board model&gt;_&lt;revision&gt;_&lt;serial&gt;_&lt;view&gt;_&lt;UTC time&gt;.png, such as {example}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>its time {time} is not a real date and time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>a file of the same name is in done/</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>the same image was inspected before, as {earlier}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>it could not be decoded as an image.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5917,35 +6042,35 @@
 <context>
     <name>InspectionPage</name>
     <message>
-        <location filename="../ui/pages/inspection.py" line="+104"/>
-        <location line="+110"/>
-        <location line="+229"/>
+        <location filename="../ui/pages/inspection.py" line="+112"/>
+        <location line="+121"/>
+        <location line="+305"/>
         <source>Load Images…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-338"/>
+        <location line="-425"/>
         <source>Load Folder…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
         <source>Next view</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+13"/>
         <source>View:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+6"/>
-        <location line="+93"/>
+        <location line="+99"/>
         <source>No images loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-52"/>
+        <location line="-58"/>
         <source>No</source>
         <comment>defect number</comment>
         <translation type="unfinished"></translation>
@@ -5982,16 +6107,19 @@
     </message>
     <message>
         <location line="+9"/>
+        <location line="+32"/>
+        <location line="+305"/>
         <source>▶  Start</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-336"/>
+        <location line="+29"/>
         <source>■  Stop</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="-28"/>
         <source>Next Board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6001,12 +6129,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+25"/>
+        <location line="+31"/>
         <source>Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+205"/>
+        <location line="+276"/>
         <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
         <translation type="unfinished">✓ 교대 점검: 모든 판정이 올바름 · {until}까지 보드를 검사할 수 있습니다</translation>
     </message>
@@ -6016,27 +6144,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+18"/>
         <source>Next Board ›</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-211"/>
+        <location line="-284"/>
         <source>Select PCB images</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-156"/>
+        <location line="-172"/>
         <source>Save Image… needs the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+35"/>
+        <location line="+41"/>
         <source>Shift Check</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+45"/>
         <source>Judge the board model&apos;s boards with this AI model and its Golden board, as Activate Selected does</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6051,7 +6179,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+34"/>
+        <location line="+40"/>
         <source>Images ({extensions})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6061,7 +6189,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+33"/>
         <source>{count} image(s) queued</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6076,7 +6204,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+24"/>
+        <location line="+29"/>
         <source>Stopping after this board…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6096,7 +6224,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+60"/>
+        <location line="+100"/>
         <source>Shift check: judging the master samples of {board_model}…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6111,12 +6239,54 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="-38"/>
+        <location line="+58"/>
         <source>Stopped: a shift check is needed first</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="-380"/>
+        <source>Watch Input Folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Watch Input Folder waits for the run to stop or the board in hand to finish.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+105"/>
+        <source>Each board image that arrives in the input folder is inspected while the line runs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <location line="+60"/>
+        <source>Line running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-58"/>
+        <source>Line paused</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+50"/>
+        <source>Watching {folder}: press Start (F5) to run the line</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Line paused: Start (F5) resumes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>{count} image(s) waiting in the input folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+218"/>
         <source>Shift check off</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6136,12 +6306,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+14"/>
+        <location line="+16"/>
         <source>Press Next Board to carry on with the queue.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+2"/>
+        <source>The line is paused and the image is back in the input folder: Start (F5) runs the line.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
         <source>No board is left in the queue. Load Images… or Load Folder… to queue more boards.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6151,7 +6326,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+22"/>
+        <location line="+23"/>
         <source>{file} was inspected under board model {board_model} and judged {verdict}; the header now shows {header}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6176,12 +6351,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+2"/>
+        <source>Inspecting {file} from the input folder…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Inspecting {file} ({n} of {total})…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+22"/>
         <source>{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6191,7 +6371,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+44"/>
         <source>Save annotated image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6206,12 +6386,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+69"/>
+        <location line="+76"/>
         <source>Review saved: {review} for record {record}.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+35"/>
         <source>Run stopped: the session of {starter} ended after {minutes} minutes without input, and {user} is signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7981,7 +8161,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/inspection.py" line="-677"/>
+        <location filename="../ui/pages/inspection.py" line="-786"/>
         <source>Inspection</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8042,7 +8222,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/cycle.py" line="+27"/>
+        <location filename="../core/cycle.py" line="+28"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9148,7 +9328,18 @@
     </message>
     <message>
         <location line="+8"/>
+        <location line="+131"/>
         <source>Browse…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-130"/>
+        <source>Input folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Output folder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -9164,6 +9355,16 @@
     <message>
         <location line="+15"/>
         <source>Workspace (images, AI models, database)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Input folder (empty: none)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Output folder (empty: none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -9223,12 +9424,12 @@
     </message>
     <message>
         <location line="+8"/>
-        <location line="+123"/>
+        <location line="+139"/>
         <source>Confirm Retention Policy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-122"/>
+        <location line="-138"/>
         <source>Support Bundle…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9260,23 +9461,23 @@
     </message>
     <message>
         <location line="+0"/>
-        <location line="+122"/>
+        <location line="+138"/>
         <source>Role</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-119"/>
+        <location line="-135"/>
         <source>Add / Change User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+133"/>
+        <location line="+149"/>
         <source>Unlock User</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-129"/>
+        <location line="-145"/>
         <source>Disable / Enable</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9286,7 +9487,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+153"/>
+        <location line="+169"/>
         <source>Disable / Enable User</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9296,7 +9497,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-161"/>
+        <location line="-177"/>
         <source>Hardware interfaces</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9311,7 +9512,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+134"/>
+        <location line="+150"/>
         <source>{user} ({status})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9356,18 +9557,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-190"/>
+        <location line="-206"/>
         <location line="+14"/>
         <source>Status</source>
         <translation>상태</translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+32"/>
         <source>Workspace folder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+31"/>
+        <location line="+33"/>
         <source>Saved. Restart the app to switch the workspace.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9902,7 +10103,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-3988"/>
+        <location filename="../core/services.py" line="-4032"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>

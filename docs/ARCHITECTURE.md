@@ -101,6 +101,13 @@ commits, into `Settings.output_folder` when one is set: `<board ID>_<record UUID
 fields. A shift CSV that refuses its line keeps it in the context's `_shift_lines`, added in board order by the next
 write or by the heartbeat's timer once the file takes it, a last time at close (`result_files.flush`), with AOI-INSP-020
 raised once while any line is kept (`ShiftNotWritten.first`).
+The watched input folder (REQ-INSP-020), `aoi/core/folder_watch.py`'s `FolderWatch` from `AppContext.folder_watch()`,
+is a frame source whose `grab(board_model)` takes the oldest complete file of `Settings.input_folder` that keeps the
+naming contract (`docs/schemas/input-file-naming.md`, ADR 0024 D30), claims it into `working/` and reads it with its
+SHA-256, which `FrameMeta` carries to the record (`inspections.image_sha256`, migration 0031), or gives None while none
+is complete; `InspectionCycle.watched()` inspects and saves it, then `finish()` moves it to `done/` or back to the
+input folder. Refusals go to `failed/` with AOI-INSP-025 to -027. The Inspection page runs one look job at a time,
+every `LOOK_S`, while its line runs.
 
 Types (Code style, since S22): mypy runs strict on `aoi/core`, `aoi/data` and `aoi/times.py`, and since S22a on `aoi/ui`
 and `aoi/hal` too, and since S56 on `aoi/selftest.py`, with no flag relaxed (`pyproject.toml`). PySide6 enums are

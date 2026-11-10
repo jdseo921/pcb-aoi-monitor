@@ -62,6 +62,20 @@ or cycle it with Alt+V; the view is stored with every result.
 | Next Board | F8 | Inspects one board |
 | Save Image… | F9 | Admin only: greyed for an Operator, its tooltip saying so (#151). Writes the board shown when you press it, with its defect boxes, to a picture file you choose (a run goes on while you name the file); the result itself is already recorded. Each picture saved is recorded in the audit trail with who saved it, which result it shows and where it went |
 
+**Running the line (REQ-INSP-020).** Where an Admin has set an input folder, the imaging station puts each board's
+image there and the station inspects it without you loading it. Press **Watch Input Folder** (Ctrl+Shift+I, shown only there), then
+**▶ Start** (F5): the top bar reads **Line running** with the images waiting in the folder, and each board that
+arrives is judged within 2 s, in the view its file name gives, whatever the View box shows. **■ Stop** (F6) pauses the
+line: no new board is taken, and the board in hand, if one is, is still judged and recorded. The top bar then reads
+**Line paused**, and Start resumes the line. Next Board is grey while the page watches the folder, and Load Images… and
+Load Folder… while the line runs. A file the station cannot take is moved aside to the folder's `failed/` with an
+alarm: its name is not as the imaging station must write it (AOI-INSP-025), the board was inspected before
+(AOI-INSP-026), or it is not a whole image (AOI-INSP-027); tell an Engineer, the line goes on. A board of another board
+model pauses the line (AOI-INSP-029): pick its board model in the top bar and press Start. If the folder cannot be
+reached, AOI-INSP-028 is shown once and the line goes on by itself when it answers. If a board cannot be inspected or
+recorded, the line pauses with the coded message and the image goes back to the folder: press Start once the message's
+step is done. Load Images… or Load Folder… on a paused line leaves it for a queue again.
+
 A button and its key do the same. The key works whichever control on the Inspection page is selected (the defect
 list, the View box, a button), and only while that page is shown. Both go grey while the action is not possible:
 Start and Next Board until images are queued, while no board model is chosen in the top bar (with none yet, the page

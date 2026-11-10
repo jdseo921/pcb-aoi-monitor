@@ -654,13 +654,14 @@ class Database:
     ) -> int:
         """The inspection row, its defects, its checks and its alarm, given as (level, message, code), commit together:
         a crash or a refused write leaves all or none (REQ-INSP-008, REQ-INSP-006; #179). `uid` is the record's UUID,
-        which the names of its overlay and maps already carry (#245); a new one when None.
-        `rec["result_json"]` is the whole result as `InspectionResult.to_dict` gives it, `model_uuid` and `recipe_uuid`
-        name the AI model version active when the board was judged and the recipe revision that judged it, which says
-        whether the AI check ran (its notes say so too, #246), `diff_map_path` and `ai_map_path` the map files
-        beside the overlay, `reference_path` and `reference_sha256` the golden board file it was judged against and the
-        SHA-256 of its bytes (every path is stored relative to the workspace), and each check is a dict with the fields
-        of `Check` (name, value, threshold, rule, verdict, source, explain, region) (REQ-INSP-012)."""
+        which the names of its overlay and maps already carry (#245); a new one when None. `rec["result_json"]` is the
+        whole result as `InspectionResult.to_dict` gives it, `model_uuid` and `recipe_uuid` name the AI model version
+        active when the board was judged and the recipe revision that judged it, which says whether the AI check ran
+        (its notes say so too, #246), `diff_map_path` and `ai_map_path` the map files beside the overlay,
+        `reference_path` and `reference_sha256` the golden board file it was judged against and the SHA-256 of its
+        bytes, `image_sha256` that of the board's image when the line took it (REQ-INSP-020) (every path is stored
+        relative to the workspace), and each check is a dict with the fields of `Check` (name, value, threshold, rule,
+        verdict, source, explain, region) (REQ-INSP-012)."""
         result_json = rec.get("result_json")
         row = (
             uid or new_uuid(),
@@ -682,6 +683,7 @@ class Database:
             json.dumps(rec.get("metrics", {}), allow_nan=False),
             None if result_json is None else json.dumps(result_json, allow_nan=False),
             rec.get("operator"),
+            rec.get("image_sha256"),
         )  # every parameter is built before the transaction opens, so a bad value fails it before the first INSERT
         defect_rows = [
             (d["no"], d["type"], d["score"], d.get("side", "Top"), d["x"], d["y"], d["w"], d["h"]) for d in defects
@@ -695,8 +697,8 @@ class Database:
                 cur = self._conn.execute(
                     "INSERT INTO inspections(uuid, time, board_model, model_version, model_uuid, recipe_rev,"
                     " recipe_uuid, image_path, overlay_path, diff_map_path, ai_map_path, reference_path,"
-                    " reference_sha256, view, result, score, metrics, result_json, operator)"
-                    " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    " reference_sha256, view, result, score, metrics, result_json, operator, image_sha256)"
+                    " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     row,
                 )
                 iid = cur.lastrowid
@@ -856,6 +858,11 @@ class Database:
         sql = f"SELECT {cols}, reference_sha256, {', '.join(paths)} FROM inspections WHERE id=?"
         r = self.query(sql, (inspection_id,))
         return self._resolved(r[0], *paths) if r else None
+
+    def image_inspected(self, sha256: str) -> Path | None:
+        """The image file, absolute, of the first record whose image had `sha256` (migration 0031), or None."""
+        r = self.query("SELECT image_path FROM inspections WHERE image_sha256=? ORDER BY id LIMIT 1", (sha256,))
+        return Path(self._resolved(r[0], "image_path")["image_path"]) if r else None
 
     def inspection_id(self, uuid: str) -> int | None:
         """The id of the inspection record with this UUID, or None."""
