@@ -873,7 +873,7 @@ a board failed. All thresholds live in the recipe and can be tried out live on t
 | Difference regions | Compare | NG if > 0 | Number of difference blobs ≥ *Min defect area* (40 px; at a scale, the area of a round defect *Minimum defect size* mm wide) |
 | Alignment inliers (shown as "Alignment points") | Compare | info; WARN if < 12 | Confidence that the board was registered correctly |
 | AI anomaly score | AI | NG if ≥ AI score threshold (the recipe's override, else the AI model's calibrated value) | 99.9th percentile of the anomaly map (σ above normal variation) |
-| ROI *name* [type] | ROI | NG if ≥ ROI AI Score | Strongest anomaly inside the ROI, as a multiple of the AI score threshold the AI check used |
+| ROI *name* [type] | ROI | NG if ≥ ROI AI Score | Strongest anomaly inside the ROI, as a multiple of the AI score threshold the AI check used; an enabled ROI not wholly on the AI map gives the board no verdict (AOI-INSP-021), and with no AI map no ROI is judged (`ROIS_NOT_JUDGED_NOTE`) |
 | Inspection time | System | spec < 1 s | GUI §11 acceptance criterion |
 
 The AI score threshold is the AI model's calibrated value (section 3, step 5) unless the board model's recipe overrides

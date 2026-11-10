@@ -32,6 +32,7 @@ AI_OFF_NOTE = "AI check turned off in the recipe; AI check skipped."  # the reco
 # A re-evaluation's (REQ-CMP-005), when the recipe turns on a check that did not run when the board was inspected.
 NOT_COMPARED_NOTE = "Comparison with the golden board did not run at inspection; not judged again."
 NOT_AI_JUDGED_NOTE = "AI check did not run at inspection; not judged again."
+ROIS_NOT_JUDGED_NOTE = "The recipe's ROIs are judged on the AI map; no AI check ran, so no ROI was judged."
 NOT_RUN = {  # why a check did not run, by its note, for AOI-INSP-010
     NO_GOLDEN_NOTE: QT_TRANSLATE_NOOP("Errors", "no Golden board is set"),
     NOT_COMPARED_NOTE: QT_TRANSLATE_NOOP(
@@ -321,7 +322,8 @@ class Inspector:
 
     def inspect(self, img: np.ndarray) -> InspectionResult:
         """The board in `img` aligned, compared and judged. AOI-INSP-011 before any work when it, or the golden board,
-        has a side under MIN_SIDE px; AOI-INSP-010 when no check could judge it (`judge`)."""
+        has a side under MIN_SIDE px; AOI-INSP-010 when no check could judge it, AOI-INSP-021 for an ROI it cannot judge
+        whole (`judge`)."""
         board, golden = QT_TRANSLATE_NOOP("Errors", "board image"), QT_TRANSLATE_NOOP("Errors", "Golden board")
         for image, im in ((board, img), (golden, self.reference)):
             if im is not None and min(im.shape[:2]) < MIN_SIDE:
@@ -361,7 +363,9 @@ class Inspector:
         it on a board just inspected and `re_grade` on a stored result's maps (REQ-CMP-005), so both judge by one set
         of rules. `peaks` holds the highest AI map value of each ROI the result was judged on, by the region its check
         names; an ROI found there takes that value, not one read from a stored map that holds it to a step. A board no
-        check judged gets no verdict: AOI-INSP-010, saying why each check did not run (#169)."""
+        check judged gets no verdict: AOI-INSP-010, saying why each check did not run (#169); nor does one with an
+        enabled ROI that is not wholly on the AI map, AOI-INSP-021, as a scale or Golden board set since the ROI was
+        drawn can move it there. Without an AI map, ROIS_NOT_JUDGED_NOTE says no enabled ROI was judged."""
         r = self.recipe
         regions: list[Region] = []
         res.checks, res.defects, res.score = [], [], 0.0  # judged afresh, never added to
@@ -437,28 +441,35 @@ class Inspector:
             mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
             regions += regions_from_mask(mask, amap / thr, r.min_defect_area, "ai")
 
-        # 3) ROI checks ----------------------------------------------------------
-        for roi in (x for x in r.rois if x.enabled):
-            if res.anomaly_map is None or ai is None:
-                break
+        # 3) ROI checks: each enabled ROI judged on the AI map, whole; one past its edge or of no size gives no
+        # verdict, as part of its place would go unjudged; with no AI map, a note says that no ROI was judged -------
+        rois, ai_map = [x for x in r.rois if x.enabled], res.anomaly_map
+        if rois and (ai_map is None or ai is None):
+            res.notes.append(ROIS_NOT_JUDGED_NOTE)
+        elif ai_map is not None and ai is not None:
+            height, width = ai_map.shape[:2]
+            if (off := r.off_image(width, height)) is not None:
+                raise AoiError(
+                    "AOI-INSP-021", roi=off.name, board=r.board_model, x=off.x, y=off.y, w=off.w, h=off.h,
+                    width=width, height=height,
+                )  # fmt: skip
             thr = r.anomaly_threshold or ai.image_threshold
-            patch = res.anomaly_map[roi.y : roi.y + roi.h, roi.x : roi.x + roi.w]
-            if patch.size == 0:
-                continue
-            where = f"{roi.name} @ {roi.x},{roi.y} {roi.w}x{roi.h}"
-            val = (peaks[where] if peaks and where in peaks else float(patch.max())) / thr
-            res.checks.append(
-                Check(
-                    f"ROI {roi.name} [{roi.type}]",
-                    val,
-                    roi.ai_score,
-                    "≥ thr → NG",
-                    _grade(val, roi.ai_score, r.warn_ratio),
-                    "ROI",
-                    f"fails as {ROI_DEFECT.get(roi.type, 'Anomaly')}",
-                    region=where,
+            for roi in rois:
+                patch = ai_map[roi.y : roi.y + roi.h, roi.x : roi.x + roi.w]
+                where = f"{roi.name} @ {roi.x},{roi.y} {roi.w}x{roi.h}"
+                val = (peaks[where] if peaks and where in peaks else float(patch.max())) / thr
+                res.checks.append(
+                    Check(
+                        f"ROI {roi.name} [{roi.type}]",
+                        val,
+                        roi.ai_score,
+                        "≥ thr → NG",
+                        _grade(val, roi.ai_score, r.warn_ratio),
+                        "ROI",
+                        f"fails as {ROI_DEFECT.get(roi.type, 'Anomaly')}",
+                        region=where,
+                    )
                 )
-            )
 
         # 4) Merge evidence into a defect list ------------------------------------
         res.defects = self._defects(regions, res)
@@ -548,7 +559,7 @@ def re_grade(
     if recipe.use_ai and ran_ai:
         res.anomaly_map = judged.anomaly_map
     # The notes on checks that did not run, or that the recipe turns off, are worked out again, in this order:
-    skipped = {NO_GOLDEN_NOTE, NO_AI_NOTE, AI_OFF_NOTE, NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE}
+    skipped = {NO_GOLDEN_NOTE, NO_AI_NOTE, AI_OFF_NOTE, NOT_COMPARED_NOTE, NOT_AI_JUDGED_NOTE, ROIS_NOT_JUDGED_NOTE}
     if recipe.use_compare and cr is None:
         res.notes.append(NO_GOLDEN_NOTE if NO_GOLDEN_NOTE in judged.notes else NOT_COMPARED_NOTE)
     if recipe.use_ai and not ran_ai:

@@ -13,6 +13,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
 
+from aoi.core.imaging import file_header
 from aoi.core.recipe import ROI
 from aoi.core.services import AppContext
 from aoi.ui import theme
@@ -63,7 +64,8 @@ def test_req_cmp_005_every_decision_row_shows_with_the_panel_under_the_images(
     85 px at 1600 x 900 on Linux with DejaVu Sans (layout review)."""
     ctx = trained_ctx
     recipe = ctx.recipe(BOARD)[1]
-    recipe.rois = [ROI("U1", "Presence", 0, 0, 4000, 4000)]  # its row makes the sketch's seven
+    _, width, height = file_header(str(ctx.db.reference(BOARD))) or ("", 0, 0)
+    recipe.rois = [ROI("U1", "Presence", 0, 0, width, height)]  # its row makes the sketch's seven, over the whole board
     ctx.save_recipe(recipe)
     gate, judge_again = threading.Event(), AppContext.re_evaluate
 

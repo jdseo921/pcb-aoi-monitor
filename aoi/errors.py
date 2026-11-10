@@ -415,6 +415,22 @@ CODES: dict[str, ErrorCode] = {
             ),
         ),
         ErrorCode(
+            "AOI-INSP-021",
+            QT_TRANSLATE_NOOP("Errors", "ROI off the image"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "ROI {roi} of board model {board} is not wholly on the image it is judged on: its box is {x}, {y},"
+                " {w} × {h} px and the image {width} × {height} px, so part of it would go unjudged. The board gets no"
+                " verdict.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Tell an Engineer. After a camera change, they calibrate the scale on its new Golden board; else, in"
+                " the Recipe Editor, they move the ROI inside the Golden board, or turn it off, and save the recipe."
+                " Then judge the board again.",
+            ),
+        ),
+        ErrorCode(
             "AOI-CMP-001",
             QT_TRANSLATE_NOOP("Errors", "Result has no stored heatmaps"),
             QT_TRANSLATE_NOOP(
@@ -1301,6 +1317,36 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Nothing was changed. On Training, label more boards of this board model: NG images with each defect"
                 " boxed, and OK images, in the Golden board's view; then press Learn From Labelled Boards… again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-014",
+            QT_TRANSLATE_NOOP("Errors", "ROI off the Golden board"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "ROI {roi} of board model {board_model} is not wholly on its Golden board: at the board model's scale"
+                " its box is {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was saved. Move the ROI inside the Golden board in the Recipe Editor, or turn it off, then"
+                " save the recipe again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-015",
+            QT_TRANSLATE_NOOP("Errors", "ROI would be off the image"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The new scale would leave ROI {roi} of board model {board_model} not wholly on its Golden board: its"
+                " box would be {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px, so every board would"
+                " get no verdict (AOI-INSP-021).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was changed. Check the length and the distance measured. If they are right, move the ROI to"
+                " fit {width} × {height} px in the Recipe Editor, or turn it off, and save the recipe; then calibrate"
+                " the scale again.",
             ),
         ),
         ErrorCode(
