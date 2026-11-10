@@ -36,7 +36,7 @@
               "w": {"type": "integer", "minimum": 0},
               "h": {"type": "integer", "minimum": 0}
             },
-            "description": "In pixels of the inspected image, from its top-left corner."
+            "description": "In pixels of the Golden board the image was aligned to, from its top-left corner, as the board's overlay shows it: the same place on every board of its board model, not the place in the image as the camera took it."
           }
         }
       }

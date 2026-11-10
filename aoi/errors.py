@@ -100,6 +100,7 @@ DB_NOT_OPENED = QT_TRANSLATE_NOOP("Errors", "the database file could not be open
 DB_READ_ONLY = QT_TRANSLATE_NOOP("Errors", "the database file or its folder is set to read-only")
 DB_REFUSED = QT_TRANSLATE_NOOP("Errors", "the database refused it")
 REFUSED = QT_TRANSLATE_NOOP("Errors", "the system refused it")
+NOT_UTF8 = QT_TRANSLATE_NOOP("Errors", "it is no longer UTF-8 text, as when a spreadsheet has saved over it")  # a CSV
 _BY_ERRNO = {  # by name: a system without one of these numbers leaves it out
     getattr(errno, name): reason
     for names, reason in (
@@ -392,6 +393,41 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Check that the output folder exists, that its drive or share is connected and has space, and that the"
                 " station may write to it. The records are kept: export the boards missed from Logs & Export.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-INSP-020",
+            QT_TRANSLATE_NOOP("Errors", "Shift file not updated"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "{file} was judged and its record saved, and its own result files were written to the output folder"
+                " {folder}, but its line could not be added to the shift file {shift}: {reason}. The line, and any"
+                " after it, is kept and added once the file takes it again, with the next board or within a minute,"
+                " while the app stays open; this alarm is not repeated meanwhile.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Close the shift file in any app that has it open, such as a spreadsheet. If a spreadsheet saved over"
+                " it, move that copy out of the output folder: the station starts the file again with the lines it"
+                " kept, and the boards before them are in the copy and in Logs & Export. For any other reason, an Admin"
+                " makes the output folder take files again. Lines still kept when the app closes are not added; every"
+                " record is in Logs & Export.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-INSP-021",
+            QT_TRANSLATE_NOOP("Errors", "ROI off the image"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "ROI {roi} of board model {board} is not wholly on the image it is judged on: its box is {x}, {y},"
+                " {w} × {h} px and the image {width} × {height} px, so part of it would go unjudged. The board gets no"
+                " verdict.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Tell an Engineer. After a camera change, they calibrate the scale on its new Golden board; else, in"
+                " the Recipe Editor, they move the ROI inside the Golden board, or turn it off, and save the recipe."
+                " Then judge the board again.",
             ),
         ),
         ErrorCode(
@@ -1089,6 +1125,22 @@ CODES: dict[str, ErrorCode] = {
                 " as they are. Nothing was written.",
             ),
         ),
+        ErrorCode(  # a board model of a shredded dataset store, its images gone for good (REQ-TRN-017; review TRN-2)
+            "AOI-TRN-058",
+            QT_TRANSLATE_NOOP("Errors", "Board model's dataset store shredded"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The dataset store of board model {board} was shredded on {date}, and nothing learned from its images"
+                " judges boards again: {refused}.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing of board model {board} can be trained or made active again. To inspect these boards again, an"
+                " Admin makes a new board model under another name with + New, naming its customer, which puts it in a"
+                " dataset store that is not shredded; an Engineer then imports its images on Training, freezes a"
+                " dataset version, locks its validation set and trains from it.",
+            ),
+        ),
         ErrorCode(
             "AOI-TST-001",
             QT_TRANSLATE_NOOP("Errors", "AI model, recipe, scale or Golden board changed since the run"),
@@ -1281,6 +1333,36 @@ CODES: dict[str, ErrorCode] = {
                 "Errors",
                 "Nothing was changed. On Training, label more boards of this board model: NG images with each defect"
                 " boxed, and OK images, in the Golden board's view; then press Learn From Labelled Boards… again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-014",
+            QT_TRANSLATE_NOOP("Errors", "ROI off the Golden board"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "ROI {roi} of board model {board_model} is not wholly on its Golden board: at the board model's scale"
+                " its box is {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was saved. Move the ROI inside the Golden board in the Recipe Editor, or turn it off, then"
+                " save the recipe again.",
+            ),
+        ),
+        ErrorCode(
+            "AOI-RCP-015",
+            QT_TRANSLATE_NOOP("Errors", "ROI would be off the image"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The new scale would leave ROI {roi} of board model {board_model} not wholly on its Golden board: its"
+                " box would be {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px, so every board would"
+                " get no verdict (AOI-INSP-021).",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Nothing was changed. Check the length and the distance measured. If they are right, move the ROI to"
+                " fit {width} × {height} px in the Recipe Editor, or turn it off, and save the recipe; then calibrate"
+                " the scale again.",
             ),
         ),
         ErrorCode(
@@ -1769,6 +1851,21 @@ CODES: dict[str, ErrorCode] = {
                 'guide, "Where the workspace goes"); at start, choose it in the window that opens next.',
             ),
         ),
+        ErrorCode(
+            "AOI-SET-025",
+            QT_TRANSLATE_NOOP("Errors", "Workspace drive full"),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "The workspace folder {path} could not be opened: its drive is full, with no room for the database's"
+                " working files.",
+            ),
+            QT_TRANSLATE_NOOP(
+                "Errors",
+                "Restore no backup: the database is not damaged, only out of room. Free space on that drive, for"
+                " example by moving old exports off it, and start the app again. Or choose another workspace folder"
+                " in the window that opens next; Cancel there closes the app.",
+            ),
+        ),
     )
 }
 
@@ -1893,6 +1990,11 @@ GUIDE: dict[str, Phrase] = {
         "Errors",
         "Nothing was made: Validated AI model {version} judges {board}'s boards, and Train makes a Trial one, which"
         " never replaces it.",
+    ),
+    "AOI-TRN-058": QT_TRANSLATE_NOOP(  # the Train a shred meets (review TRN-2)
+        "Errors",
+        "The images of {board} were shredded on {date}, so no AI model trained from them judges boards. An Admin makes"
+        " a board model under another name with + New, naming its customer; then add its images.",
     ),
     "AOI-TST-003": QT_TRANSLATE_NOOP(
         "Errors", "Not tested: {reason}. The AI model judges boards; AI Model Test tests it again."

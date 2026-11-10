@@ -288,6 +288,7 @@ UNCHECKED = {
     "load_model", "recipe",
     "note_window",  # the window's handle beside the lock, for a second start (A6): any role's window, not the database
     "inspection_cycle",  # the cycle a page or a headless driver inspects through, as inspect_file (#447)
+    "engine_may_judge",  # whether the engine the cycle keeps may judge the next board: a read (REQ-TRN-017)
     "inspector", "inspect", "inspect_file", "load_image", "log_result", "board_models", "reference_image", "samples",
     "sample_path", "models", "model", "active_model", "recipe_history", "inspections", "defects_for", "checks_for",
     "checks_for_many", "inspection_result", "inspection", "judged_reference", "users", "board_status", "start_user",

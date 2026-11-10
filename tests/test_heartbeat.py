@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import functools
 import json
+import sqlite3
 import time
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from aoi.config import APP_LABEL, Settings
 from aoi.core import heartbeat
 from aoi.core.services import FALSE_CALL, AppContext
+from aoi.data.errors import WorkspaceError
 from tests.conftest import TrainedModel, engineer, log_rows, restored
 from tests.run_pinned import PINNED_DRIVE
 from tests.test_evidence_policy import saved
@@ -94,3 +98,75 @@ def test_req_set_024_every_alarm_is_appended_to_alerts_jsonl(
     alerts = [json.loads(line) for line in lines]
     assert [(a["level"], a["code"]) for a in alerts][0] == ("WARN", "AOI-LOG-005") and alerts[0]["text"]
     assert alerts[-1]["level"] == "NG" and all(a["time"].endswith("+00:00") for a in alerts)
+
+
+def test_req_set_024_every_alarm_reaches_the_log_and_alerts_jsonl_once_a_failed_shift_checks_too(
+    ctx: AppContext, synthetic_dataset: Path, ng_board: Path
+) -> None:
+    """A failed shift check stored its NG alarm AOI-INSP-016 in the database alone, so `logs/alerts.jsonl` and the log
+    never had it, unlike every other alarm (review finding DAT-2). Each alarm now writes one line to each, whichever
+    way it is stored: raised by `alarm`, an NG board's stored with its record, a failed shift check's with the check.
+    Lines the copied workspace held are left out, and so are alarms the app raises meanwhile (a drive filling, say):
+    this test's are told by their code, `alarm`'s by its text."""
+    logs, raised = ctx.settings.root / "logs", "Raised by this test"
+
+    def ours(rows: list[dict[str, Any]], level: str) -> list[tuple[str, str | None]]:
+        """The lines of this test's alarms, as (level, code)."""
+        codes = ("AOI-INSP-003", "AOI-INSP-016")
+        return [(r[level], r["code"]) for r in rows if r["code"] in codes or r["text"] == raised]
+
+    def written() -> tuple[list[tuple[str, str | None]], list[tuple[str, str | None]]]:
+        """Each line of `alerts.jsonl`, and each `alarm` line of the log, of this test's alarms."""
+        alerts = logs / heartbeat.ALERTS
+        lines = alerts.read_text(encoding="utf-8").splitlines() if alerts.exists() else []
+        logged = [r for r in log_rows(logs) if r["event"] == "alarm"]
+        return ours([json.loads(line) for line in lines], "level"), ours(logged, "alarm_level")
+
+    before = written()
+    ctx.alarm("WARN", raised, "AOI-LOG-005")
+    saved(ctx, synthetic_dataset, ng_board)  # an NG board's alarm AOI-INSP-003, stored with its record
+    ok_master = ctx.master_samples("TINY")[0]
+    ctx.update_sample(int(ok_master["id"]), "NG", "Solder Bridge")  # the known-OK board is now expected NG
+    assert not ctx.run_shift_check("TINY")["check"]["passed"]
+    assert ctx.alarms()[0]["code"] == "AOI-INSP-016"  # the alarm list, as before
+    each = [("WARN", "AOI-LOG-005"), ("NG", "AOI-INSP-003"), ("NG", "AOI-INSP-016")]
+    alerted, logged = (after[len(old) :] for after, old in zip(written(), before, strict=True))
+    assert alerted == each, "alerts.jsonl"
+    assert logged == each, "the log"
+
+
+@pytest.mark.parametrize("refused_in", ["_archive_old", "_ensure_recipe"])
+def test_req_set_024_a_refused_start_leaves_the_marker_as_it_found_it(
+    tmp_path: Path, tiny_model: TrainedModel, monkeypatch: pytest.MonkeyPatch, refused_in: str
+) -> None:
+    """A start refused once its database was open (another program holding the database's lock, AOI-SET-012) deleted
+    the marker a killed run had left, so the next start no longer said that run had not closed cleanly (review
+    finding DAT-3). A refused start now leaves the marker as it found it, whichever start-up step meets the lock: the
+    first that writes (`_archive_old`) or the last before the marker is written (`_ensure_recipe`). None stays none,
+    and the next good start says so of the killed run."""
+    ws = restored(tiny_model, tmp_path / "ws")
+    (ws / heartbeat.RUNNING).unlink(missing_ok=True)  # copied from the session's workspace, which is still open
+    monkeypatch.setattr(sqlite3, "connect", functools.partial(sqlite3.connect, timeout=0.2))  # not SQLite's 5 s wait
+    killed = '{"pid": 1, "time": "2026-11-01T00:00:00+00:00"}\n'  # what a kill, a crash or a power cut leaves
+    step = getattr(AppContext, refused_in)
+    for found in (None, killed):
+        if found is not None:
+            (ws / heartbeat.RUNNING).write_text(found, encoding="utf-8")
+        other = sqlite3.connect(ws / "aoi.sqlite", isolation_level=None)
+
+        def locked(self: AppContext, *args: object, held: sqlite3.Connection = other) -> None:
+            """The step, run once another program takes the database's lock: before the first, as if from the start."""
+            held.execute("BEGIN IMMEDIATE")
+            step(self, *args)
+
+        try:
+            with monkeypatch.context() as m, pytest.raises(WorkspaceError) as refused:
+                m.setattr(AppContext, refused_in, locked)
+                AppContext(Settings(workspace=str(ws), device="cpu"))
+        finally:
+            other.close()
+        assert refused.value.code == "AOI-SET-012"
+        marker = ws / heartbeat.RUNNING
+        assert (marker.read_text(encoding="utf-8") if marker.exists() else None) == found, "the marker as found"
+    AppContext(Settings(workspace=str(ws), device="cpu")).close()
+    assert [r["event"] for r in log_rows(ws / "logs")].count("app.not_closed_cleanly") == 1

@@ -50,7 +50,7 @@ progress** (branch named), **in review** (PR number), **merged** (date), **dropp
 | D.3 | Accounts: first Admin with a recovery code, user administration | REQ-USR-005, REQ-USR-006 | in review: D.3a user administration (#443); D.3b the first Admin and its recovery code (`feat/REQ-USR-005-first-admin`); D.3c sign-in with the code and the demo's known Admin (`feat/REQ-USR-005-recovery-sign-in`) |
 | E.1 | `InspectionCycle` in `aoi/core/cycle.py` (production plan 3.1, pulled into G1) | #447 (two PRs) | in review |
 | E.2 | Watched input folder (`FolderWatch`) and the file-naming contract | REQ-INSP-020 | planned |
-| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | in review |
+| E.3 | Result file per board, end-of-shift CSV, `docs/schemas/result-file.schema.json` | REQ-INSP-021 | merged 2026-11-04 (#450); the senior review's fixes, a dotted board ID and a shift CSV held open, in review (`fix/REQ-INSP-021-result-files-keep-every-board`) |
 | F.1 | Korean for the operator: `QTranslator`, `.qm` shipped, operator path translated | REQ-SET-006 (operator scope) | planned |
 | F.2 | Offline licence key and the EULA page | REQ-SET-010, REQ-SET-022 | planned |
 | F.3 | Station hardening: autostart with restart on failure, kiosk guidance, self-check alarms | REQ-SET-024 | planned |
@@ -196,8 +196,19 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-06: Jay said "Set H1 and H2 rules using industry norms": ADR 0024 D24 (no account claimed at a station) and
   D25 (each role lands on its own work), confirmed, then built in `feat/REQ-USR-005-claim-and-landing`, stacked on
   `fix/usability-sweep-low-risk` (#478), the same day's train.
+- 2026-11-06: senior review of the whole app on `3efc292` (Jay: "Proceed with a discretion assuming you are a strict
+  senior dev from a company who is reviewing the whole thing the first time and wants it to work properly"), recorded in
+  `docs/reviews/2026-11-06-senior-review.md`: 32 defects (8 P1, 15 P2, 9 P3), and ADR 0024 D26 (the result file's
+  checks), D27 (what a retrain aligns to), D28 (role checks on every write) and D29 (work on the window's thread),
+  proposed. One P1, UI-1, is in #487, the next train now that #479 has merged, and stops a release until it is fixed.
+  Nine PRs, one train, stacked on #479's head, which main holds since it merged: this record first, then the fixes in
+  the record's order. The regression set is unchanged. Tracking issue #488; follow-ups #480 to #487, #489 and #490.
 - 2026-11-10: tester readiness check (Jay's request: can people who know little about technology run and test Stage 1
   with sample uploads). `docs/REQ-SET-012-tester-guide`, docs only: `docs/install/tester-guide.md`, a plain-language
   install, demo walkthrough and own-photo check with a tick column; `install.md` names the pilot-signed artifact that
   builds of `main` make and its UAC publisher. Nothing under `aoi/` changed and the regression set is unchanged. One PR
   on `main`.
+- 2026-11-10: Jay answered ADR 0024 D29 with (A) on a decision card and asked to "push everything to main". The senior
+  review's train (#491 to #498 and #500) lands on `main` through #491: each PR merged into its base, then `main`
+  merged into #491's branch, with the register's status column and the progress file taking both sides' lines and
+  `aoi/i18n/aoi_ko.ts` regenerated. D26 to D28 stay proposed.

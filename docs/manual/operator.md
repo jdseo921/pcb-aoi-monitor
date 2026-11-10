@@ -111,8 +111,9 @@ and what happened, so the verdict of the board before is never shown beside it. 
 queue; when it was the last board, the view says so and offers Load Images… to queue more. A board is never passed on
 no evidence: the run stops the
 same way when the Golden board's file is gone or damaged (AOI-INSP-009), when nothing can judge the board because the
-board model has neither a Golden board nor an AI model yet, or the recipe turns both off (AOI-INSP-010), and for a
-picture under 11 px on a side (AOI-INSP-011); for the first two, call an Engineer. At the end of the queue the status bar reads "End of
+board model has neither a Golden board nor an AI model yet, or the recipe turns both off (AOI-INSP-010), when one of
+the recipe's ROIs is not wholly on the picture (AOI-INSP-021), and for a picture under 11 px on a side (AOI-INSP-011);
+for the first three, call an Engineer. At the end of the queue the status bar reads "End of
 queue".
 
 ## 3. When a board is NG or WARN
@@ -217,7 +218,9 @@ keeps.
 **Result files.** Where an Admin has set an output folder, the station writes each board's result there as it is saved,
 for the line's systems to read: one JSON file and one CSV line per board, and a shift CSV for the day that lists every
 board under a header. You do nothing for it. If the folder refuses them (a network drive gone, a full disk), the alarm
-list shows AOI-INSP-019: the board is still judged and recorded, so carry on and tell an Engineer or Admin.
+list shows AOI-INSP-019: the board is still judged and recorded, so carry on and tell an Engineer or Admin. AOI-INSP-020
+usually means someone has the day's shift file open, in a spreadsheet say: close it there, and while the app stays open
+the station adds the lines it kept, with the next board or within a minute.
 
 **Handing over.** Let the queue run to its end, or press ■ Stop: the board in hand is still judged and recorded. For
 your counts, set **From** and **To** to the days of your shift, pick your name under **Operator**, press **Filter** and

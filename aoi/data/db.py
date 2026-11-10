@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+import shutil
 import sqlite3
 import threading
 import uuid
@@ -19,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from ..errors import AoiError, Phrase, system_detail, system_reason
+from ..errors import FULL, NOT_READ, AoiError, Phrase, system_detail, system_reason
 from ..times import local_day_bounds_utc, now_utc
 from .errors import WorkspaceError
 from .migrate import migrate
@@ -53,6 +54,9 @@ def is_busy(e: BaseException | None) -> bool:
     """SQLite's refusal while another program holds the lock a statement needs (SQLITE_BUSY, SQLITE_LOCKED)."""
     code = getattr(e, "sqlite_errorcode", 0) if isinstance(e, sqlite3.Error) else 0
     return (code & 0xFF) in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED)
+
+
+NO_ROOM = 1 << 20  # bytes free under which a disk I/O error at opening is taken to be a full drive's (1 MiB)
 
 
 class Database:
@@ -98,10 +102,25 @@ class Database:
 
     def refusal(self, e: DbError) -> WorkspaceError:
         """The start-up refusal the folder picker follows (REQ-SET-016): AOI-SET-012 while another program holds the
-        database's lock, else AOI-SET-011 with SQLite's reason (read-only, disk full, damaged)."""
+        database's lock, AOI-SET-025 when SQLite says the drive is full, or gives a disk I/O error on a drive that is
+        (`_full`), else AOI-SET-011 with SQLite's reason (read-only, damaged, not opened)."""
         if is_busy(e):
             return WorkspaceError("AOI-SET-012", system_detail(e), path=str(self.path), error=system_reason(e))
-        return WorkspaceError("AOI-SET-011", system_detail(e), path=str(self.workspace), error=system_reason(e))
+        reason = system_reason(e)
+        if reason == FULL or (reason == NOT_READ and self._full()):
+            return WorkspaceError("AOI-SET-025", system_detail(e), path=str(self.workspace))
+        return WorkspaceError("AOI-SET-011", system_detail(e), path=str(self.workspace), error=reason)
+
+    def _full(self) -> bool:
+        """Whether the database's drive has under NO_ROOM bytes free (False when it cannot be measured). A WAL database
+        opened after a clean close (no -shm file left) fails with a disk I/O error (SQLITE_IOERR_SHMSIZE) when no byte
+        is free for its shared-memory file; said as AOI-SET-011's "could not be read or written", whose remedy restores
+        a backup and loses the records since it (senior review 2026-11-06, DAT-1). Only that error is read so: a full
+        drive does not make SQLite misread a file, so a damaged or read-only database keeps its own reason."""
+        try:
+            return shutil.disk_usage(self.path.parent).free < NO_ROOM
+        except OSError:
+            return False
 
     # --- primitives --------------------------------------------------------
     @contextmanager
