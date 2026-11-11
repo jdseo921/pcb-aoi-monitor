@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QEvent, QItemSelectionModel, QObject, Qt
-from PySide6.QtGui import QAction, QKeyEvent, QKeySequence, QResizeEvent, QShowEvent
+from PySide6.QtGui import QAction, QImage, QKeyEvent, QKeySequence, QResizeEvent, QShowEvent, QTextDocument
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractSpinBox,
@@ -150,6 +150,21 @@ class _Counts(QLabel):
         shown = self._line(fm.elidedText(self._name, Qt.TextElideMode.ElideRight, max(room, 0)))
         self.setText(shown)
         self.setToolTip(whole if shown != whole else "")
+
+
+# A card holds names people typed (customer, user): GitHub Markdown with HTML off, so "R&D <team>" shows as typed
+# and cannot hide the rest of the card (review of #523)
+CARD_MARKDOWN = QTextDocument.MarkdownFeature(
+    QTextDocument.MarkdownFeature.MarkdownDialectGitHub.value | QTextDocument.MarkdownFeature.MarkdownNoHTML.value
+)
+
+
+class _CardDocument(QTextDocument):
+    """The AI Model Card's document: an image in a card is drawn empty and never reads a file (review of #523). An
+    empty image, not None: on None, Qt's image handler opens the path itself."""
+
+    def loadResource(self, kind: int, name: object) -> object:  # noqa: N802 (Qt's name)
+        return QImage()
 
 
 class TrainingPage(Page):
@@ -335,6 +350,7 @@ class TrainingPage(Page):
         # the selected version's card, read-only, shown on AI Model Card (REQ-TRN-011): its Markdown laid out, headings
         # and tables, never shown as marks (dress rehearsal 2026-11-11, where "# Model card" and "**" were read out)
         self.card_view = QTextEdit()
+        self.card_view.setDocument(_CardDocument(self.card_view))
         self.card_view.setReadOnly(True)
         self.card_view.hide()
         rl.addWidget(self.card_view, 1)
@@ -1166,7 +1182,9 @@ class TrainingPage(Page):
             return
         text = self.ctx.card_text(int(cell_text(self.models, rows[0].row(), 0)))
         no_card = self.tr("AI model {version} has no AI model card: train again to make a version that has one.")
-        self.card_view.setMarkdown(text or no_card.format(version=cell_text(self.models, rows[0].row(), 1)))
+        self.card_view.document().setMarkdown(
+            text or no_card.format(version=cell_text(self.models, rows[0].row(), 1)), CARD_MARKDOWN
+        )
         self.card_view.show()
 
     def export_model(self) -> None:

@@ -488,7 +488,7 @@ def test_req_set_007_the_fifteen_minute_script_checks_trains_and_tries_a_thresho
         card = next(b for b in training.findChildren(QPushButton) if b.text() == "AI Model Card")
         qtbot.mouseClick(card, Qt.MouseButton.LeftButton)  # the script reads out its first line: no result claimed yet
         shown_card = training.card_view.toPlainText()  # type: ignore[attr-defined]
-        assert shown_card.startswith(f"Model card: {bm} v1.1")  # laid out, no "#"
+        assert shown_card.startswith(f"Model card: {bm} v1.1") and "**" not in shown_card  # laid out, no marks
         assert NOT_YET_TESTED in shown_card
         activate = next(b for b in training.findChildren(QPushButton) if b.text() == "Activate Selected")
         qtbot.mouseClick(activate, Qt.MouseButton.LeftButton)
