@@ -5,7 +5,8 @@ script must never go wrong: rehearse it before every demo ([README.md](README.md
 
 Ready before they sit down: the demo laptop on the projector, the app open in the demo workspace (the yellow
 **Demo** badge at the top left) at **Home**, the **Presenter theme** on, signed in as `admin`, and an empty USB stick
-with their name on it.
+with their name on it. The demo first opens in the dark theme: switch the presenter theme on once, under **Settings**,
+and it stays on, through **Reset Demo** and a restart.
 
 ## 0:00 to 0:45, Home
 
@@ -35,7 +36,9 @@ Point at the line "Stage 1 workflow: upload → train → validate → inspect" 
 
 3. Point at the table under the two boards: each check, its value, its threshold and its rule. The rows in red
    decided the verdict: **Difference regions** (2, where 0 are allowed) and **AI score** (about 8, where under 5 is
-   OK).
+   OK). Quote these two from the table. The picture may show fewer boxes than regions, and **Inspection** gave the same
+   AI score as a multiple of its threshold ("1.62× threshold"), with a score of its own beside each box: if asked,
+   "the table is the measure; the others are the same check shown another way".
 4. Point at the box beside the boards, under the verdict, "Why this board is NG:", which says the same in plain
    words. On a 1366 × 768 projector the box is narrower: scroll it to the last line.
 
@@ -53,6 +56,7 @@ Click **Inspection** and press **Start**. The six boards left come out ✓ OK, a
 1. Click **Logs & Export**. The 10 boards are listed, newest first, and the line under the table counts them:
    9 OK, 1 NG. Select the NG row: its picture with its box shows beside the table.
 2. Put their USB stick in. Press **Export CSV**, confirm, and save the file on the stick under their company's name.
+   Two files are written, the records and a second one ending in `_checks.csv` with every check; both are theirs.
 3. Press **Export Image Overlays**, confirm, and pick the stick. The pictures of the 10 boards, with their boxes, are
    copied there.
 4. Hand them the stick.

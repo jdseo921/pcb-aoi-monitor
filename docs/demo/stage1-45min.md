@@ -13,7 +13,10 @@ board on **Compare**, the check on the locked boards, training live, and a thres
 
 ## 12:30 to 20:00, recipes
 
-1. Click **Recipe Editor**. The board model DEMO-TBOX-A1 is picked in the header.
+1. Click **Recipe Editor**. The board model DEMO-TBOX-A1 is picked in the header. It opens on the **ROIs** tab. A
+   yellow line says sizes are shown in px (AOI-RCP-005), as the demo has no scale set: say "on your station we set the
+   scale, and sizes read in millimetres". Fields marked Stage 2 (height, volume) wait for Stage 2's hardware: skip
+   them.
 2. **Thresholds** tab: every check's threshold, with its unit. These are the numbers **Compare** showed in its table.
 
 > "A recipe is the set of thresholds for one board model. Your engineers own it."
@@ -27,10 +30,12 @@ board on **Compare**, the check on the locked boards, training live, and a thres
 
 3. **ROIs** tab: a region of the board with its own threshold, for a part that needs a closer look. Show
    **Draw ROI** if they ask, then leave without saving.
-4. **AOI checks** tab: the checklist of what the station checks for this board model, each with the reason it is on or
-   off.
-5. **Revisions** tab: every saved recipe, who saved it, when and why. **Restore as New Revision** brings an old one
-   back without deleting anything.
+4. **AOI checks** tab: the 10 checks of the defect classification table, and which this recipe's ROIs cover. Four
+   need Stage 2's 3D or side camera. "Not covered", as for Missing Component, means no ROI of this recipe is set to
+   that check yet: every board is still compared with the Golden board and judged by the AI model, which is how
+   board_04's missing part was found. Say so before they read it.
+5. **Revisions** tab: every saved recipe, who saved it, when and why. The demo has one revision, so **Restore as New
+   Revision** is greyed: say that with two or more it brings an old one back without deleting anything.
 
 > "Nothing is overwritten. Every board's record names the recipe revision that judged it, so a verdict from last
 > month can be explained with the thresholds of last month."
@@ -40,9 +45,11 @@ board on **Compare**, the check on the locked boards, training live, and a thres
 1. Click **Training**. Under **AI model versions**: v1.1 from the live training, and v1.0, active.
 2. Select v1.1 and press **AI Model Card**: what it was trained on, the dataset version and its thresholds. Its first
    line says it is not yet tested on a locked validation set, so the card claims no result.
-3. Press **Activate Selected** to make v1.1 active. Click **AI Model Test** and press **Run Test** again: the tiles show
-   v1.1's counts on the same 61 locked boards.
-4. Open the **History** tab: both runs are there, newest first. Select a row to see it again.
+3. Press **Activate Selected** to make v1.1 active. Click **AI Model Test** and press **Run Test Again**: the tiles show
+   v1.1's counts on the same 61 locked boards. Expect them to differ from v1.0's, and to be worse: v1.1 was trained in
+   two minutes on a laptop, and in rehearsal it stopped 20 of 50 good boards where v1.0 stopped 3. Use it: "this is
+   why a new version is tested on the locked boards before it judges yours, and why going back is one click."
+4. Open the **History** tab: both runs are there, newest first. Select a row and press **Open** to see it again.
 
 > "Before a new AI model judges your boards, it is tested on the same locked boards as the one before, and you compare
 > the counts. Every run is kept."
@@ -71,13 +78,14 @@ If they ask to see the settings: **Exit presenter theme**, open **Settings**, sh
 
 ## 36:00 to 40:00, who may do what
 
-1. Press **Switch User**, pick `operator (Operator)` and press OK.
+1. Press **Switch User**, pick `operator (Operator)` and press **Sign In**. An Operator needs no password.
 
 > "An Operator runs boards and looks at results. Training, AI Model Test and the Recipe Editor are greyed: an Operator
 > cannot change what judges a board."
 
-2. Click **Inspection** to show the Operator's page, then press **Switch User** and pick `admin (Admin)` again. Only an
-   Admin sees **Exit presenter theme**, so never end the demo signed in as the Operator.
+2. Click **Inspection** to show the Operator's page, then press **Switch User**, pick `admin (Admin)` again, type the
+   demo Admin's password, `show the demo to the customer` ([README.md](README.md), "The demo's Admin"), and press
+   **Sign In**. Only an Admin sees **Exit presenter theme**, so never end the demo signed in as the Operator.
 
 ## 40:00 to 43:00, the report they keep
 
