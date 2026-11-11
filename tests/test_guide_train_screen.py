@@ -126,17 +126,22 @@ def test_req_trn_021_what_train_made_after_a_restart_and_the_handover(
     assert screen.result.isVisible() and guide.steps.text() == TRAINED and win.focusWidget() is screen.btn_inspect
     real = ctx.guide_result
     with pytest.MonkeyPatch.context() as mp:
-        rows = [{"right": True}, {"right": False}]
+        missed = {"right": False, "file": "images/ONE-1/ng_07.png", "defect_type": "Solder Bridge"}
+        rows = [{"right": True}, missed | {"expected": "NG", "verdict": "OK"}]
         mp.setattr(ctx, "guide_result", lambda bm: real(bm) | {"shift": {"state": "failed", "check": {"rows": rows}}})
         home_page.on_show()
         assert screen.shift_line.text() == "Shift check of ONE-1: 1 of 2 master samples judged right."
-        assert screen.shift_next.isVisible()
+        assert screen.shift_next.isVisible() and screen.shift_wrong.isVisible()  # which one, and what to do (#453)
+        assert screen.shift_wrong.text().startswith(
+            "Judged wrongly: ng_07.png (Solder Bridge), labelled NG, judged OK. Check that the image is labelled"
+        )
         mp.setattr(ctx, "guide_result", lambda bm: None)  # as for an AI model trained and made active on Training
         assert ctx.guide_step(ONE) is None
         home_page.on_show()
         assert not guide.isVisible() and home_page.cards.isVisible()
     home_page.on_show()
     assert screen.result.isVisible() and screen.shift_next.isVisible() == (real(ONE)["shift"]["state"] == "failed")
+    assert screen.shift_wrong.isVisible() == screen.shift_next.isVisible()
     assert screen.btn_logs.text() == "Open Logs && Export ›"  # shown "Open Logs & Export ›": && is one &, no mnemonic
     screen.btn_logs.click()
     logs = cast(LogsPage, win.pages["Logs & Export"])

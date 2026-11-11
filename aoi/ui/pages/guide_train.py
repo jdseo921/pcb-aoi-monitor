@@ -151,12 +151,14 @@ class GuideTrain(QWidget):
         trial.setWordWrap(True)
         self.shift_line = QLabel()  # the shift check: passed, failed, or not run
         self.shift_line.setWordWrap(True)
+        self.shift_wrong = QLabel()  # a failed shift check's samples judged wrongly, so the next step is plain (#453)
+        self.shift_wrong.setWordWrap(True)
         self.shift_next = QLabel(self.tr("Boards are inspected only after every master sample is judged right."))
         self.shift_next.setWordWrap(True)
         result.addWidget(self.done_line)
         result.addWidget(self.trained_line)
         result.addLayout(rates)
-        for w in (self.untested, trial, self.shift_line, self.shift_next):
+        for w in (self.untested, trial, self.shift_line, self.shift_wrong, self.shift_next):
             result.addWidget(w)
         self.btn_inspect = size_class(button(self.tr("Inspect a Board…  Enter"), "primary", self.inspect), "T")
         inspect = QAction(self.tr("Inspect a Board…"), self.result)  # its text for F1's list (`keys`)
@@ -303,6 +305,24 @@ class GuideTrain(QWidget):
             line = self.tr("No shift check counts now: Inspection asks for Shift Check (F7) before the first board.")
         self.shift_line.setText(line)
         self.shift_line.setVisible(bool(line))
+        wrong = [r for r in shift["check"]["rows"] if not r["right"]] if state == "failed" else []
+        each = self.tr("{file}{kind}, labelled {expected}, judged {verdict}")
+        named = "; ".join(
+            each.format(
+                file=Path(str(r.get("file", ""))).name,
+                kind=f" ({r['defect_type']})" if r.get("defect_type") else "",
+                expected=r.get("expected", ""),
+                verdict=r.get("verdict", ""),
+            )
+            for r in wrong
+        )
+        self.shift_wrong.setText(
+            self.tr(
+                "Judged wrongly: {samples}. Check that the image is labelled as the board is; an Engineer then"
+                " looks at it on Compare and sets the recipe, and Shift Check (F7) on Inspection judges them again."
+            ).format(samples=named)
+        )
+        self.shift_wrong.setVisible(bool(wrong))
         self.shift_next.setVisible(state == "failed")
 
     def _typed(self) -> None:
