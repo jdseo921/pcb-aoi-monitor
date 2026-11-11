@@ -10,7 +10,7 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QInputMethodEvent, QKeySequence
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QDialog, QLineEdit, QMessageBox
+from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QLineEdit, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from aoi.config import Settings
@@ -153,6 +153,39 @@ def test_req_usr_004_a_key_that_fires_a_shortcut_starts_the_idle_time_again(
     QTest.mouseMove(win.nav)
     qtbot.wait(1100)
     assert len(listed) == 1 and win.check_idle() and ctx.role == "Operator"
+    win.close()
+
+
+def test_req_usr_004_coming_back_from_a_native_dialog_starts_the_idle_time_again(qtbot: QtBot, ctx: AppContext) -> None:
+    """On Windows the operating system's own file and print dialogs take their presses and keys without passing them to
+    Qt, and the app is inactive while one shows: the app active again after it went inactive with a file dialog as its
+    modal widget is input, so an Engineer who browsed for a folder is not signed out at the next check (#503). The app
+    active again in any other way is none: a program that took the foreground and closed is no person (review of
+    #503), and the session then ends as ever."""
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    handed_over(ctx)
+    ctx.sign_in("engineer", password=PASSPHRASE)
+    win.set_user("engineer")
+    app = QApplication.instance()
+    assert isinstance(app, QApplication)
+    win.input.last = time.monotonic() - 15 * 60
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationInactive)  # another program in front, no dialog
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
+    assert time.monotonic() - win.input.last >= 15 * 60
+    browse = QFileDialog(win)
+    qtbot.addWidget(browse)
+    browse.setWindowModality(Qt.WindowModality.ApplicationModal)
+    browse.show()  # as Load Folder… shows it, native on Windows
+    assert QApplication.activeModalWidget() is browse
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationInactive)  # the native dialog has the focus
+    browse.hide()
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)  # and closes
+    assert time.monotonic() - win.input.last < 5 and not win.check_idle() and ctx.user == "engineer"
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)  # counted once
+    win.input.last = time.monotonic() - 15 * 60
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
+    assert win.check_idle() and ctx.role == "Operator"
     win.close()
 
 

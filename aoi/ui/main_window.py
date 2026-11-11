@@ -11,6 +11,7 @@ from PySide6.QtGui import (
     QAction,
     QCloseEvent,
     QColor,
+    QGuiApplication,
     QInputMethodEvent,
     QKeySequence,
     QMouseEvent,
@@ -19,10 +20,12 @@ from PySide6.QtGui import (
     QScreen,
     QShowEvent,
 )
+from PySide6.QtPrintSupport import QPrintDialog
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QDialog,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -467,9 +470,13 @@ class _InputWatch(QObject):
     """A press, key, wheel or touch in the app: an Engineer's or Admin's idle time starts again (REQ-USR-004). A key
     that fires a shortcut (F1, Inspection's F5 to F11, Enter on the guide's key step) reaches no widget as `KeyPress`,
     only its action as `Shortcut`, and Hangul typed through the input method arrives as `InputMethod`, so both count
-    too, the second once it carries text (senior review 2026-11-06, UI-2). A trigger from code, a timer or a mouse
-    moved without a press counts as none. One for the application, whatever windows it opens (`watch_input`), so no
-    event passes through a filter per window."""
+    too, the second once it carries text (senior review 2026-11-06, UI-2). The operating system's own file and print
+    dialogs (every `QFileDialog.get*`, `QPrintDialog`) take their presses and keys on Windows without passing them to
+    Qt, and the app is inactive while one shows: the app active again counts only when it went inactive with such a
+    dialog as its modal widget, so closing one starts the idle time again, and any other way back to the front (a
+    program that took the foreground and closed, a second start) counts as none (#503). A trigger from code, a timer
+    or a mouse moved without a press counts as none. One for the application, whatever windows it opens
+    (`watch_input`), so no event passes through a filter per window."""
 
     INPUT = {
         QEvent.Type.MouseButtonPress,
@@ -482,6 +489,17 @@ class _InputWatch(QObject):
     def __init__(self, app: QObject | None) -> None:
         super().__init__(app)
         self.last = time.monotonic()
+        self.native = False  # the app went inactive while a file or print dialog was its modal widget
+        if isinstance(app, QGuiApplication):
+            app.applicationStateChanged.connect(self._front)
+
+    def _front(self, state: Qt.ApplicationState) -> None:
+        """Back from the operating system's own file or print dialog, and only from one (#503)."""
+        if state != Qt.ApplicationState.ApplicationActive:
+            self.native = isinstance(QApplication.activeModalWidget(), (QFileDialog, QPrintDialog))
+        elif self.native:
+            self.native = False
+            self.last = time.monotonic()
 
     def eventFilter(self, watched: QObject, e: QEvent) -> bool:  # noqa: N802 (Qt's name)
         typed = isinstance(e, QInputMethodEvent) and bool(e.commitString() or e.preeditString())

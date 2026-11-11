@@ -134,7 +134,8 @@ store's recovery key, the Operator signed in sees no key: the guide keeps it, hi
 open does the same: it stays, hides the key or code and offers **Sign In as Admin…**, and shows it again to an Admin
 (a recovery code only to the Admin it is for; another Admin may press **Close Without the Code**, and that Admin then
 needs Reset Password for a new one) (#499). Every key counts as input, a page's keys such as F1, F5 or Enter and Hangul typed
-through the input method too, and so does a barcode scanner that types as a keyboard, so one in use keeps the session
+through the input method too, and so does closing Windows' own Open, Save or Print window, whose clicks and keys
+the app cannot see (#503), and so does a barcode scanner that types as a keyboard, so one in use keeps the session
 alive. `operator_pin: true` in `settings.json` asks each Operator for a 4 to 6 digit PIN at Switch User, chosen at their
 first sign-in (AOI-USR-008 for one that is not); a start still signs the Operator in, so the Operator view is never
 held.
