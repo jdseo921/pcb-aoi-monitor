@@ -35,6 +35,7 @@ from torch import nn
 from ..data import atomic
 from ..errors import A_FOLDER, QT_TRANSLATE_NOOP, AoiError, Phrase, system_detail, system_reason
 from . import lineage, run_progress
+from .compare import region_level
 from .jobs import JobCancelled
 
 # Why an AI model file or a trained AI model is refused (AOI-TRN-001, AOI-TRN-004), as phrases shown translated (#198)
@@ -139,6 +140,7 @@ def prepare(img_bgr: np.ndarray, size: int) -> Prepared:
     return Prepared(to_tensor(img_bgr, size), (int(img_bgr.shape[0]), int(img_bgr.shape[1])))
 
 
+REGION_AREA = 40  # px: the area of an AI region the pixel threshold is calibrated for, the recipe's default
 PIXEL_PERCENTILE = 99.95  # of every pixel of the calibration OK images' anomaly maps together
 
 
@@ -458,10 +460,13 @@ def _train(
     ng_scores: list[float] = []
     maps = len(cal_ok) + len(ng_images)
 
+    ok_levels: list[float] = []
+
     def scored(images: Sequence[Prepared]) -> Iterable[np.ndarray]:  # each map scored, then read for its top
         for p in images:
             amap = model.prepared_map(p)
             ok_scores.append(model.score(amap))
+            ok_levels.append(region_level(amap, REGION_AREA))
             yield amap
             say("map", len(ok_scores), maps, "")  # once the map's largest values are read
             stop()
@@ -473,10 +478,14 @@ def _train(
         say("map", len(ok_scores) + len(ng_scores), maps, "")
         stop()
     thr, rule = calibrate(ok_scores, ng_scores)
-    pix = max(top * 1.15, thr * 0.6)
+    # An AI region on a board whose checks pass makes it WARN. The pixel threshold therefore lies above the level at
+    # which the good boards held out showed a region, by the rule the image threshold has on their scores (#460):
+    # under it, every good board with a score past 0.6 of the image threshold was sent to a person.
+    pix = max(top * 1.15, thr * 0.6, calibrate(ok_levels, [])[0])
     model.meta.update(
         image_threshold=thr,
         pixel_threshold=max(pix, 1e-4),
+        ok_region_levels=ok_levels,
         threshold_rule=str(rule),  # plain text: a model file holds tensors and plain values only
         ok_scores=ok_scores,
         ng_scores=ng_scores,

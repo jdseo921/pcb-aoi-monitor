@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import math
 import re
 import struct
 import zlib
@@ -502,6 +503,17 @@ def load_image_sha256(
     return img, hashlib.sha256(data).hexdigest()
 
 
+def load_image_bytes(
+    path: str | Path,
+    max_megapixels: float = MAX_MEGAPIXELS,
+    max_megabytes: float = MAX_MEGABYTES,
+    read: Reader | None = None,
+) -> tuple[np.ndarray, bytes]:
+    """`load_image`, with the very bytes decoded: a Golden board's file is read once for its picture, its hash and the
+    tolerance map it carries (#461)."""
+    return _read_image(Path(path), max_megapixels, max_megabytes, read)
+
+
 def checked_bytes(
     path: str | Path,
     max_megapixels: float = MAX_MEGAPIXELS,
@@ -610,7 +622,8 @@ def align_to_reference(
     resize when not enough features match; `info["aligned"]` tells the UI which.
     """
     homography, info = registration(img, ref, max_features, fine)
-    return warp_to(img, homography, (ref.shape[1], ref.shape[0])), info
+    aligned, seen = conform(warp_to(img, homography, (ref.shape[1], ref.shape[0])), ref, homography, img.shape)
+    return aligned, info | seen
 
 
 FINE_SIDE = 1024  # px: the longest side the fine alignment matches at; a larger board is matched scaled down to it
@@ -663,6 +676,13 @@ def registration(
     training run keeps it, so it can warp an image read again exactly as the first time (REQ-TRN-007). With `fine`
     a homography ORB found is refined (`refine`), and the method says whether it was: "orb-homography+fine"."""
     info: dict[str, Any] = {"aligned": False, "inliers": 0, "method": "resize"}
+    scale = _to_ref_scale(img.shape, ref.shape)
+    if scale is not None:  # ORB's pyramid spans 3.6 times: a photo much larger or smaller is matched at ref's scale
+        f, size = scale
+        homography, info = registration(cv2.resize(img, size, interpolation=_resize_mode(f)), ref, max_features, fine)
+        if homography is not None:
+            homography = homography @ np.diag([size[0] / img.shape[1], size[1] / img.shape[0], 1.0])
+        return homography, info
     g1 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     g2 = cv2.cvtColor(ref, cv2.COLOR_BGR2GRAY)
     orb = cv2.ORB.create(max_features)
@@ -676,6 +696,7 @@ def registration(
             dst = np.array([k2[m.trainIdx].pt for m in matches], dtype=np.float32).reshape(-1, 1, 2)
             H, mask = cv2.findHomography(src, dst, cv2.RANSAC, 4.0)
             if H is not None and mask is not None and int(mask.sum()) >= 12:
+                H = _simplest(H, src, dst)
                 info.update(aligned=True, inliers=int(mask.sum()), method="orb-homography")
                 if fine and (better := refine(img, ref, H)) is not None:
                     H, info["method"] = better, "orb-homography+fine"
@@ -683,11 +704,198 @@ def registration(
     return None, info
 
 
+SIMPLE_PX = 2.0  # a match is explained by a transform that puts it within this many px
+SIMPLE_SHARE = 0.95  # the share of the homography's explained matches a turn, shift and scale must explain to be used
+
+
+def _simplest(homography: np.ndarray, src: np.ndarray, dst: np.ndarray) -> np.ndarray:
+    """`homography`, or the turn, shift and scale that explain the matches as well (#460). Two boards under one camera
+    differ by how they lie on the conveyor: four numbers. A homography has eight, and fits the other four to the
+    matches' noise, parts that sit a pixel off among it; that costs nothing among the matches and several pixels at
+    the board's corners, where there are few, and the comparison then reads the corners as changed. A photo taken
+    from another angle is not explained by four numbers, and keeps its homography."""
+    simple, _ = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=4.0)
+    if simple is None or not np.isfinite(simple).all():
+        return homography
+    simple = np.vstack([simple, [0.0, 0.0, 1.0]])
+    points = src.astype(np.float64)
+
+    def explained(m: np.ndarray) -> int:
+        off = cv2.perspectiveTransform(points, m).reshape(-1, 2) - dst.reshape(-1, 2)
+        return int((np.hypot(off[:, 0], off[:, 1]) <= SIMPLE_PX).sum())
+
+    return simple if explained(simple) >= SIMPLE_SHARE * explained(homography.astype(np.float64)) else homography
+
+
+SCALE_APART = 1.5  # a photo whose longest side is this many times the Golden board's, or more, is matched at its scale
+
+
+def _resize_mode(f: float) -> int:
+    return cv2.INTER_AREA if f < 1 else cv2.INTER_LINEAR
+
+
+def _to_ref_scale(shape: tuple[int, ...], ref_shape: tuple[int, ...]) -> tuple[float, tuple[int, int]] | None:
+    """The factor and (width, height) that bring a photo of `shape` to the scale of a Golden board of `ref_shape`, its
+    own proportions kept; None when their longest sides are less than SCALE_APART times apart (#460)."""
+    f = max(ref_shape[0], ref_shape[1]) / max(shape[0], shape[1])
+    if 1 / SCALE_APART < f < SCALE_APART:
+        return None
+    return f, (max(MIN_FEATURE_SIDE, round(shape[1] * f)), max(MIN_FEATURE_SIDE, round(shape[0] * f)))
+
+
+FRAME_FULL = 0.995  # a photo that shows this share of the Golden board's frame or more shows the whole of it
+MIN_FEATURE_SIDE = 16  # px: no photo is scaled below this to be matched
+COVERAGE_WARN = 95.0  # % of the Golden board's frame the photo must show, or a person looks at the board (#460)
+LIGHT_STEADY = 0.02  # a photo lit within 2 % of the Golden board, evenly, is judged as taken: no pixel is changed
+LIGHT_WARN = 0.35  # lighting more than 35 % from the Golden board's is said: a person checks the lamp (#460)
+LIGHT_LIMIT = (0.5, 2.0)  # the gains a photo is corrected by are held within these
+LIGHT_OFFSET = 48.0  # grey levels: the most a photo's black level is corrected by
+LIGHT_GREY = 128.0  # the grey level the lighting change is stated at
+LIGHT_SIDE = 160  # px: the longest side the lighting is measured at
+LIGHT_CONTRAST = 0.03  # a board whose shades differ by less than this share cannot tell an offset from a gain
+LIGHT_CLIPPED = (2, 253)  # grey levels: at or beyond these the camera clipped the value
+LIGHT_MIN_PIXELS = 200  # fewer measured pixels than this and the lighting is left as it is
+
+
+def frame_mask(shape: tuple[int, ...], homography: np.ndarray | None, size: tuple[int, int]) -> np.ndarray | None:
+    """Where a photo of `shape`, warped by `homography` to `size` (width, height), holds its own pixels: 255 there, 0
+    where the warp had none to give; None when it holds them everywhere (a plain resize, or a photo that covers the
+    whole frame, to within FRAME_FULL)."""
+    if homography is None or not np.isfinite(homography).all():
+        return None  # a registration with no finite answer is judged as it always was, on the warp alone
+    h, w = shape[:2]
+    corners = np.array([[[0, 0]], [[w, 0]], [[w, h]], [[0, h]]], np.float64)
+    moved = cv2.perspectiveTransform(corners, homography.astype(np.float64)).reshape(4, 2)
+    if not np.isfinite(moved).all():
+        return None
+    mask = np.zeros((size[1], size[0]), np.uint8)
+    cv2.fillConvexPoly(mask, np.round(moved * 16).astype(np.int32), 255, lineType=cv2.LINE_8, shift=4)
+    # a pixel or two short at an edge is the registration's own error, not a board out of frame: judged as before
+    return None if cv2.countNonZero(mask) >= FRAME_FULL * mask.size else mask
+
+
+def match_light(img: np.ndarray, ref: np.ndarray, valid: np.ndarray | None = None) -> tuple[np.ndarray, dict[str, Any]]:
+    """`img`, registered onto `ref`, as it would look under `ref`'s lighting, and what was measured (#460).
+
+    A lamp that ages, a door left open or a camera's white balance scale a photo's colours, evenly or from one side to
+    the other, and haze or the camera's black level raise them all; a defect does none of these. Six numbers describe
+    it: a gain that is a plane across the board and an offset, shared by the three colours, and a gain of its own for
+    each colour. The plane and the offset are fitted on the colours' mean, which has the widest range of values to fit
+    on, and each colour's gain on what is left; a colour with little contrast, as blue has on a green board, cannot
+    then tilt the fit on its own. The photos are scaled down first, the pixels that are dark, burnt out or outside
+    `valid` left out, and the fit made twice more without the pixels that fit worst, so a missing part does not pull
+    it. The offset, held within LIGHT_OFFSET, is then taken from `img` and the rest divided by the gains, held within
+    LIGHT_LIMIT. A value the camera clipped cannot be brought back: it counts only against a Golden board that lies
+    on the side of it the clipping did not hide.
+
+    `info["light_gain"]` is what a mid-grey of `ref` reads in the photo, as a share of it (1.0 = lit as `ref`),
+    `info["light_tilt"]` the difference of the gain across the board, and `info["light_change"]` the furthest the
+    lighting is from `ref`'s anywhere on the board, which the inspection states. A photo within LIGHT_STEADY of `ref`
+    on all of them is returned as it is, so a station with steady light judges exactly the pixels it photographed."""
+    info: dict[str, Any] = {"light_gain": 1.0, "light_tilt": 0.0, "light_change": 0.0, "light_matched": False}
+    h, w = ref.shape[:2]
+    f = min(1.0, LIGHT_SIDE / max(h, w))
+    small = (max(2, round(w * f)), max(2, round(h * f)))
+    a = cv2.resize(img, small, interpolation=cv2.INTER_AREA).astype(np.float64)
+    b = cv2.resize(ref, small, interpolation=cv2.INTER_AREA).astype(np.float64)
+    low, high = LIGHT_CLIPPED[0] + 2, LIGHT_CLIPPED[1] - 2  # a scaled-down pixel may average clipped ones
+    use = (a.min(axis=2) > low) & (a.max(axis=2) < high) & (b.min(axis=2) > low) & (b.max(axis=2) < high)
+    if valid is not None:
+        use &= cv2.resize(valid, small, interpolation=cv2.INTER_AREA) == 255
+    if int(use.sum()) < LIGHT_MIN_PIXELS:
+        return img, info
+    ys, xs = np.mgrid[0 : small[1], 0 : small[0]]
+    x = (xs[use] / max(1, small[0] - 1)) - 0.5
+    y = (ys[use] / max(1, small[1] - 1)) - 0.5
+    t, r = a[use], b[use]  # pixels x colours
+    mean_t, mean_r = t.mean(axis=1), r.mean(axis=1)
+    design = np.stack([mean_r, mean_r * x, mean_r * y, np.ones_like(mean_r)], axis=1)
+    keep = np.ones(len(mean_t), bool)
+    g = np.array([1.0, 0.0, 0.0, 0.0])
+    for _ in range(3):
+        n = int(keep.sum())
+        if n < LIGHT_MIN_PIXELS:
+            return img, info
+        # On a board of one shade a gain and an offset say the same thing, and the fit could split it between them
+        # any way: the offset is held towards 0 by as much as LIGHT_CONTRAST of contrast would hold it.
+        hold = np.array([[0.0, 0.0, 0.0, math.sqrt(n) * LIGHT_CONTRAST]])
+        g = np.linalg.lstsq(np.vstack([design[keep], hold]), np.append(mean_t[keep], 0.0), rcond=None)[0]
+        res = np.abs(design @ g - mean_t)
+        keep = res <= max(2.0, 2.5 * 1.4826 * float(np.median(res[keep])))
+    if int(keep.sum()) < LIGHT_MIN_PIXELS or g[0] <= 0.05:
+        return img, info
+    offset = float(np.clip(g[3], -LIGHT_OFFSET, LIGHT_OFFSET))
+    slope = (g[1] / g[0], g[2] / g[0])  # the plane, as a share of the gain at the board's middle
+    plane = 1.0 + slope[0] * x[keep] + slope[1] * y[keep]
+    colours = []
+    for c in range(3):  # each colour's own gain on what the plane and the offset leave: the white balance
+        lit, was = (t[keep, c] - offset) / plane, r[keep, c]
+        k = float(lit @ was / max(1e-9, was @ was))
+        near = np.abs(lit - k * was) <= max(2.0, 2.5 * 1.4826 * float(np.median(np.abs(lit - k * was))))
+        colours.append(float(lit[near] @ was[near] / max(1e-9, was[near] @ was[near])) if near.any() else k)
+    corner = np.array([[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]])
+    shape = np.array([1.0 + slope[0] * cx + slope[1] * cy for cx, cy in corner])
+    at = np.outer(colours, shape)  # colour x corner: the gain at each corner
+    info["light_gain"] = float(np.mean(colours) + offset / LIGHT_GREY)
+    info["light_tilt"] = float((shape.max() - shape.min()) * np.mean(colours))
+    reads = at.mean(axis=0) + offset / LIGHT_GREY  # what a mid-grey of the Golden board reads at each corner
+    info["light_change"] = float(max(abs(info["light_gain"] - 1.0), np.abs(reads - 1.0).max()))
+    steady = all(abs(k - 1.0) <= LIGHT_STEADY for k in colours) and abs(offset) <= LIGHT_STEADY * LIGHT_GREY
+    if steady and info["light_tilt"] <= LIGHT_STEADY:
+        return img, info
+    at = np.clip(at, *LIGHT_LIMIT)
+    inverse = np.dstack(
+        [
+            cv2.resize((1.0 / at[c]).reshape(2, 2).astype(np.float32), (w, h), interpolation=cv2.INTER_LINEAR)
+            for c in range(3)
+        ]
+    )  # fmt: skip  (a plane is its corners, joined bilinearly)
+    out: np.ndarray = cv2.multiply(img.astype(np.float32) - np.float32(offset), inverse, dtype=cv2.CV_8U)
+    # A value the camera clipped says only that the board was at least that bright, or that dark, there: where the
+    # Golden board lies on the side the clipping hid, the photo shows nothing against it and takes its value.
+    hid = ((img >= LIGHT_CLIPPED[1]) & (out < ref)) | ((img <= LIGHT_CLIPPED[0]) & (out > ref))
+    out[hid] = ref[hid]
+    info["light_matched"] = True
+    return out, info
+
+
+def outside_frame(valid: np.ndarray, margin: int) -> np.ndarray:
+    """Where a map made from a conformed photo says nothing about the board: outside `valid` (`frame_mask`) and within
+    `margin` px of its edge, where the photo meets the Golden board's own pixels. 255 there, else 0."""
+    k = 2 * margin + 1
+    out: np.ndarray = cv2.bitwise_not(cv2.erode(valid, cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))))
+    return out
+
+
+def conform(
+    warped: np.ndarray, ref: np.ndarray, homography: np.ndarray | None, shape: tuple[int, ...]
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """A photo of `shape`, already warped onto `ref` by `homography`, made comparable with `ref` pixel for pixel
+    (#460): lit as `ref` (`match_light`), and holding `ref`'s own pixels where the photo showed none of the board, so
+    neither check reads the warp's border as a defect. `info["coverage_pct"]` is the share of `ref`'s frame the photo
+    showed, which the inspection reports: what was not photographed was not inspected."""
+    valid = frame_mask(shape, homography, (ref.shape[1], ref.shape[0]))
+    out, info = match_light(warped, ref, valid)
+    info["coverage_pct"] = 100.0
+    info["frame"] = valid  # for the checks that read the photo itself; never stored with a result
+    if valid is not None:
+        info["coverage_pct"] = cv2.countNonZero(valid) / valid.size * 100.0
+        if out is warped:
+            out = warped.copy()
+        cv2.copyTo(ref, cv2.bitwise_not(valid), out)
+    return out, info
+
+
 def warp_to(img: np.ndarray, homography: np.ndarray | None, size: tuple[int, int]) -> np.ndarray:
     """`img` warped by `homography` to `size` (width, height), or resized to it when the homography is None."""
     if homography is None:
         resized: np.ndarray = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
         return resized
+    shrink = math.sqrt(abs(float(np.linalg.det(homography[:2, :2]))))  # the warp's scale at the photo's origin
+    if 0 < shrink <= 1 / SCALE_APART:  # a much larger photo is averaged down first: a warp alone would skip pixels
+        small = (max(1, round(img.shape[1] * shrink)), max(1, round(img.shape[0] * shrink)))
+        img = cv2.resize(img, small, interpolation=cv2.INTER_AREA)
+        homography = homography @ np.diag([1 / shrink, 1 / shrink, 1.0])
     warped: np.ndarray = cv2.warpPerspective(img, homography, size, borderMode=cv2.BORDER_REPLICATE)
     return warped
 

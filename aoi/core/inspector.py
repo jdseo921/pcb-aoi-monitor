@@ -18,12 +18,13 @@ import numpy as np
 from .. import defects as taxonomy
 from ..errors import QT_TRANSLATE_NOOP, AoiError, joined
 from .anomaly import AnomalyModel
-from .compare import MIN_SIDE, CompareResult, Region, changed_regions, compare, regions_from_mask
+from .compare import MIN_SIDE, CompareResult, Region, ai_mask, changed_regions, compare, regions_from_mask
 from .copper import copper_level, copper_type
-from .imaging import align_to_reference
+from .imaging import COVERAGE_WARN, LIGHT_WARN, align_to_reference, outside_frame
 from .recipe import ROI_DEFECT, Recipe
 
 OK, WARN, NG = "OK", "WARN", "NG"
+AI_SEAM = 6  # px at the AI model's input size: how far a photo's edge inside the frame shows in its anomaly map
 MAX_NAMED = 200  # regions named as copper defects on one board (REQ-INSP-018): past it they stay Anomaly, in time
 # The engine's notes, stored with each result as written; aoi/core/explain.py words them for the screen.
 NO_GOLDEN_NOTE = "No golden reference image set for this board model; comparison skipped."
@@ -282,7 +283,9 @@ class Inspector:
         reference_path: str | None = None,
         reference_sha256: str | None = None,
         px_per_mm: float | None = None,
+        tolerance: np.ndarray | None = None,
     ) -> None:
+        self.tolerance = tolerance  # how far good boards lie from the Golden board, pixel by pixel (#461); None: none
         self.recipe = recipe.in_px(px_per_mm)
         self.px_per_mm = px_per_mm
         self.model = model
@@ -340,12 +343,24 @@ class Inspector:
         if self.reference is not None:
             work, align_info = align_to_reference(img, self.reference, fine=r.fine_alignment is True)
         if r.use_compare and self.reference is not None:
-            res.compare = compare(img, self.reference, r.diff_threshold, r.min_defect_area, work, align_info)
+            res.compare = compare(
+                img, self.reference, r.diff_threshold, r.min_defect_area, work, align_info, self.tolerance
+            )
         elif r.use_compare:
             res.notes.append(NO_GOLDEN_NOTE)
         ai = None
         if r.use_ai and self.model is not None:
             m, res.anomaly_map = self.model, self.model.anomaly_map(work)
+            frame = align_info.get("frame") if align_info else None
+            if frame is not None:  # no AI evidence where the photo showed no board, nor at that area's seam (#460)
+                size = int(m.meta.get("image_size") or max(frame.shape))  # the AI model's input size
+                margin = min(max(8, round(max(frame.shape) / size * AI_SEAM)), max(8, max(frame.shape) // 20))
+                unseen = outside_frame(frame, margin) > 0
+                res.anomaly_map[unseen] = 0
+                # an enabled ROI that reaches into what was not seen is not judged whole: said, never passed in silence
+                hidden = [x.name for x in r.rois if x.enabled and unseen[x.y : x.y + x.h, x.x : x.x + x.w].any()]
+                if hidden and res.compare is not None:
+                    res.compare.metrics["rois_out_of_frame"] = hidden
             rule = m.meta.get("threshold_rule", "")
             ai = AiEvidence(m.score(res.anomaly_map), m.image_threshold, m.pixel_threshold, rule)
         elif r.use_ai:
@@ -406,6 +421,35 @@ class Inspector:
                     f"blobs ≥ {r.min_defect_area} px after noise clean-up",
                 )
             )
+            # What the photo itself was like (#460), said only when a person has to act on it: lighting too far from
+            # the Golden board's to correct safely, or a board partly out of the frame. Both are kept with every
+            # result's metrics; a result stored before #460 holds neither and is not judged on them.
+            change = math.copysign(float(m.get("light_change", 0.0)), float(m.get("light_gain", 1.0)) - 1.0) * 100.0
+            if abs(change) > LIGHT_WARN * 100.0:
+                res.checks.append(
+                    Check(
+                        "Lighting change %",
+                        change,
+                        LIGHT_WARN * 100.0,
+                        "info only",
+                        WARN,
+                        "Compare",
+                        "brighter (+) or darker (-) than the golden board; corrected before the photo is judged",
+                    )
+                )
+            if float(m.get("coverage_pct", 100.0)) < COVERAGE_WARN or m.get("rois_out_of_frame"):
+                res.checks.append(
+                    Check(
+                        "Board in frame %",
+                        float(m["coverage_pct"]),
+                        COVERAGE_WARN,
+                        "info only",
+                        WARN,
+                        "Compare",
+                        "the share of the golden board's frame the photo shows; the rest, and an ROI that reaches"
+                        " into it, is not inspected",
+                    )
+                )
             res.checks.append(
                 Check(
                     "Alignment inliers",
@@ -437,9 +481,7 @@ class Inspector:
                 )
             )
             pix_thr = ai.pixel_threshold
-            mask: np.ndarray = (amap >= pix_thr).astype(np.uint8) * 255
-            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
-            regions += regions_from_mask(mask, amap / thr, r.min_defect_area, "ai")
+            regions += regions_from_mask(ai_mask(amap, pix_thr), amap / thr, r.min_defect_area, "ai")
 
         # 3) ROI checks: each enabled ROI judged on the AI map, whole; one past its edge or of no size gives no
         # verdict, as part of its place would go unjudged; with no AI map, a note says that no ROI was judged -------

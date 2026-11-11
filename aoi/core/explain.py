@@ -51,6 +51,17 @@ CHECKS = {
         "The number of alignment points is {value}, fewer than the threshold of {threshold}, so the other checks may"
         " be off: check that the board lies flat, then inspect it again.",
     ),
+    ("Lighting change %", WARN): QT_TRANSLATE_NOOP(
+        "Explain",
+        "The photo's lighting differs from the Golden board's by {value}, more than the {threshold} that can be"
+        " corrected safely, so the other checks may be off: check the lamp and the camera's settings, then inspect the"
+        " board again.",
+    ),
+    ("Board in frame %", WARN): QT_TRANSLATE_NOOP(
+        "Explain",
+        "The photo shows {value} of the Golden board's frame, where {threshold} is needed and every ROI whole: the"
+        " rest of the board was not inspected. Place the board fully in view, then inspect it again.",
+    ),
     ("AI anomaly score", NG): QT_TRANSLATE_NOOP(
         "Explain", "The AI score is {value}, at or above its threshold of {threshold}."
     ),
@@ -156,7 +167,14 @@ TRIED_AI_OFF = QT_TRANSLATE_NOOP(  # thresholds tried whose recipe turns the AI 
     " the Recipe Editor.",
 )
 OTHER_NOTE = QT_TRANSLATE_NOOP("Explain", "Note: {note}")
-UNITS = {"Changed area %": "%", "Difference regions": "", "Alignment inliers": "", "ROI": "×"}  # "" = a count
+UNITS = {
+    "Changed area %": "%",
+    "Difference regions": "",
+    "Alignment inliers": "",
+    "ROI": "×",
+    "Board in frame %": "%",
+    "Lighting change %": "%",
+}  # "" = a count
 TEMPLATES = [  # every template a screen may translate, for the tests
     *CHECKS.values(), *ROI_CHECK.values(), OTHER_CHECK, ALL_INSIDE, SEVERE_DEFECT, SEVERE_DEFECTS, UNEXPLAINED,
     *NOTES.values(), INACTIVE_AI_NOTE, *STORED_NOTES.values(), OTHER_NOTE,

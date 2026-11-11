@@ -71,14 +71,16 @@ from . import (
     support,
     tuning,
 )
-from .compare import Region, changed_regions
+from .compare import Region, changed_regions, lab_difference, similarity
 from .cycle import InspectionCycle
 from .folder_watch import FolderWatch
 from .imaging import (
     align_to_reference,
+    conform,
     encode_image,
     list_images,
     load_image,
+    load_image_bytes,
     load_image_sha256,
     preview_path,
     preview_size,
@@ -127,6 +129,13 @@ ALIGNING = QT_TRANSLATE_NOOP("Training", "Aligning {count} images to the referen
 READING = QT_TRANSLATE_NOOP("Training", "Aligning image {n} of {count}")
 BAND = QT_TRANSLATE_NOOP("Training", "Golden board, part {band} of {bands}: image {n} of {count}")
 MEDIAN = QT_TRANSLATE_NOOP("Training", "Building the Golden board: step {n} of {count}")
+SPREAD = QT_TRANSLATE_NOOP("Training", "Measuring how good boards differ: image {n} of {count}")  # #461
+LEARNED_SSIM = QT_TRANSLATE_NOOP(
+    "Training",
+    "Similarity threshold set from the {count} OK images AI model {version} was trained on: the lowest scored"
+    " {low:.2f}, under the default of {default:.2f}.",
+)
+SSIM_MARGIN = 0.05  # a similarity threshold learned from good boards lies this far under the lowest of them (#460)
 EPOCH = QT_TRANSLATE_NOOP("Training", "Training the AI model: round {epoch} of {epochs}")  # first-run guide, Q79
 CALIBRATING = QT_TRANSLATE_NOOP("Training", "Setting the threshold: image {n} of {count}")
 SAVING = QT_TRANSLATE_NOOP("Training", "Saving AI model {version}")
@@ -1647,7 +1656,8 @@ class AppContext:
         )
         n_ok, n_ng = len(ok_items), len(ng_items)
         maps = (anomaly.held_out(n_ok, cfg.val_fraction) or n_ok) + n_ng  # held-out OK maps, else every OK's; the NG's
-        eta = run_progress.Eta({"read": 1 + n_ok + n_ng, "step": cfg.epochs * cfg.steps_per_epoch, "map": maps})
+        # every OK image is read once more than the Golden board needs, to measure how good boards differ from it (#461)
+        eta = run_progress.Eta({"read": 1 + 2 * n_ok + n_ng, "step": cfg.epochs * cfg.steps_per_epoch, "map": maps})
 
         def check() -> None:  # Cancel, or the window closing: nothing saved, registered, activated or audited (#171)
             if stop():
@@ -1697,7 +1707,8 @@ class AppContext:
         for n, item in enumerate(ok_items, 1):
             image = self._read_frozen(frozen, item)
             homography = registration(image, anchor)[0]
-            warped = warp_to(image, homography, size)
+            # lit as the reference board and holding its pixels where the photo showed none, as Inspection judges it
+            warped = conform(warp_to(image, homography, size), anchor, homography, image.shape)[0]
             del image  # the image at the camera's resolution goes; its tensor and its first band stay
             kept.append(homography)
             ok_in.append(anomaly.prepare(warped, cfg.image_size))
@@ -1710,9 +1721,22 @@ class AppContext:
             read(READING.fill(n=n, count=n_ok + n_ng))
         for part in range(2, bands + 1):  # each later band of the median: every OK image read again, warped as before
             for n, (item, homography) in enumerate(zip(ok_items, kept, strict=True), 1):
-                warped = warp_to(self._read_frozen(frozen, item), homography, size)
+                image = self._read_frozen(frozen, item)
+                warped = conform(warp_to(image, homography, size), anchor, homography, image.shape)[0]
+                del image
                 read(BAND.fill(band=part, bands=bands, n=n, count=n_ok))
                 board.add(warped, built)
+        # How far each pixel of the good boards lies from the Golden board just built, and how similar each is to it:
+        # the comparison's tolerance (#461) and the lowest similarity a good board scored (#460).
+        spread, similar = golden.Spread((anchor.shape[0], anchor.shape[1])), []
+        for n, (item, homography) in enumerate(zip(ok_items, kept, strict=True), 1):
+            image = self._read_frozen(frozen, item)
+            seen = conform(warp_to(image, homography, size), board.board, homography, image.shape)[0]
+            del image
+            spread.add(lab_difference(seen, board.board))
+            similar.append(similarity(seen, board.board))
+            read(SPREAD.fill(n=n, count=n_ok))
+        learned = {"images": n_ok, "sigmas": golden.TOLERANCE_SIGMAS, "ssim_low": round(float(min(similar)), 4)}
         model = anomaly.train(ok_in, ng_in, cfg, engine, should_stop)
         check()
         previous = self.db.active_model(board_model)
@@ -1746,8 +1770,11 @@ class AppContext:
         model.meta["settings"].update(golden_band_bytes=band, golden_step_bytes=golden.STEP_BYTES)
         try:
             model.save(path)
-            save_image(golden_path, board.board)
+            # the Golden board's file carries its tolerance: every copy, hash and backup of the file covers both (#461)
+            png = golden.embed(encode_image(golden_path, board.board), spread.tolerance(), learned)
+            atomic.write_bytes(golden_path, png)
             model.meta["golden_image"] = to_stored(golden_path, self.settings.root)
+            model.meta["golden_learned"] = learned
             card = model_card.build(
                 model.meta,
                 trained_by=self.user,
@@ -1789,8 +1816,29 @@ class AppContext:
         if isinstance(not_live, AoiError) and not_live.code == "AOI-TRN-058":
             raise not_live  # said as a refusal, never as a version to activate once the cause is fixed (review TRN-2)
         live = first and not_live is None and (self.db.active_model(board_model) or {}).get("id") == model_id
+        if live:
+            self._learn_similarity(board_model, version, learned)
         self.log.info("training.finished", extra={"board_model": board_model, "model_version": version, "live": live})
         return {**model.meta, "activated": live, "not_live": not_live}
+
+    def _learn_similarity(self, board_model: str, version: str, learned: dict[str, Any]) -> None:
+        """A board model's first AI model went live and its recipe is still the default no one has changed: when the
+        good boards it was trained on score a similarity under the default threshold, less SSIM_MARGIN, the threshold
+        is set under the lowest of them, as a recipe revision with its reason, like any other (#460). On photographs
+        the default would call every good board NG, and a customer's first run would need the Recipe Editor before one
+        board passed. A recipe an Engineer has saved is never touched: Use Learned Values is theirs to press."""
+        latest = self.db.latest_recipe(board_model)
+        recipe = Recipe.from_dict(latest[1]) if latest else Recipe(board_model=board_model)
+        default = Recipe(board_model=board_model)
+        low = float(learned["ssim_low"])
+        if recipe.to_dict() != default.to_dict() or low - SSIM_MARGIN >= default.ssim_min:
+            return
+        recipe.ssim_min = round(max(0.0, low - SSIM_MARGIN), 2)
+        reason = LEARNED_SSIM.fill(count=learned["images"], version=version, low=low, default=default.ssim_min)
+        try:
+            self.save_recipe(recipe, str(reason))
+        except AoiError as e:  # the model is live either way; the default threshold then stands, and is said
+            self.log.warning("training.similarity_not_learned", extra={"board_model": board_model, "code": e.code})
 
     def load_model(self, board_model: str) -> tuple[str, anomaly.AnomalyModel, str] | None:
         """The active model of a board model as (version, model, uuid), the three from one row so a record never names
@@ -1956,7 +2004,7 @@ class AppContext:
         if golden_path is None:
             why = QT_TRANSLATE_NOOP("Errors", "it has no Golden board; set one on Training")
             raise AoiError("AOI-RCP-013", board_model=board_model, reason=why)
-        golden = self._read_golden(board_model, golden_path)[0]
+        golden, _, tolerance = self._read_golden_learned(board_model, golden_path)  # as the Inspector compares (#461)
         rev, saved = self.recipe(board_model)
         recipe = saved.in_px(self.db.scale(board_model))  # the pair as the engine applies it
         rows = self.db.samples(board_model)
@@ -1999,7 +2047,8 @@ class AppContext:
                 left_out["why"] = left_out["why"] or f"{Path(s['path']).name}: {e.code} {e.title}"
             else:
                 part = s["uuid"] in held
-                tables = tuning.board_tables(image, golden, boxes, s["label"] == NG, recipe, thresholds, areas)
+                ng = s["label"] == NG
+                tables = tuning.board_tables(image, golden, boxes, ng, recipe, thresholds, areas, tolerance)
                 parts[part].append(tables)
                 counted[part]["ok" if s["label"] == OK else "ng"] += 1
                 counted[part]["boxes"] += len(boxes)
@@ -2116,27 +2165,33 @@ class AppContext:
         if recipe is not None and recipe.to_dict() != rcp.to_dict():
             rev, recipe_uuid = None, None  # an unsaved recipe (thresholds tried on Compare) has no revision
         mv = self.load_model(board_model)
-        golden = self.db.reference(board_model) if reference is None else None
+        golden_file = self.db.reference(board_model) if reference is None else None
         sha: str | None = None
-        if golden:
-            reference, sha = self._read_golden(board_model, golden)
+        tolerance: np.ndarray | None = None
+        if golden_file:
+            reference, sha, tolerance = self._read_golden_learned(board_model, golden_file)
         model, version, model_uuid = (mv[1], mv[0], mv[2]) if mv else (None, None, None)
         scale = self.db.scale(board_model)  # the recipe's sizes in mm are applied at it (REQ-RCP-006)
-        args = (model, reference, side, version, rev, model_uuid, recipe_uuid, golden, sha, scale)
+        args = (model, reference, side, version, rev, model_uuid, recipe_uuid, golden_file, sha, scale, tolerance)
         return Inspector(recipe or rcp, *args)
 
-    def _read_golden(self, board_model: str, golden: str) -> tuple[np.ndarray, str]:
-        """The Golden board file `golden` of `board_model`, decoded, with the SHA-256 of the bytes read (one read: the
-        bytes hashed are the bytes judged); AOI-INSP-009 when it is gone or cannot be read, as the comparison, and the
-        alignment the AI model was trained on, would otherwise silently go (#169)."""
+    def _read_golden_learned(self, board_model: str, golden_file: str) -> tuple[np.ndarray, str, np.ndarray | None]:
+        """The Golden board file `golden_file` of `board_model`, decoded, with the SHA-256 of the bytes read (one read:
+        the bytes hashed are the bytes judged) and the tolerance map the file carries when a training run built it
+        (#461), None for a Golden board with none, such as a sample set as the reference; AOI-INSP-009 when the file is
+        gone or cannot be read, as the comparison, and the alignment the AI model was trained on, would otherwise
+        silently go (#169)."""
+        limits = (self.settings.max_image_megapixels, self.settings.max_image_megabytes)
         try:
-            return self._load_image_sha256(golden)
+            image, data = load_image_bytes(golden_file, *limits, read=self._plain_bytes)
         except AoiError as e:
             unreadable = QT_TRANSLATE_NOOP("Errors", "it cannot be read ({code} {title})").fill(
                 code=e.code, title=e.title
             )
-            why = unreadable if Path(golden).exists() else QT_TRANSLATE_NOOP("Errors", "the file is gone")
-            raise AoiError("AOI-INSP-009", detail=str(e), board=board_model, file=golden, reason=why) from e
+            why = unreadable if Path(golden_file).exists() else QT_TRANSLATE_NOOP("Errors", "the file is gone")
+            raise AoiError("AOI-INSP-009", detail=str(e), board=board_model, file=golden_file, reason=why) from e
+        found = golden.extract(data, (image.shape[0], image.shape[1]))
+        return image, hashlib.sha256(data).hexdigest(), found[0] if found else None
 
     def engine_is_current(self, board_model: str, insp: Inspector | JudgedBy) -> bool:
         """Whether `insp` was built from what `inspector(board_model)` would use now: the active AI model, the latest

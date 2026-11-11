@@ -8,7 +8,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-from .imaging import align_to_reference
+from .imaging import align_to_reference, outside_frame
 
 # SSIM as scikit-image's structural_similarity computes it with its defaults: 7 px uniform window, sample
 # covariance, K1 = 0.01, K2 = 0.03, data range 255, "reflect" border, mean over the map without the border.
@@ -18,6 +18,9 @@ DIFF_BORDER = 4  # px at each edge of the difference map that are never judged: 
 # nothing, NaN), and the difference map 3 px inside its border for the 3 × 3 noise clean-up to keep a pixel (at 10 px
 # or less no pixel is ever judged changed); ORB's image pyramid fails on a 1 px side.
 MIN_SIDE = max(SSIM_WINDOW, 2 * DIFF_BORDER + 3)  # 11 px
+
+
+PHOTO_METRICS = ("light_gain", "light_tilt", "light_change", "coverage_pct")  # of the photo itself, kept with a result
 
 
 @dataclass
@@ -46,6 +49,39 @@ class CompareResult:
 
 SMALL = 8  # px: the boxes this wide and high or less have their peaks read together, CHUNK boxes at a time
 CHUNK = 8192  # so that reading them never takes more than a few MB, however many regions a board has
+
+
+AI_CLOSE = 5  # px: gaps this wide in an AI map's region are closed before its area is measured
+
+
+def ai_mask(amap: np.ndarray, level: float) -> np.ndarray:
+    """Where an AI map lies at `level` or above, small gaps closed: what the inspection finds its AI regions in."""
+    mask: np.ndarray = (amap >= level).astype(np.uint8) * 255
+    out: np.ndarray = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((AI_CLOSE, AI_CLOSE), np.uint8))
+    return out
+
+
+def region_level(amap: np.ndarray, min_area: int, steps: int = 14) -> float:
+    """The highest level at which `amap` holds a region of `min_area` px or more, as the inspection finds one
+    (`ai_mask`): a board shows an AI region exactly when its pixel threshold is at or under this level (#460). Found
+    by halving, to 1 part in 2^steps of the map's highest value; 0.0 for a map with no such region at any level."""
+    low, high = 0.0, float(amap.max())
+    if high <= 0.0:
+        return 0.0
+
+    def held(level: float) -> bool:
+        _, _, stats, _ = cv2.connectedComponentsWithStats(ai_mask(amap, level), connectivity=8)
+        return bool((stats[1:, cv2.CC_STAT_AREA] >= min_area).any())
+
+    if not held(np.nextafter(0.0, 1.0)):
+        return 0.0
+    for _ in range(steps):
+        mid = (low + high) / 2
+        if held(mid):
+            low = mid
+        else:
+            high = mid
+    return low
 
 
 def regions_from_mask(mask: np.ndarray, value_map: np.ndarray, min_area: int, source: str) -> list[Region]:
@@ -148,6 +184,19 @@ def ssim(g1: np.ndarray, g2: np.ndarray) -> tuple[float, np.ndarray]:
     return float(s[pad:-pad, pad:-pad].astype(np.float64).mean()), s
 
 
+def similarity(aligned: np.ndarray, reference: np.ndarray) -> float:
+    """The SSIM score `compare` gives a board registered onto the Golden board."""
+    return ssim(cv2.cvtColor(aligned, cv2.COLOR_BGR2GRAY), cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY))[0]
+
+
+def lab_difference(aligned: np.ndarray, reference: np.ndarray) -> np.ndarray:
+    """The colour difference of a board registered onto the Golden board, 8-bit, before any tolerance or border rule:
+    what `compare` judges, and what a training run measures on its good boards (`golden.Spread`, #461)."""
+    a = cv2.cvtColor(cv2.GaussianBlur(aligned, (5, 5), 0), cv2.COLOR_BGR2LAB)
+    b = cv2.cvtColor(cv2.GaussianBlur(reference, (5, 5), 0), cv2.COLOR_BGR2LAB)
+    return shift_tolerant_diff(a, b)
+
+
 def compare(
     test: np.ndarray,
     reference: np.ndarray,
@@ -155,27 +204,38 @@ def compare(
     min_area: int = 40,
     aligned: np.ndarray | None = None,
     align_info: dict[str, Any] | None = None,
+    tolerance: np.ndarray | None = None,
 ) -> CompareResult:
+    """`test` against `reference`. With `tolerance`, the map of how far each pixel of good boards lay from the Golden
+    board (`golden.Spread`), a pixel that differs no more than good boards did there is not counted, and one that
+    differs more counts at its full difference (#461): a date code or a joint's shine is passed over, and every other
+    place keeps the sensitivity it had. Where the photo showed no board, and at the edge of what it showed, nothing is
+    counted either (#460): the inspection states how much of the frame the photo showed."""
     if aligned is None:
         aligned, align_info = align_to_reference(test, reference)
     elif align_info is None:
         raise ValueError("align_info is required when a pre-aligned image is passed")
 
-    a = cv2.cvtColor(cv2.GaussianBlur(aligned, (5, 5), 0), cv2.COLOR_BGR2LAB)
-    b = cv2.cvtColor(cv2.GaussianBlur(reference, (5, 5), 0), cv2.COLOR_BGR2LAB)
-    diff = shift_tolerant_diff(a, b).astype(np.float32)
+    raw = lab_difference(aligned, reference)
+    if tolerance is not None:
+        raw = np.where(raw > tolerance, raw, 0)
+    diff = raw.astype(np.float32)
     m = max(DIFF_BORDER, min(diff.shape) // 60)  # ignore warped borders
     diff[:m, :] = diff[-m:, :] = 0
     diff[:, :m] = diff[:, -m:] = 0
+    frame = align_info.get("frame")
+    if frame is not None:  # the photo's own edge inside the frame, where it meets the Golden board's pixels (#460)
+        diff[outside_frame(frame, m) > 0] = 0
 
-    g1 = cv2.cvtColor(aligned, cv2.COLOR_BGR2GRAY)
-    g2 = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY)
-    score, ssim_map = ssim(g1, g2)
+    score, ssim_map = ssim(cv2.cvtColor(aligned, cv2.COLOR_BGR2GRAY), cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY))
 
     mask, regions, found = changed_regions(diff, diff_threshold, min_area)
-    metrics = {
+    photo = {k: align_info[k] for k in PHOTO_METRICS if k in align_info}  # what `conform` measured (#460)
+    metrics: dict[str, Any] = {
         "alignment_method": align_info["method"],
         "alignment_inliers": align_info["inliers"],
+        **photo,
+        "tolerance": tolerance is not None,
         "ssim": score,
         "mean_abs_diff": float(diff.mean()),
         "max_diff": float(diff.max()),

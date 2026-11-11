@@ -168,6 +168,8 @@ CHECK_NAMES = {
     "Changed area %": QT_TRANSLATE_NOOP("ComparePage", "Changed area %"),
     "Difference regions": QT_TRANSLATE_NOOP("ComparePage", "Difference regions"),
     "Alignment inliers": QT_TRANSLATE_NOOP("ComparePage", "Alignment points"),
+    "Lighting change %": QT_TRANSLATE_NOOP("ComparePage", "Lighting change %"),
+    "Board in frame %": QT_TRANSLATE_NOOP("ComparePage", "Board in frame %"),
     "AI anomaly score": QT_TRANSLATE_NOOP("ComparePage", "AI score"),
 }
 SOURCES = {

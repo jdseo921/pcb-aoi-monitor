@@ -24,7 +24,7 @@ import cv2
 import numpy as np
 
 from .compare import changed_mask, compare
-from .imaging import refine, registration, warp_to
+from .imaging import conform, refine, registration, warp_to
 from .recipe import Recipe
 
 THRESHOLDS = (8, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 60, 70)  # Pixel difference values tried (0-255)
@@ -223,11 +223,12 @@ def board_tables(
     recipe: Recipe,
     thresholds: Iterable[int] = THRESHOLDS,
     areas: Iterable[int] = AREAS,
+    tolerance: np.ndarray | None = None,
 ) -> dict[bool, Table]:
     """One labelled board's counts at each pair of `thresholds` and `areas`, with fine alignment off (False) and on
-    (True): the board aligned onto the Golden board as the Inspector aligns it, compared, and `measure`d with its boxes
-    mapped onto the board (`map_boxes`). Where fine alignment finds nothing better, both are the same counts, as the
-    Inspector then judges alike."""
+    (True): the board aligned onto the Golden board as the Inspector aligns it, compared, with the Golden board's
+    `tolerance` when it carries one (#461), and `measure`d with its boxes mapped onto the board (`map_boxes`). Where
+    fine alignment finds nothing better, both are the same counts, as the Inspector then judges alike."""
     thresholds, areas = tuple(thresholds), tuple(areas)
     size = (golden.shape[1], golden.shape[0])
     homography, info = registration(image, golden)
@@ -237,10 +238,9 @@ def board_tables(
         if on and h is None:
             out[True] = out[False]
             continue
-        aligned = warp_to(image, h, size)
-        result = compare(
-            image, golden, recipe.diff_threshold, recipe.min_defect_area, aligned, info | {"method": method}
-        )
+        aligned, seen = conform(warp_to(image, h, size), golden, h, image.shape)  # as the Inspector judges it (#460)
+        seen = info | seen | {"method": method}
+        result = compare(image, golden, recipe.diff_threshold, recipe.min_defect_area, aligned, seen, tolerance)
         mapped = map_boxes(boxes, h, (image.shape[1], image.shape[0]), size)
         assert result.diff_map is not None
         out[on] = measure(result.diff_map, mapped, ng, recipe, result.metrics["ssim"], thresholds, areas)

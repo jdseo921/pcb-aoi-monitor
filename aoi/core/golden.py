@@ -3,8 +3,13 @@ band of rows at a time, so a run holds that band of every image rather than ever
 
 from __future__ import annotations
 
+import json
+import struct
+import zlib
 from collections.abc import Callable
+from typing import Any
 
+import cv2
 import numpy as np
 
 from . import run_progress
@@ -60,3 +65,96 @@ class Median:
         started = run_progress.clock()
         self._work(0, 0, rows)
         return run_progress.clock() - started
+
+
+TOLERANCE_SIGMAS = 3.0  # a pixel's tolerance: its mean difference on good boards plus this many of its deviations
+TOLERANCE_CHUNK = b"aoTl"  # a private PNG chunk, safe to copy: the Golden board file carries its own tolerance
+TOLERANCE_FORMAT = 1
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+class Spread:
+    """How far each pixel of good boards lies from the Golden board (#461), from the comparison's own difference map,
+    one good board added at a time, so a run holds five maps and never the boards.
+
+    The comparison passes over a pixel that differs no more than `tolerance()` there. A date code, a joint's shine or
+    an edge that sits a pixel off differ from board to board on good boards; a place that never differs keeps a
+    tolerance near 0, and every place keeps its full sensitivity to a difference beyond it. The tolerance is the
+    larger of the mean plus TOLERANCE_SIGMAS deviations and the second-highest difference a good board showed: the
+    highest alone would let one board labelled good by mistake blind the comparison at its defect for good."""
+
+    def __init__(self, shape: tuple[int, int]) -> None:
+        self.count = 0
+        self._sum = np.zeros(shape, np.float64)
+        self._squares = np.zeros(shape, np.float64)
+        self._top = np.zeros(shape, np.uint8)
+        self._second = np.zeros(shape, np.uint8)
+
+    def add(self, difference: np.ndarray) -> None:
+        d = difference.astype(np.float64)
+        self._sum += d
+        self._squares += d * d
+        seen = np.clip(difference, 0, 255).astype(np.uint8)
+        self._second = np.maximum(self._second, np.minimum(self._top, seen))
+        self._top = np.maximum(self._top, seen)
+        self.count += 1
+
+    def tolerance(self) -> np.ndarray:
+        """The tolerance map, 8-bit, rounded up and spread by a pixel each way."""
+        mean = self._sum / max(1, self.count)
+        deviation = np.sqrt(np.maximum(self._squares / max(1, self.count) - mean * mean, 0.0))
+        tol = np.clip(np.ceil(mean + TOLERANCE_SIGMAS * deviation), 0, 255).astype(np.uint8)
+        out: np.ndarray = cv2.dilate(np.maximum(tol, self._second), np.ones((3, 3), np.uint8))
+        return out
+
+
+def _chunks(png: bytes) -> list[tuple[bytes, int, int]]:
+    """Each chunk of a PNG as (type, start of its length field, end of its CRC); [] for bytes that are no PNG."""
+    out, at = [], len(PNG_SIGNATURE)
+    if not png.startswith(PNG_SIGNATURE):
+        return []
+    while at + 12 <= len(png):
+        (size,) = struct.unpack(">I", png[at : at + 4])
+        end = at + 12 + size
+        if end > len(png):
+            return []
+        out.append((png[at + 4 : at + 8], at, end))
+        at = end
+    return out
+
+
+def embed(png: bytes, tolerance: np.ndarray, learned: dict[str, Any]) -> bytes:
+    """`png`, a Golden board's file, with `tolerance` and what was `learned` with it in a chunk before IEND. Viewers
+    and decoders pass over the chunk; the file's SHA-256, which every result names, covers it."""
+    chunks = _chunks(png)
+    if not chunks or chunks[-1][0] != b"IEND":
+        raise ValueError("not a PNG file")
+    head = json.dumps({"format": TOLERANCE_FORMAT, "shape": list(tolerance.shape), **learned}).encode("utf-8")
+    body = struct.pack(">I", len(head)) + head + zlib.compress(np.ascontiguousarray(tolerance).tobytes(), 6)
+    crc = zlib.crc32(TOLERANCE_CHUNK + body) & 0xFFFFFFFF
+    chunk = struct.pack(">I", len(body)) + TOLERANCE_CHUNK + body + struct.pack(">I", crc)
+    kept = b"".join(png[a:b] for kind, a, b in chunks[:-1] if kind != TOLERANCE_CHUNK)
+    return PNG_SIGNATURE + kept + chunk + png[chunks[-1][1] : chunks[-1][2]]
+
+
+def extract(png: bytes, shape: tuple[int, int]) -> tuple[np.ndarray, dict[str, Any]] | None:
+    """The tolerance map a Golden board file carries, and what was learned with it; None for a file with none, or one
+    whose chunk is damaged or is not for an image of `shape` (height, width): the board is then compared without."""
+    for kind, a, b in _chunks(png):
+        if kind != TOLERANCE_CHUNK:
+            continue
+        body, crc = png[a + 8 : b - 4], png[b - 4 : b]
+        if struct.pack(">I", zlib.crc32(TOLERANCE_CHUNK + body) & 0xFFFFFFFF) != crc or len(body) < 4:
+            return None
+        (n,) = struct.unpack(">I", body[:4])
+        try:
+            learned = json.loads(body[4 : 4 + n].decode("utf-8"))
+            raw = zlib.decompress(body[4 + n :])
+        except (ValueError, zlib.error):
+            return None
+        if not isinstance(learned, dict) or learned.get("format") != TOLERANCE_FORMAT:
+            return None
+        if learned.get("shape") != list(shape) or len(raw) != shape[0] * shape[1]:
+            return None
+        return np.frombuffer(raw, np.uint8).reshape(shape).copy(), learned
+    return None
