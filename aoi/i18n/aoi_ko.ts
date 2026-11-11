@@ -1793,7 +1793,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+164"/>
-        <location filename="../ui/main_window.py" line="+1337"/>
+        <location filename="../ui/main_window.py" line="+1335"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5671,7 +5671,7 @@
 <context>
     <name>HeldSecretDialog</name>
     <message>
-        <location filename="../ui/held_secret.py" line="+32"/>
+        <location filename="../ui/held_secret.py" line="+28"/>
         <source>Sign In as Admin…</source>
         <translation type="unfinished">관리자로 로그인…</translation>
     </message>
@@ -5679,7 +5679,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1189"/>
+        <location filename="../ui/main_window.py" line="-1187"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7129,7 +7129,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+77"/>
+        <location line="+75"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7139,12 +7139,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-51"/>
+        <location line="-49"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+197"/>
+        <location line="+195"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8039,7 +8039,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1146"/>
+        <location filename="../ui/main_window.py" line="-1144"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>

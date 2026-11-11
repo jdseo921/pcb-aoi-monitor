@@ -886,12 +886,10 @@ class MainWindow(QMainWindow):
         does not wait: it is recorded under the user who started it, and a run under way stops after it, as at any
         sign-in, saying why (#177, `InspectionPage.idle_end`), so no run keeps a session open (senior review 2026-11-06,
         SEC-4). Never in the demo, where the presenter talks. A dialog left open is closed first, as Cancel would; a
-        recovery key's or code's dialog that will not close until its secret is kept (`HeldSecretDialog`) stays, and
-        the session ends under it, the dialog hiding the secret, kept, until one who may see it signs in again (#499);
-        any other dialog that will not close keeps the session. While the first-run guide holds the frame on a new
-        store's recovery key (`hold_frame`), the session ends as at any other time, on Home, and the guide hides the
-        key, still held, until an Admin signs in again (senior review 2026-11-06, UI-1). Returns whether it ended
-        one."""
+        recovery key's or code's that will not close ends the session under it, hiding its secret (`HeldSecretDialog`,
+        #499); any other keeps the session. While the first-run guide holds the frame on a new store's recovery key
+        (`hold_frame`), the session ends as at any other time, on Home, and the guide hides the key, still held, until
+        an Admin signs in again (senior review 2026-11-06, UI-1). Returns whether it ended one."""
         idle = time.monotonic() - self.input.last >= self.ctx.settings.idle_minutes * 60
         if self.ctx.role == "Operator" or self.in_demo or not idle:
             return False

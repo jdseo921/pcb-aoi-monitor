@@ -3,11 +3,10 @@ business-readiness brief, decision D2; ADR 0021). It takes a board model's name 
 boards it is. A customer's first board model makes that customer's encrypted dataset store and puts the board model in
 it, in this dialog (`AppContext.create_customer_board_model`), then shows the store's recovery key this once
 (`RecoveryKey`) with Save to File… and Print…: Done waits for its tick, and Esc and the window's close do nothing until
-then; the idle end hides the key until an Admin signs in again (`HeldSecretDialog`, #499). A customer with a store gets
-the board model in it; no customer makes a board model in no store, as + New did before, for in-house and demo boards.
-The name is checked as it is typed, by the rule every call that makes a board model applies
-(`AppContext.board_model_name_refusal`; B4 of the brief, D4 part, F9; ADR 0023): a line under it says why a name is
-refused, and Create and Enter do nothing until it is one a new board model may have."""
+then. A customer with a store gets the board model in it; no customer makes a board model in no store, as + New did
+before, for in-house and demo boards. The name is checked as it is typed, by the rule every call that makes a board
+model applies (`AppContext.board_model_name_refusal`; B4 of the brief, D4 part, F9; ADR 0023): a line under it says
+why a name is refused, and Create and Enter do nothing until it is one a new board model may have."""
 
 from __future__ import annotations
 
@@ -41,7 +40,8 @@ STORE_CALL = "create_customer_board_model"  # the call a customer's board model 
 
 class NewBoardModelDialog(HeldSecretDialog):
     """The name and the customer, then, for a customer's first board model, its store's recovery key. `made` names the
-    board model made, or found as it was, once Create succeeds, and `store` the customer's store it is in, if any."""
+    board model made, or found as it was, once Create succeeds, and `store` the customer's store it is in, if any. The
+    idle end hides the key until an Admin signs in again (`HeldSecretDialog`, #499)."""
 
     def __init__(self, shell: MainWindow) -> None:
         super().__init__(shell, shell.ctx)

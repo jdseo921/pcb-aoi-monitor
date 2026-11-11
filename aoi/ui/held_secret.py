@@ -1,10 +1,6 @@
-"""A dialog that shows a secret this once and will not close until it is kept: the New board model dialog's key step,
-Settings' New Store… (`RecoveryKeyDialog`) and the first Admin's recovery code (`RecoveryCodeDialog`). The idle end
-(`MainWindow.check_idle`, REQ-USR-004) cannot close one, so before #499 it kept the Admin's session open with no time
-limit and the secret on screen. Now the session ends as at any other time; while someone who may not see the secret is
-signed in, the dialog takes it off the screen, kept in memory, hides its buttons, says why, and offers Sign In as
-Admin…, which opens Switch User with the Admin who saw it picked; the secret shows again to one who may see it, as the
-first-run guide's key step does since UI-1 (senior review 2026-11-06)."""
+"""A dialog that shows a secret this once and will not close until it is kept (#499): the idle end (REQ-USR-004) ends
+the session under it, and while someone who may not see the secret is signed in, the dialog hides it, kept, says why
+and offers Sign In as Admin…, as the first-run guide's key step does since UI-1 (senior review 2026-11-06)."""
 
 from __future__ import annotations
 
@@ -32,20 +28,16 @@ class HeldSecretDialog(QDialog):
         self.btn_admin = size_class(button(self.tr("Sign In as Admin…"), "primary", self._sign_in), "T")
         self.btn_admin.hide()
 
-    def holding(self) -> bool:
-        """The secret shows and is not kept yet: the dialog will not close."""
+    def holding(self) -> bool:  # the secret is not kept yet: the dialog will not close
         raise NotImplementedError
 
-    def may_see(self) -> bool:
-        """The user signed in may see the secret: an Admin."""
+    def may_see(self) -> bool:  # the user signed in may see the secret: an Admin
         return self.ctx.role == "Admin"
 
-    def show_secret(self, on: bool) -> None:
-        """The secret, its buttons and its tick on the screen (`on`), or off it, the secret kept."""
+    def show_secret(self, on: bool) -> None:  # the secret and its buttons on the screen, or off it, kept
         raise NotImplementedError
 
-    def away_text(self) -> str:
-        """What the dialog says while the secret is hidden."""
+    def away_text(self) -> str:  # what the dialog says while the secret is hidden
         raise NotImplementedError
 
     def user_changed(self) -> None:
@@ -58,11 +50,9 @@ class HeldSecretDialog(QDialog):
         self.away.setText(self.away_text() if hide else "")
         self.away.setVisible(hide)
         self.btn_admin.setVisible(hide)
+        self.btn_admin.setDefault(hide)
         if hide:
-            self.btn_admin.setDefault(True)
             self.btn_admin.setFocus()
-        else:
-            self.btn_admin.setDefault(False)
 
     def _sign_in(self) -> None:
         """Sign In as Admin…: the window's Switch User over the dialog, the Admin who saw the secret picked first."""
