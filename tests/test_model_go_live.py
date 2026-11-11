@@ -99,5 +99,25 @@ def test_req_trn_011_card_shown_on_training(qtbot: QtBot, trained_ctx: AppContex
     page.models.selectRow(0)
     page.show_card()
     text = page.card_view.toPlainText()
-    assert page.card_view.isVisible() and text.startswith(f"# Model card: {BOARD} ")
+    assert page.card_view.isVisible() and text.startswith(f"Model card: {BOARD} ")
     assert "Not yet tested on a locked validation set" in text
+    assert "**" not in text and "|" not in text  # laid out, not its marks
+
+
+def test_req_trn_011_card_shows_typed_names_as_typed_and_loads_no_file(
+    qtbot: QtBot, trained_ctx: AppContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A customer named "R&D <team>" shows as typed and hides nothing after it; an image in a card reads no file
+    (review of #523)."""
+    picture = tmp_path / "p.png"
+    picture.write_bytes(b"")
+    table = "| customer | R&D <team> |\n|---|---|\n"
+    card = f"# Model card\n\n{table}\n![x]({picture.as_posix()})\n\n## Known limits\n\nend\n"
+    monkeypatch.setattr(trained_ctx, "card_text", lambda model_id: card)
+    win = _window(qtbot, trained_ctx, "Engineer")
+    page = cast(TrainingPage, win.pages["Training"])
+    assert win.navigate("Training")
+    page.models.selectRow(0)
+    page.show_card()
+    assert "R&D <team>" in page.card_view.toPlainText() and "Known limits" in page.card_view.toPlainText()
+    assert page.card_view.document().loadResource(2, picture.as_uri()).isNull()
