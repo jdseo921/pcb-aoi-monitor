@@ -98,7 +98,8 @@ def test_req_insp_004_columns_in_order_and_selecting_a_row_centres_its_box(
     qtbot.wait(1)  # let the view repaint once
     elapsed = perf_counter() - t0
     centre = page.view.mapToScene(page.view.viewport().rect().center())
-    assert abs(centre.x() - (d.x + d.w / 2)) <= 2 and abs(centre.y() - (d.y + d.h / 2)) <= 2
+    step = max(3.0, 1.5 / page.view.transform().m11())  # the view scrolls by whole screen pixels
+    assert abs(centre.x() - (d.x + d.w / 2)) <= step and abs(centre.y() - (d.y + d.h / 2)) <= step
     assert elapsed < 0.3, f"centring took {elapsed * 1000:.0f} ms"
 
 

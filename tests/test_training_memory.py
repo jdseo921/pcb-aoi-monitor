@@ -20,7 +20,8 @@ import numpy as np
 import pytest
 
 from aoi.core import anomaly, golden
-from aoi.core.imaging import align_to_reference, list_images, load_image, registration, warp_to
+from aoi.core.compare import region_level
+from aoi.core.imaging import align_to_reference, conform, list_images, load_image, registration, warp_to
 from tests.regression import make_regression_set as rs
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +94,10 @@ def test_req_trn_007_calibration_as_from_whole_images(synthetic_dataset: Path) -
     assert model.meta["ok_scores"] == [model.score(m) for m in maps]
     assert model.meta["ng_scores"] == [model.score(model.anomaly_map(im)) for im in ng]
     whole = float(np.percentile(np.concatenate([m.ravel() for m in maps]), 99.95))
-    assert model.meta["pixel_threshold"] == max(whole * 1.15, model.image_threshold * 0.6, 1e-4)
+    levels = [region_level(m, anomaly.REGION_AREA) for m in maps]  # where each held-out OK board shows a region (#460)
+    assert model.meta["ok_region_levels"] == levels
+    above = anomaly.calibrate(levels, [])[0]
+    assert model.meta["pixel_threshold"] == max(whole * 1.15, model.image_threshold * 0.6, above, 1e-4)
     p = anomaly.prepare(ok[0], 64)
     assert p.shape == ok[0].shape[:2]
     assert np.array_equal(model.prepared_map(p), model.anomaly_map(ok[0]))
@@ -111,7 +115,11 @@ def test_req_trn_007_golden_board_matches_exact_median(tmp_path: Path) -> None:
     kept = [registration(im, reference)[0] for im in ok]
     assert all(h is not None for h in kept)  # every board registered, so the bands re-warp rather than resize
     aligned = [align_to_reference(im, reference)[0] for im in ok]
-    assert all(np.array_equal(warp_to(im, h, size), a) for im, h, a in zip(ok, kept, aligned, strict=True))
+
+    def rewarped(im: np.ndarray, h: np.ndarray | None) -> np.ndarray:  # as a run warps a board read again (#460)
+        return conform(warp_to(im, h, size), reference, h, im.shape)[0]
+
+    assert all(np.array_equal(rewarped(im, h), a) for im, h, a in zip(ok, kept, aligned, strict=True))
     blank = np.full((300, 400, 3), 128, np.uint8)  # no features: the plain resize, both ways
     assert registration(blank, reference)[0] is None
     assert np.array_equal(warp_to(blank, None, size), align_to_reference(blank, reference)[0])
@@ -121,7 +129,7 @@ def test_req_trn_007_golden_board_matches_exact_median(tmp_path: Path) -> None:
         assert len(median.bands) == (1 if budget == golden.BAND_BYTES else 69)
         while not median.done:
             for im, h in zip(ok[:count], kept[:count], strict=True):
-                median.add(warp_to(im, h, size))
+                median.add(rewarped(im, h))
         assert np.array_equal(median.board, exact), count
     rng = np.random.default_rng(1)  # and one row a band, on boards of noise
     noise = [rng.integers(0, 256, (5, 6, 3), dtype=np.uint8) for _ in range(4)]

@@ -61,7 +61,7 @@ def test_req_rcp_002_a_scale_that_moves_an_roi_off_the_golden_board_refuses_the_
     a scale is now refused as it is set (the next test); one stored before gives no verdict, and nothing is stored."""
     ok_board, rcp = _ok_board(synthetic_dataset), trained_ctx.recipe(BOARD)[1]
     trained_ctx.set_scale(BOARD, 100, 10)
-    strict = Roi("P1", "Presence", 500, 300, 60, 60, ai_score=0.05)  # an AI score any board reaches: NG
+    strict = Roi("P1", "Presence", 500, 300, 60, 60, ai_score=0.001)  # an AI score any board reaches: NG
     trained_ctx.save_recipe(replace(rcp, rois=[strict]).in_mm(trained_ctx.scale(BOARD)), "review case")
     assert trained_ctx.inspect_file(BOARD, ok_board, save=False).verdict == "NG"
     trained_ctx.db.set_scale(BOARD, 20.0)  # as stored before: the ROI now at 1000, 600, past the 640 x 480 board

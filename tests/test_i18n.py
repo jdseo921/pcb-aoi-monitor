@@ -25,6 +25,7 @@ from aoi.ui.main_window import MainWindow
 from aoi.ui.pages.base import VIEW_NAMES
 from aoi.ui.pages.compare import CHECK_NAMES, MODE_AI, MODES, RULES, SOURCES
 from tests.conftest import TrainedModel
+from tests.test_explain import dim_and_out_of_frame
 from tools.update_translations import ROOT, TS_FILE, qt_tool, update
 
 PLACEHOLDER = re.compile(r"\{(\w+)(?::[^}]*)?\}")
@@ -101,9 +102,11 @@ def test_req_set_005_engine_names_and_camera_views_have_display_strings(tiny_mod
     each through a marked display string in the translation file, so a translation never changes a stored name."""
     assert set(VIEW_NAMES) == set(VIEWS)
     recipe = Recipe(board_model=tiny_model.board_model)  # Golden board comparison and the AI check, no ROI
-    res = Inspector(recipe, tiny_model.model, tiny_model.reference).inspect(tiny_model.reference)
-    assert {c.name for c in res.checks} == set(CHECK_NAMES)
-    assert {c.source for c in res.checks} <= set(SOURCES) and {c.rule for c in res.checks} <= set(RULES)
+    engine = Inspector(recipe, tiny_model.model, tiny_model.reference)
+    checks = engine.inspect(tiny_model.reference).checks
+    checks += engine.inspect(dim_and_out_of_frame(tiny_model.reference)).checks  # the photo's own two checks (#460)
+    assert {c.name for c in checks} == set(CHECK_NAMES)
+    assert {c.source for c in checks} <= set(SOURCES) and {c.rule for c in checks} <= set(RULES)
     listed = {source for context, source in _messages(TS_FILE) if context == "ComparePage"}
     assert set(CHECK_NAMES.values()) | set(SOURCES.values()) | set(RULES.values()) | set(MODES) <= listed
 

@@ -27,6 +27,7 @@ FIVE_MP = (2592, 1944)
 
 def assert_equivalent(test: np.ndarray, golden: np.ndarray, label: str) -> float:
     aligned, info = align_to_reference(test, golden)
+    info.pop("frame")  # v0.1 knew no frame: on the pixels a photo shows, the step is v0.1's; the edge is #460's test
     before = old.compare(test, golden, aligned=aligned, align_info=info)
     after = new.compare(test, golden, aligned=aligned, align_info=info)
     assert np.array_equal(before.diff_map, after.diff_map), f"{label}: difference map"

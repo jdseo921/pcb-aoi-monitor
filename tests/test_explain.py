@@ -142,12 +142,23 @@ def test_req_cmp_004_sentence_per_failing_check(tmp_path: Path) -> None:
     assert {OK, NG} <= verdicts
 
 
+def dim_and_out_of_frame(board: np.ndarray) -> np.ndarray:
+    """`board` photographed in half the light and 8 % out of the frame: the photo the engine's two checks of the photo
+    itself warn about (#460), which a photo like the Golden board never shows."""
+    h, w = board.shape[:2]
+    shifted = cv2.warpAffine(board, np.array([[1, 0, 0.08 * w], [0, 1, 0]], np.float32), (w, h))
+    out: np.ndarray = (shifted * 0.5).astype(np.uint8)
+    return out
+
+
 def test_req_cmp_004_every_engine_check_has_its_sentences(tiny_model: TrainedModel) -> None:
     """Each check the engine makes, with each failing verdict its rule can give, has a sentence of its own: a check
     added to the engine without one fails here, not on an Operator's screen."""
     recipe = Recipe(board_model=tiny_model.board_model, rois=[ROI("R1", "Presence", 0, 0, 40, 40)])
-    res = Inspector(recipe, tiny_model.model, tiny_model.reference).inspect(tiny_model.reference)
-    assert {(c.name, v) for c in res.checks if c.source != "ROI" for v in FAILING[c.rule]} == set(ex.CHECKS)
+    engine = Inspector(recipe, tiny_model.model, tiny_model.reference)
+    res = engine.inspect(tiny_model.reference)
+    made = res.checks + engine.inspect(dim_and_out_of_frame(tiny_model.reference)).checks  # with #460's two checks
+    assert {(c.name, v) for c in made if c.source != "ROI" for v in FAILING[c.rule]} == set(ex.CHECKS)
     assert {v for c in res.checks if c.source == "ROI" for v in FAILING[c.rule]} == set(ex.ROI_CHECK)
     severe = InspectionResult(WARN, 0.0, checks=res.checks, defects=[_defect(1, "Critical")])  # with INFO (#207)
     assert {c.verdict for c in res.checks} == {OK, "INFO"}, [(c.name, c.verdict) for c in res.checks]

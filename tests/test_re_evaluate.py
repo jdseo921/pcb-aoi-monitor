@@ -48,7 +48,7 @@ WHAT_IF = [  # other thresholds, one change at a time and all at once, and check
     ({"diff_threshold": 20}, {REGIONS}), ({"diff_threshold": 90}, {AREA}),
     ({"min_defect_area": 5}, {REGIONS}), ({"min_defect_area": 400}, {REGIONS}),
     ({"ssim_min": 0.99}, {"SSIM similarity"}), ({"max_diff_regions": 3}, {REGIONS}),
-    ({"changed_pct_max": 0.01}, {AREA}), ({"warn_ratio": 0.3}, {AI, IN_R1, "SSIM similarity"}),
+    ({"changed_pct_max": 0.01}, {AREA}), ({"warn_ratio": 0.1}, {AI, IN_R1, "SSIM similarity"}),
     (
         {"anomaly_threshold": 50.0, "diff_threshold": 30, "min_defect_area": 20, "ssim_min": 0.9,
          "max_diff_regions": 1},  # an AI threshold far above the calibrated one, so a grade changes on any platform
@@ -346,7 +346,7 @@ def test_req_cmp_005_reevaluate_with_thousands_of_regions_under_300_ms(
     uuid = _store_5mp(ctx, board_5mp)
     _refuse_the_engine(monkeypatch)
     thresholds = copy.deepcopy(ctx.recipe(BOARD)[1])
-    thresholds.diff_threshold, thresholds.min_defect_area = 10, 1
+    thresholds.diff_threshold, thresholds.min_defect_area = 4, 1  # 10 until #460, which left 73 regions at it
     took, res = _five_calls(lambda: ctx.re_evaluate(uuid, thresholds))
     regions = res.compare.metrics["compare_regions"] if res.compare is not None else 0
     print(f"{regions} difference regions, {len(res.defects)} defects, {res.verdict}")

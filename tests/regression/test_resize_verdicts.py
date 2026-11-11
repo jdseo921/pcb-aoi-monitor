@@ -14,9 +14,10 @@ from tests.regression.test_regression_verdicts import BOARDS, regression_set  # 
 
 SCALE = 640 / 150  # px per mm of the set's 640 x 480 boards, taken as 150 mm wide, as the resolution test does
 MIN_SIZE_MM = disc_width(rs.RECIPE.min_defect_area) / SCALE  # the default 40 px of area as a size: 1.67 mm
-# NG boards the default recipe misses at 1x by a few px (regions of 31 and 37 px against 40) and finds at 2x, where the
-# noise clean-up and the shift tolerance, both in px, take less of a region: open with Jay (S29 change note)
-FOUND_ONLY_AT_2X = {"ng_02_misalignment.png", "ng_04_contamination.png"}
+# An NG board the default recipe misses at 1x by a few px and finds at 2x, where the noise clean-up and the shift
+# tolerance, both in px, take less of a region: open with Jay (S29 change note). Until #460 these were ng_02 and ng_04
+# (31 and 37 px against 40), found at 1x since their photos' lighting is matched to the Golden board's.
+FOUND_ONLY_AT_2X = {"ng_11_contamination.png"}
 # What the same boards do at 2x with the minimum defect area left at 40 px: five more change
 CHANGED_IN_PX = FOUND_ONLY_AT_2X | {
     "ng_01_solder_bridge.png", "ng_06_solder_ball.png", "ng_08_solder_bridge.png", "ng_13_solder_ball.png",
