@@ -15,8 +15,9 @@ Korean drafts of each file are in [ko/](ko/), marked for review by a native spea
 ## Ground rules
 
 - Demo the release build only: a signed installer from a tagged commit, never a developer setup. None exists
-  yet (the code-signing certificate, plan item J6): today's unsigned installer is for rehearsing on our own PCs,
-  never for a customer's room ([install.md](../install/install.md)).
+  yet (the code-signing certificate, plan item J6): the installer that builds of main make is signed only with our
+  own test certificate, so Windows names no publisher, and it is for rehearsing on our own PCs, never for a
+  customer's room ([install.md](../install/install.md)).
 - Lead with an NG board and open **Compare**. Show Settings only if asked.
 - Show only finished features. The presenter theme hides 3D Profile, and the Stage 2 to 4 hardware on **Settings**,
   for this reason. Settings stays in the sidebar for the Admin role alone, for **Reset Demo**.
@@ -47,9 +48,14 @@ Rehearse once on the demo laptop, the day before or in the room, and tick each l
       theme, if it is on, stays on. Leave it at **Home** with the **Presenter theme** on.
 - [ ] Wi-Fi is off. The app needs no network ([ports.md](../install/ports.md)).
 - [ ] The projector is checked at 1920 × 1080 and at 1366 × 768: every page of the script reads from the back row.
-      Every page and tab the scripts open fits 1366 × 768, its verdict, defect boxes and the table on **Compare** in
-      view with nothing scrolled; where the app has under 900 px of height or 1400 px of width, the presenter theme's
-      text is 16 pt, not 18 ([screen sizes](../tests/2026-10-screen-sizes.md)). The presenter theme fills the whole
+      At 1920 × 1080 every page the scripts open fits in height, but three tables keep a column off to the right:
+      **Active** under **AI model versions** on **Training**, **Verdict** on **AI Model Test** and the file name on
+      **Logs & Export**. At 1366 × 768 the verdict, defect boxes and the table on **Compare** are in view with
+      nothing scrolled, but "Try other thresholds" under them, **Training**, **AI Model Test**'s results and history,
+      the **Recipe Editor**'s tabs and the table on **Logs & Export** need scrolling, and About leaves the header
+      while a training runs: run the projector at 1920 × 1080 when it allows. Where the app has under 900 px of
+      height or 1400 px of width, the presenter theme's text is 16 pt, not 18
+      ([screen sizes](../tests/2026-10-screen-sizes.md)). The presenter theme fills the whole
       screen, with no title bar or taskbar; **Exit presenter theme** brings them back. Those sizes were measured on
       Linux at 1366 × 768, not on a Windows projector, so check on the projector that **Start** on **Inspection** and
       the last row of the table on **Compare** are in view. On a projector that takes less than 1366 × 768, play the
@@ -101,4 +107,6 @@ draft. `tests/test_demo_fit.py` opens every page and tab the scripts show at 136
 the dark one, and goes red on a page or a panel of fields that scrolls sideways, a line of text cut off, or a verdict,
 defect box or table row on **Compare** that is not in view. Customers & Launch also asks that someone in each reader's
 role follows the scripts on the release build before they go out; that has not been done yet, as the release build does
-not exist.
+not exist. On 2026-11-11 a reviewer who had not seen the app followed the 15- and 45-minute scripts on Linux, from a
+source checkout of main with its demo bundle built, offscreen at 1920 × 1080, and these scripts were corrected where
+the screen differed. That was not the installed build this section asks for.

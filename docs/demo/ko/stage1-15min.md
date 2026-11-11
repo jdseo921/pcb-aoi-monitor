@@ -17,12 +17,14 @@
 ## 3:45 ~ 6:00, 불량이 알려진 보드로 확인
 
 1. **AI Model Test**를 누릅니다. **Source**에 "DS-DEMOTBOXA1-R1-TOP-v1: its locked validation set, 61 images"가
-   나옵니다.
+   나옵니다. 그 아래 패널은 아직 시험한 적이 없다고 하며 **Select Test Folder…**를 보여 줍니다. 누르지 않습니다.
+   잠긴 세트가 이미 골라져 있습니다.
 
 > "학습 전에 보드 61장을 따로 떼어 잠가 두었습니다. AI 모델은 이 보드를 한 번도 보지 않습니다. 그중 11장은 불량이
 > 알려져 있습니다. 어떤 AI 모델이든 쓰기 전에 이 보드로 확인합니다."
 
-2. **Run Test**를 누릅니다. 몇 초 걸립니다. 타일이 채워집니다: **Missed defects** 11장 중 0장, **False calls**
+2. **Run Test**를 누릅니다. 몇 초 걸리며, 앱을 켠 뒤 첫 시험은 1분까지 걸릴 수 있으니 막대가 움직이는 동안 이야기를
+   이어 갑니다. 타일이 채워집니다: **Missed defects** 11장 중 0장, **False calls**
    50장 중 3장, 그리고 **Recall**, **Precision**, **Accuracy**.
 
 > "라인에서 중요한 숫자는 두 가지입니다. 놓친 불량, 여기서는 11장 중 0장. 그리고 멈춘 양품, 여기서는 50장 중
@@ -31,7 +33,9 @@
 > 것이라 이 건수는 고객님 보드에 대해 아무것도 말해 주지 않습니다. 고객님 보드에서 받으실 결과의 형태를 보여
 > 드리는 것입니다."
 
-3. 표의 빨간 줄 하나를 고릅니다: 멈춘 양품입니다. 표 옆에 사진이 나옵니다.
+3. 표에서 빨간 줄 하나를 고릅니다: 사람이 보도록 멈춘 양품입니다 (오른쪽 밖의 **Verdict** 열에 ▲ WARN이 있습니다).
+   표 옆에 사진이 나오고, 배너에 ▲ WARN이 있습니다. 이제
+   버튼은 **Run Test Again**으로 바뀝니다.
 
 놓친 불량과 멈춘 양품을 이야기하고, **Accuracy**로 시작하지 않습니다.
 
@@ -41,30 +45,35 @@
    "Validation set locked ✓ 50 OK / 11 NG · training set 40 OK, 3 NG" 줄이 있습니다. **Epochs**는 60,
    **Network input size**는 256 그대로 둡니다.
 2. **Start Training**을 누릅니다. 진행 막대가 움직이고 아래 줄에 예를 들어 "Training the AI model: round 7 of 60 · 15 % · about
-   1 min left"가 나옵니다. 우리 4코어 시험 PC에서 98초 걸렸습니다.
+   1 min left"가 나옵니다. 우리 4코어 시험 PC에서 98초 걸렸고, 리허설의 더 느린 PC에서는 10분이 넘게 걸렸으므로
+   리허설할 때 데모 노트북에서 시간을 재 둡니다.
 
-> "양품 보드 사진 40장으로 양품이 어떻게 생겼는지 배웁니다. NG 사진 3장은 임계값 위치를 정하는 데만 씁니다.
+> "양품 보드 사진 40장으로 양품이 어떻게 생겼는지 배웁니다. 30장으로 배우고 10장은 임계값 위치를 정하려고 남겨 둡니다.
+> NG 사진 3장은 임계값 위치를 정하는 데만 씁니다.
 > 학습은 뒤에서 돌기 때문에 그동안에도 라인은 계속 검사합니다."
 
 남은 시간이 2분을 넘으면 **Cancel**을 누르고 "같은 보드로 미리 학습한 것입니다"라고 말합니다. AI 모델 v1.0이 이미
 있어 잃는 것은 없습니다.
 
-3. 끝나면 상태 표시줄에 "AI model v1.1 trained: select it and press Activate Selected to judge boards with it"이
-   나옵니다. **AI model versions** 아래에 v1.1이 v1.0 위에 있고, **Active**의 점은 아직 v1.0에 있습니다.
+3. 끝나면 상태 표시줄이나 막대 아래 로그에 "AI model v1.1 trained: select it and press Activate Selected to judge boards with it"이
+   나옵니다. **AI model versions** 아래에 v1.1이 v1.0 위에 있고, **Active**의 점은 아직 v1.0에 있습니다 (표를
+   오른쪽으로 스크롤해 보여 줍니다).
 
 > "보드 모델의 첫 AI 모델은 학습이 끝나면 바로 적용되어 라인은 첫날부터 AI 검사를 쓰고, 이것은 기록됩니다. 그 뒤의 새
 > 버전은 절대 저절로 바뀌지 않습니다. 엔지니어가 잠긴 보드로 확인하고 켭니다."
 
-4. v1.1 줄을 고르고 **AI Model Card**를 누릅니다: 무엇으로 학습했는지와 임계값이 나옵니다. 첫 줄은 "Not yet tested on a
-   locked validation set: nothing on this card is a measure of accuracy."입니다.
+4. v1.1 줄을 고르고 **AI Model Card**를 누릅니다. 카드는 창이 아니라 표 아래에 열리며, 무엇으로 학습했는지와 임계값이
+   나옵니다. 제목에 v1.1이 있고, 그 아래 줄은 "Not yet tested on a locked validation set: nothing on this card is a
+   measure of accuracy."입니다. 필드 이름을 읽어 주기보다 스크롤해 보여 줍니다.
 5. **Activate Selected**를 누르면 점이 v1.1로 옮겨 갑니다. 이어서 **Roll Back**("Roll Back to v1.0"이라고 표시됨)을
-   누르면 점이 다시 돌아옵니다.
+   누르면 점이 다시 돌아오고 상태 표시줄에 "Rolled back to AI model v1.0"이 나옵니다. 그 뒤 버튼은 "Roll Back to v1.1"로 바뀌는데, 그대로 둡니다.
 
 > "켜는 것도 되돌리는 것도 한 번의 클릭이고, 둘 다 누가 했는지 기록됩니다."
 
 ## 9:30 ~ 12:30, 임계값은 누가 정하는가
 
-1. **Logs & Export**를 누르고 `board_04.png`의 NG 줄을 고른 뒤 **Open in Compare ›**를 누릅니다. 판정 당시 그대로,
+1. **Logs & Export**를 누르고 `board_04.png`의 NG 줄, 곧 ✗ NG가 있는 유일한 줄을 고른 뒤(파일 이름은 오른쪽으로
+   벗어난 열에 있을 수 있습니다) **Open in Compare ›**를 누릅니다. 판정 당시 그대로,
    표와 "Why this board is NG:"와 함께 열립니다.
 2. "Try other thresholds (nothing is saved until you press Save to Recipe)"에서 **Allowed difference regions**를
    2로 바꾸고 **Re-evaluate**를 누릅니다. 옆 줄에 "Would be: ✗ NG"가 나옵니다.
