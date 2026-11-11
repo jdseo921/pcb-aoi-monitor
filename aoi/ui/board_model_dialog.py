@@ -44,7 +44,7 @@ class NewBoardModelDialog(HeldSecretDialog):
     board model made, or found as it was, once Create succeeds, and `store` the customer's store it is in, if any."""
 
     def __init__(self, shell: MainWindow) -> None:
-        super().__init__(shell, shell.ctx, shell.switch_user)
+        super().__init__(shell, shell.ctx)
         self.shell = shell
         self.setWindowTitle(self.tr("New board model"))
         self.setMinimumWidth(theme.CARD_W)

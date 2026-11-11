@@ -8,7 +8,6 @@ first-run guide's key step does since UI-1 (senior review 2026-11-06)."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QDialog, QLabel, QWidget
@@ -23,9 +22,9 @@ class HeldSecretDialog(QDialog):
     """`holding`, `may_see`, `show_secret` and `away_text` are the dialog's own; `user_changed`, which the window calls
     after every sign-in and idle end, hides or shows the secret by them. `away` and `btn_admin` go in its layout."""
 
-    def __init__(self, parent: QWidget, ctx: AppContext, switch_user: Callable[[str | None], object]) -> None:
+    def __init__(self, parent: QWidget, ctx: AppContext) -> None:
         super().__init__(parent)
-        self.ctx, self.switch_user = ctx, switch_user
+        self.ctx = ctx
         self.owner = ctx.user  # the Admin who saw it, picked first at Sign In as Admin…
         self.away = QLabel()  # why the secret is hidden; empty and hidden while it shows
         self.away.setWordWrap(True)
@@ -66,5 +65,8 @@ class HeldSecretDialog(QDialog):
             self.btn_admin.setDefault(False)
 
     def _sign_in(self) -> None:
-        """Sign In as Admin…: Switch User over the dialog, the Admin who saw the secret picked first."""
-        self.switch_user(self.owner or None)
+        """Sign In as Admin…: the window's Switch User over the dialog, the Admin who saw the secret picked first."""
+        parent = self.parentWidget()
+        switch_user = getattr(parent.window(), "switch_user", None) if parent is not None else None
+        if switch_user is not None:
+            switch_user(self.owner or None)

@@ -55,8 +55,7 @@ def idle_end(win: MainWindow, ctx: AppContext) -> None:
 
 
 def signs_in(monkeypatch: pytest.MonkeyPatch, win: MainWindow, *users: str) -> list[str | None]:
-    """Switch User answered by `users` in turn, set before a dialog takes the window's switch_user; the names it was
-    opened with are returned as they come."""
+    """Switch User answered by `users` in turn; the names it was opened with are returned as they come."""
     asked: list[str | None] = []
     who = iter(users)
     monkeypatch.setattr(win, "switch_user", lambda name=None: asked.append(name) or win.set_user(next(who)))
@@ -120,7 +119,7 @@ def test_req_usr_004_an_idle_end_hides_a_new_stores_recovery_key(
     store = as_admin(ctx, ctx.create_store, BETA)
     win.set_user("admin")
     signs_in(monkeypatch, win, "admin")
-    dialog = RecoveryKeyDialog(win, ctx, store, lambda e: None, win.status, win.switch_user)
+    dialog = RecoveryKeyDialog(win, ctx, store, lambda e: None, win.status)
     modal(qtbot, dialog)
     key = dialog.recovery.key.text()
     idle_end(win, ctx)
@@ -162,3 +161,26 @@ def test_req_usr_004_a_kept_secret_or_another_dialog_is_closed_as_before(qtbot: 
     dialog._kept("✓ Saved to E:\\code.txt")
     idle_end(win, ctx)
     assert not dialog.isVisible() and QApplication.activeModalWidget() is None
+
+
+def test_req_usr_004_another_admin_may_close_a_hidden_recovery_code_without_it(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An Admin who never comes back does not hold the station: another Admin signed in at Sign In as Admin… still sees
+    no code, but may press Close Without the Code, which forgets it; the Admin it was for gets a new one after Reset
+    Password. Neither the Operator nor an Engineer sees that button (review of #499)."""
+    win = shell(qtbot, ctx)
+    ctx.add_user("kim", "Admin")
+    asked = signs_in(monkeypatch, win, "engineer", "kim")
+    dialog = RecoveryCodeDialog(win, CODE)
+    modal(qtbot, dialog)
+    idle_end(win, ctx)
+    assert not dialog.btn_drop.isVisible()
+    dialog.btn_admin.click()
+    assert ctx.role == "Engineer" and not dialog.btn_drop.isVisible()
+    dialog.btn_admin.click()
+    assert asked == ["admin", "admin"] and ctx.user == "kim" and dialog.code_label.text() == ""
+    assert dialog.btn_drop.isVisible() and not dialog.btn_save.isVisible()
+    assert dialog.away.text().startswith("Only admin may see this recovery code. Close Without the Code")
+    dialog.btn_drop.click()
+    assert not dialog.isVisible() and dialog.code == "" and QApplication.activeModalWidget() is None
