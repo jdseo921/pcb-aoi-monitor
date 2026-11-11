@@ -6,87 +6,87 @@
     <message>
         <location filename="../ui/about.py" line="+20"/>
         <source>About</source>
-        <translation type="unfinished"></translation>
+        <translation>정보</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>none</source>
-        <translation type="unfinished"></translation>
+        <translation>없음</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>App</source>
-        <translation type="unfinished"></translation>
+        <translation>앱</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Commit</source>
-        <translation type="unfinished"></translation>
+        <translation>커밋</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>none (from source)</source>
-        <translation type="unfinished"></translation>
+        <translation>없음(소스에서 실행)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board model</source>
-        <translation type="unfinished">보드 모델</translation>
+        <translation>보드 모델</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>none active</source>
-        <translation type="unfinished"></translation>
+        <translation>활성 모델 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Recipe revision</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 리비전</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Database schema</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터베이스 스키마</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Station ID</source>
-        <translation type="unfinished"></translation>
+        <translation>스테이션 ID</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Licence</source>
-        <translation type="unfinished"></translation>
+        <translation>라이선스</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>none yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 없음</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Third-party notices</source>
-        <translation type="unfinished"></translation>
+        <translation>제3자 고지</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>In THIRD_PARTY_NOTICES.txt beside the app, in an installed build.</source>
-        <translation type="unfinished"></translation>
+        <translation>설치된 빌드에서는 앱 옆의 THIRD_PARTY_NOTICES.txt에 있습니다.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Copy</source>
-        <translation type="unfinished"></translation>
+        <translation>복사</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Close</source>
-        <translation type="unfinished">닫기</translation>
+        <translation>닫기</translation>
     </message>
 </context>
 <context>
@@ -278,7 +278,7 @@
     <message>
         <location filename="../ui/widgets/busy.py" line="+28"/>
         <source>Working…</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 중…</translation>
     </message>
     <message>
         <location line="+12"/>
@@ -288,12 +288,12 @@
     <message>
         <location line="+36"/>
         <source>{what}  {seconds:.0f} s</source>
-        <translation type="unfinished"></translation>
+        <translation>{what}  {seconds:.0f}초</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>  ·  about {seconds:.0f} s left</source>
-        <translation type="unfinished"></translation>
+        <translation>  ·  약 {seconds:.0f}초 남음</translation>
     </message>
 </context>
 <context>
@@ -301,47 +301,47 @@
     <message>
         <location filename="../ui/widgets/scale.py" line="+117"/>
         <source>Calibrate Scale</source>
-        <translation type="unfinished"></translation>
+        <translation>배율 보정</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Click two points on the Golden board a known distance apart, or type the length between them, then enter that distance on the board.</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드에서 거리를 아는 두 점을 클릭하거나 두 점 사이의 길이를 입력한 다음, 보드에서의 실제 거리를 입력하십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source> px</source>
-        <translation type="unfinished"></translation>
+        <translation> px</translation>
     </message>
     <message>
         <location line="+0"/>
         <source> mm</source>
-        <translation type="unfinished"></translation>
+        <translation> mm</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Set Scale</source>
-        <translation type="unfinished"></translation>
+        <translation>배율 설정</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Length</source>
-        <translation type="unfinished"></translation>
+        <translation>길이</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Distance</source>
-        <translation type="unfinished"></translation>
+        <translation>거리</translation>
     </message>
     <message>
         <location line="+26"/>
         <source>= {scale:.2f} px/mm</source>
-        <translation type="unfinished"></translation>
+        <translation>= {scale:.2f} px/mm</translation>
     </message>
 </context>
 <context>
@@ -349,215 +349,215 @@
     <message>
         <location filename="../ui/pages/compare.py" line="+80"/>
         <source>Side by side</source>
-        <translation type="unfinished"></translation>
+        <translation>나란히 보기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Difference heatmap</source>
-        <translation type="unfinished"></translation>
+        <translation>차이 히트맵</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI score heatmap</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수 히트맵</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Defect boxes only</source>
-        <translation type="unfinished"></translation>
+        <translation>결함 박스만</translation>
     </message>
     <message>
         <location line="+70"/>
         <source>This result was judged without a Golden board.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 결과는 골든 보드 없이 판정되었습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>This result was saved before results named their Golden board.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 결과는 결과에 골든 보드를 기록하기 전에 저장되었습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The Golden board this result was judged against, {file}, is gone.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 결과를 판정한 골든 보드 {file}이(가) 없어졌습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The Golden board this result was judged against, {file}, cannot be read.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 결과를 판정한 골든 보드 {file}을(를) 읽을 수 없습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The Golden board this result was judged against, {file}, has changed since.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 결과를 판정한 골든 보드 {file}이(가) 그 뒤에 바뀌었습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Similarity (SSIM)</source>
-        <translation type="unfinished"></translation>
+        <translation>유사도 (SSIM)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Changed area %</source>
-        <translation type="unfinished"></translation>
+        <translation>변화 면적 %</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Difference regions</source>
-        <translation type="unfinished"></translation>
+        <translation>차이 영역</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Alignment points</source>
-        <translation type="unfinished"></translation>
+        <translation>정렬 점</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Lighting change %</source>
-        <translation type="unfinished"></translation>
+        <translation>조명 변화 %</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board in frame %</source>
-        <translation type="unfinished"></translation>
+        <translation>프레임 내 보드 %</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI score</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수</translation>
     </message>
     <message>
         <location line="+3"/>
         <location line="+132"/>
         <location line="+686"/>
         <source>Golden board</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드</translation>
     </message>
     <message>
         <location line="-817"/>
         <source>AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>ROI</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>&lt; threshold → NG</source>
-        <translation type="unfinished"></translation>
+        <translation>&lt; 임계값 → NG</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>≥ threshold → NG</source>
-        <translation type="unfinished"></translation>
+        <translation>≥ 임계값 → NG</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>&gt; threshold → NG</source>
-        <translation type="unfinished"></translation>
+        <translation>&gt; 임계값 → NG</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>info only</source>
-        <translation type="unfinished"></translation>
+        <translation>정보 전용</translation>
     </message>
     <message>
         <location line="+35"/>
         <source>Minimum defect size (mm)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 크기 (mm)</translation>
     </message>
     <message>
         <location line="+41"/>
         <source>Trying other thresholds and Save to Recipe need the {roles} role.</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 임계값 시험과 레시피에 저장에는 {roles} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+31"/>
         <source>Test Image…</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 이미지…</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Use Last Inspected</source>
-        <translation type="unfinished"></translation>
+        <translation>마지막 검사 사용</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Reference…</source>
-        <translation type="unfinished"></translation>
+        <translation>기준 이미지…</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Golden Board</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Show:</source>
-        <translation type="unfinished"></translation>
+        <translation>표시:</translation>
     </message>
     <message>
         <location line="+12"/>
         <location line="+1019"/>
         <source>Test board</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 보드</translation>
     </message>
     <message>
         <location line="-1013"/>
         <source>Inspecting…</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 중…</translation>
     </message>
     <message>
         <location line="+30"/>
         <source>Check</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 항목</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Source</source>
-        <translation type="unfinished"></translation>
+        <translation>출처</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Value</source>
-        <translation type="unfinished"></translation>
+        <translation>값</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Threshold</source>
-        <translation type="unfinished"></translation>
+        <translation>임계값</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Rule</source>
-        <translation type="unfinished"></translation>
+        <translation>규칙</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Result</source>
-        <translation type="unfinished"></translation>
+        <translation>결과</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>Re-evaluating…</source>
-        <translation type="unfinished"></translation>
+        <translation>다시 평가 중…</translation>
     </message>
     <message>
         <location line="+25"/>
         <source>Try other thresholds (nothing is saved until you press Save to Recipe)</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 임계값 시험 (레시피에 저장을 누르기 전에는 아무것도 저장되지 않습니다)</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Override the AI model&apos;s value {value}</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델의 값 {value} 대신 사용</translation>
     </message>
     <message>
         <location line="+66"/>
         <source>Reason (required)</source>
-        <translation type="unfinished"></translation>
+        <translation>사유 (필수)</translation>
     </message>
     <message>
         <location line="+5"/>
@@ -567,155 +567,155 @@
     <message>
         <location line="+2"/>
         <source>Save Revision</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 저장</translation>
     </message>
     <message>
         <location line="+185"/>
         <source>Would be: {verdict}</source>
-        <translation type="unfinished"></translation>
+        <translation>예상 판정: {verdict}</translation>
     </message>
     <message>
         <location line="+145"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again with today&apos;s Golden board.</source>
-        <translation type="unfinished"></translation>
+        <translation>판정과 판정 표는 저장된 것입니다. 지금의 골든 보드로 보드를 다시 검사하려면 다시 평가 ›를 누르십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <location line="+251"/>
         <source>The verdict and the decision table are the stored ones; press Re-evaluate › to inspect the board again from its image file.</source>
-        <translation type="unfinished"></translation>
+        <translation>판정과 판정 표는 저장된 것입니다. 이미지 파일로 보드를 다시 검사하려면 다시 평가 ›를 누르십시오.</translation>
     </message>
     <message>
         <location line="+43"/>
         <source>Why this board would be {verdict} with these thresholds:</source>
-        <translation type="unfinished"></translation>
+        <translation>이 임계값이면 이 보드가 {verdict}이(가) 되는 이유:</translation>
     </message>
     <message>
         <location line="+76"/>
         <source>{threshold}: {before} → {after}</source>
-        <translation type="unfinished"></translation>
+        <translation>{threshold}: {before} → {after}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Save these thresholds as revision {revision} of the recipe of {board_model}?</source>
-        <translation type="unfinished"></translation>
+        <translation>이 임계값을 {board_model} 레시피의 리비전 {revision}(으)로 저장할까요?</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Boards inspected after the save are judged by revision {revision}; stored results keep their verdicts.</source>
-        <translation type="unfinished"></translation>
+        <translation>저장 뒤에 검사하는 보드는 리비전 {revision}(으)로 판정하며, 저장된 결과의 판정은 그대로입니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Save Revision {revision}</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 {revision} 저장</translation>
     </message>
     <message>
         <location line="+32"/>
         <source>the AI model&apos;s calibrated value</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델의 보정값</translation>
     </message>
     <message>
         <location line="+78"/>
         <source>{file} was not inspected; press Re-evaluate › to inspect it.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}은(는) 검사되지 않았습니다. 검사하려면 다시 평가 ›를 누르십시오.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Press Re-evaluate › to inspect it again.</source>
-        <translation type="unfinished"></translation>
+        <translation>다시 검사하려면 다시 평가 ›를 누르십시오.</translation>
     </message>
     <message>
         <location line="-1099"/>
         <source>AI score threshold</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수 임계값</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Pixel difference (0-255)</source>
-        <translation type="unfinished"></translation>
+        <translation>픽셀 차이 (0-255)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Minimum defect area (px)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 면적 (px)</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Similarity minimum (SSIM)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 유사도 (SSIM)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Allowed difference regions</source>
-        <translation type="unfinished"></translation>
+        <translation>허용 차이 영역 수</translation>
     </message>
     <message>
         <location line="+213"/>
         <source>Re-evaluate</source>
-        <translation type="unfinished"></translation>
+        <translation>다시 평가</translation>
     </message>
     <message>
         <location line="+3"/>
         <location line="+18"/>
         <source>Save to Recipe</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피에 저장</translation>
     </message>
     <message>
         <location line="+48"/>
         <source>Test image</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 이미지</translation>
     </message>
     <message>
         <location line="+0"/>
         <location line="+17"/>
         <source>Images ({extensions})</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 ({extensions})</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Reference image</source>
-        <translation type="unfinished"></translation>
+        <translation>기준 이미지</translation>
     </message>
     <message>
         <location line="+184"/>
         <source>Test board: {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 보드: {file}</translation>
     </message>
     <message>
         <location line="+72"/>
         <source>{file} was not inspected: its Golden board cannot be opened.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}은(는) 검사되지 않았습니다: 골든 보드를 열 수 없습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Board not inspected</source>
-        <translation type="unfinished"></translation>
+        <translation>보드가 검사되지 않음</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Reference: {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>기준: {file}</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Golden board as judged: {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>판정 당시 골든 보드: {file}</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Reference: Golden board</source>
-        <translation type="unfinished"></translation>
+        <translation>기준: 골든 보드</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Reference: none set</source>
-        <translation type="unfinished"></translation>
+        <translation>기준: 설정 안 됨</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Golden board not available</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드를 사용할 수 없음</translation>
     </message>
     <message>
         <location line="+0"/>
@@ -723,57 +723,57 @@
         <location line="+236"/>
         <location line="+12"/>
         <source>Re-evaluate ›</source>
-        <translation type="unfinished"></translation>
+        <translation>다시 평가 ›</translation>
     </message>
     <message>
         <location line="-484"/>
         <source>Train an AI model on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습에서 AI 모델을 학습시키십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No Golden board for {board_model} yet</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 골든 보드가 아직 없음</translation>
     </message>
     <message>
         <location line="-625"/>
         <source>Inspection time (ms)</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 시간 (ms)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>System</source>
-        <translation type="unfinished"></translation>
+        <translation>시스템</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>spec &lt; 1 s</source>
-        <translation type="unfinished"></translation>
+        <translation>규격 &lt; 1초</translation>
     </message>
     <message>
         <location line="+786"/>
         <source>Test board: {file} (stored result)</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 보드: {file} (저장된 결과)</translation>
     </message>
     <message>
         <location line="+45"/>
         <source>Golden board not shown</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드 표시 안 함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board picture not shown</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 사진 표시 안 함</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Board picture no longer stored</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 사진이 더 이상 저장되어 있지 않음</translation>
     </message>
     <message>
         <location line="+21"/>
         <source>Stored result of {time}: AI model {model}, recipe revision {revision}, view {view}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{time}의 저장된 결과: AI 모델 {model}, 레시피 리비전 {revision}, 뷰 {view}.</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -781,47 +781,47 @@
         <location line="+4"/>
         <location line="+140"/>
         <source>none</source>
-        <translation type="unfinished"></translation>
+        <translation>없음</translation>
     </message>
     <message>
         <location line="-145"/>
         <source>Since then the board model moved to AI model {model} and recipe revision {revision}.</source>
-        <translation type="unfinished"></translation>
+        <translation>그 뒤 보드 모델은 AI 모델 {model}, 레시피 리비전 {revision}(으)로 바뀌었습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>The board model&apos;s Golden board is now {file}.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델의 골든 보드는 이제 {file}입니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>It was judged at a scale of {then:.{digits}f} px/mm, at which Re-evaluate applies sizes in mm; the board model&apos;s scale, at which Try other thresholds shows them, is now {now:.{digits}f} px/mm.</source>
-        <translation type="unfinished"></translation>
+        <translation>{then:.{digits}f} px/mm 배율에서 판정되었으며, 다시 평가는 mm 크기를 이 배율로 적용합니다. 다른 임계값 시험이 크기를 표시하는 보드 모델의 배율은 이제 {now:.{digits}f} px/mm입니다.</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Why this board is {verdict}:</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드가 {verdict}인 이유:</translation>
     </message>
     <message>
         <location line="+147"/>
         <source>Recipe saved as revision {revision}</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피를 리비전 {revision}(으)로 저장함</translation>
     </message>
     <message>
         <location line="+51"/>
         <source>Inspection cancelled</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 취소됨</translation>
     </message>
     <message>
         <location line="+104"/>
         <source>Inspect a board on Inspection, or pick a test image.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사에서 보드를 검사하거나 테스트 이미지를 고르십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No board to compare yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 비교할 보드가 없음</translation>
     </message>
 </context>
 <context>
@@ -834,7 +834,7 @@
     <message>
         <location line="+6"/>
         <source>A board model needs at least {ok} OK images of one view ({train} to train, {held} held out to test) and {ng} or more NG images with every defect boxed.</source>
-        <translation type="unfinished">보드 모델 하나에는 한 뷰의 OK 이미지 최소 {ok}장({train}장은 학습용, {held}장은 테스트용으로 따로 보관)과 모든 불량에 박스를 그린 NG 이미지 {ng}장 이상이 필요합니다.</translation>
+        <translation>보드 모델 하나에는 한 뷰의 OK 이미지 최소 {ok}장({train}장은 학습용, {held}장은 테스트용으로 따로 보관)과 모든 결함에 박스를 그린 NG 이미지 {ng}장 이상이 필요합니다.</translation>
     </message>
 </context>
 <context>
@@ -842,32 +842,32 @@
     <message>
         <location filename="../ui/widgets/scale.py" line="-100"/>
         <source>Minimum defect area (px)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 면적 (px)</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Minimum defect size (mm)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 크기 (mm)</translation>
     </message>
     <message>
         <location line="+28"/>
         <source>= {px:.1f} px</source>
-        <translation type="unfinished"></translation>
+        <translation>= {px:.1f} px</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>= {px:.1f} px ✓</source>
-        <translation type="unfinished"></translation>
+        <translation>= {px:.1f} px ✓</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>{code} {title}: raise it to {least} or more.</source>
-        <translation type="unfinished"></translation>
+        <translation>{code} {title}: {least} 이상으로 올리십시오.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{code} {title}: {action}</source>
-        <translation type="unfinished"></translation>
+        <translation>{code} {title}: {action}</translation>
     </message>
 </context>
 <context>
@@ -875,69 +875,69 @@
     <message>
         <location filename="../ui/pages/settings_demo.py" line="+31"/>
         <source>Demo</source>
-        <translation type="unfinished"></translation>
+        <translation>데모</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Demo workspace: loaded, not open.</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간: 불러옴, 열려 있지 않음.</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Demo workspace: not loaded.</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간: 불러오지 않음.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Load Demo Workspace</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간 불러오기</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Demo workspace: open, in the folder {folder}.</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간: {folder} 폴더에서 열려 있음.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Scripted run pace</source>
-        <translation type="unfinished"></translation>
+        <translation>시연 실행 속도</translation>
     </message>
     <message>
         <location line="+39"/>
         <source>Reset the demo workspace? Work still running is stopped first: training without saving an AI model, an AI model test once its folder is done, an export or an image import keeping the files copied so far. Then every result, record, alarm and log of the demo, and every change made in it to its board model, AI model, recipe and samples, is deleted, and the demo is copied back from the installed bundle. The production workspace is not touched.</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간을 초기화할까요? 실행 중인 작업을 먼저 멈춥니다: 학습은 AI 모델을 저장하지 않고, AI 모델 테스트는 폴더 작업을 마친 뒤, 내보내기나 이미지 가져오기는 그때까지 복사한 파일을 남기고 멈춥니다. 그런 다음 데모의 모든 결과, 기록, 알람, 로그와 데모에서 보드 모델, AI 모델, 레시피, 샘플에 한 모든 변경을 삭제하고, 설치된 번들에서 데모를 다시 복사합니다. 생산 작업 공간은 건드리지 않습니다.</translation>
     </message>
     <message>
         <location line="-41"/>
         <location line="+9"/>
         <source>{seconds} s</source>
-        <translation type="unfinished"></translation>
+        <translation>{seconds}초</translation>
     </message>
     <message>
         <location line="-24"/>
         <source>Opens a demo board model with its AI model, recipe and 10 drawn boards, one NG, in its own folder {folder}; production data is not touched. It shows how the app works, never how well it finds defects.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델, 레시피, 그려 만든 보드 10장(NG 1장)이 있는 데모 보드 모델을 별도 폴더 {folder}에서 엽니다. 생산 데이터는 건드리지 않습니다. 앱이 어떻게 동작하는지를 보여 줄 뿐, 결함을 얼마나 잘 찾는지를 보여 주지는 않습니다.</translation>
     </message>
     <message>
         <location line="+27"/>
         <source>Play Scripted Run ›</source>
-        <translation type="unfinished"></translation>
+        <translation>시연 실행 ›</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Leave Demo Workspace</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간 나가기</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+33"/>
         <source>Reset Demo</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 초기화</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Scripted run pace: {seconds} s per board</source>
-        <translation type="unfinished"></translation>
+        <translation>시연 실행 속도: 보드당 {seconds}초</translation>
     </message>
 </context>
 <context>
@@ -945,12 +945,12 @@
     <message>
         <location filename="../core/services.py" line="+216"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
-        <translation type="unfinished"></translation>
+        <translation>길이 {length} px, 거리 {distance} mm로는 배율을 정할 수 없습니다: 둘 다 0보다 큰 수여야 하고, 배율은 mm당 {least}~{most} px여야 합니다</translation>
     </message>
     <message>
         <location line="+62"/>
         <source> ({context})</source>
-        <translation type="unfinished"></translation>
+        <translation> ({context})</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -960,73 +960,73 @@
     <message>
         <location line="+126"/>
         <source>Operator, Engineer or Admin</source>
-        <translation type="unfinished"></translation>
+        <translation>작업자, 엔지니어 또는 관리자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Engineer or Admin</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어 또는 관리자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Admin</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자</translation>
     </message>
     <message>
         <location line="+102"/>
         <source>input folder</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>output folder</source>
-        <translation type="unfinished"></translation>
+        <translation>출력 폴더</translation>
     </message>
     <message>
         <location line="+401"/>
         <source>Saving a recovery code</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 코드 저장</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Printing a recovery code</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 코드 인쇄</translation>
     </message>
     <message>
         <location line="+52"/>
         <source>Disabling a user</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 사용 중지</translation>
     </message>
     <message>
         <location line="+19"/>
         <source>Resetting a password</source>
-        <translation type="unfinished"></translation>
+        <translation>비밀번호 재설정</translation>
     </message>
     <message>
         <location line="+96"/>
         <source>Unlocking a user</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 잠금 해제</translation>
     </message>
     <message>
         <location line="+40"/>
         <location line="+137"/>
         <source>Importing samples</source>
-        <translation type="unfinished"></translation>
+        <translation>샘플 가져오기</translation>
     </message>
     <message>
         <location line="+49"/>
         <source>its annotation file is gone</source>
-        <translation type="unfinished"></translation>
+        <translation>주석 파일이 없어졌습니다</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>its annotation file was not read: {why}</source>
-        <translation type="unfinished"></translation>
+        <translation>주석 파일을 읽지 못했습니다: {why}</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{count} box(es) of classes that are not defect types were left out: {names}</source>
-        <translation type="unfinished"></translation>
+        <translation>결함 유형이 아닌 클래스의 박스 {count}개를 제외했습니다: {names}</translation>
     </message>
     <message>
         <location line="+8"/>
@@ -1034,165 +1034,165 @@
         <location line="+26"/>
         <location line="+200"/>
         <source>Training an AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 학습</translation>
     </message>
     <message>
         <location line="+274"/>
         <location line="+2677"/>
         <source>(none)</source>
-        <translation type="unfinished"></translation>
+        <translation>(없음)</translation>
     </message>
     <message>
         <location line="-2649"/>
         <source>Saving a recipe</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 저장</translation>
     </message>
     <message>
         <location line="+91"/>
         <source>it has no Golden board; set one on Training</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드가 없습니다. 학습에서 설정하십시오</translation>
     </message>
     <message>
         <location line="+54"/>
         <source>too few of its NG images with defect boxes could be read</source>
-        <translation type="unfinished"></translation>
+        <translation>결함 박스가 있는 NG 이미지 중 읽을 수 있는 것이 너무 적습니다</translation>
     </message>
     <message>
         <location line="+129"/>
         <source>it cannot be read ({code} {title})</source>
-        <translation type="unfinished"></translation>
+        <translation>읽을 수 없습니다 ({code} {title})</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>the file is gone</source>
-        <translation type="unfinished"></translation>
+        <translation>파일이 없어졌습니다</translation>
     </message>
     <message>
         <location line="+126"/>
         <source>{file}: {defects} defect(s)</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}: 결함 {defects}개</translation>
     </message>
     <message>
         <location line="+218"/>
         <location line="+24"/>
         <source>Running an AI model test</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 테스트 실행</translation>
     </message>
     <message>
         <location line="+247"/>
         <source>Recording a customer&apos;s targets</source>
-        <translation type="unfinished"></translation>
+        <translation>고객 목표 기록</translation>
     </message>
     <message>
         <location line="+178"/>
         <source>Re-evaluating a result</source>
-        <translation type="unfinished"></translation>
+        <translation>결과 다시 평가</translation>
     </message>
     <message>
         <location line="+21"/>
         <source>file unknown</source>
-        <translation type="unfinished"></translation>
+        <translation>알 수 없는 파일</translation>
     </message>
     <message>
         <location line="+21"/>
         <source>difference map</source>
-        <translation type="unfinished"></translation>
+        <translation>차이 맵</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>the calibration of AI model {version}</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}의 보정값</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the AI model&apos;s calibration</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델의 보정값</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>AI score map</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수 맵</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>{first}, {rest}</source>
-        <translation type="unfinished"></translation>
+        <translation>{first}, {rest}</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Reviewing a board</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 검토</translation>
     </message>
     <message>
         <location line="+12"/>
         <location line="+33"/>
         <source>no such record</source>
-        <translation type="unfinished"></translation>
+        <translation>그런 기록이 없습니다</translation>
     </message>
     <message>
         <location line="-31"/>
         <source>only an NG or WARN board is reviewed</source>
-        <translation type="unfinished"></translation>
+        <translation>NG 또는 WARN 보드만 검토합니다</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>the review is neither Real defect nor False call</source>
-        <translation type="unfinished"></translation>
+        <translation>검토 값이 실제 결함도 과검출도 아닙니다</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>a False call needs a reason</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출에는 사유가 필요합니다</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Adding a board to Training</source>
-        <translation type="unfinished"></translation>
+        <translation>보드를 학습에 추가</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>it is not reviewed as a false call</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출로 검토되지 않았습니다</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>its board image was not stored</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 이미지가 저장되지 않았습니다</translation>
     </message>
     <message>
         <location line="+31"/>
         <source>Running the shift check</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검 실행</translation>
     </message>
     <message>
         <location line="+241"/>
         <source>Creating a board model</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 만들기</translation>
     </message>
     <message>
         <location line="+54"/>
         <source>Setting a board model&apos;s scale</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델의 배율 설정</translation>
     </message>
     <message>
         <location line="+31"/>
         <source>Changing the reference image</source>
-        <translation type="unfinished"></translation>
+        <translation>기준 이미지 변경</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Relabelling a sample</source>
-        <translation type="unfinished"></translation>
+        <translation>샘플 라벨 변경</translation>
     </message>
     <message>
         <location line="+21"/>
         <source>Removing a sample</source>
-        <translation type="unfinished"></translation>
+        <translation>샘플 제거</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>removed</source>
-        <translation type="unfinished"></translation>
+        <translation>제거됨</translation>
     </message>
     <message>
         <location line="+87"/>
@@ -1292,7 +1292,7 @@
     <message>
         <location line="+1372"/>
         <source>a recovery code is never saved in the workspace, whose copies and backups travel with the station&apos;s data</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 코드는 작업 공간에 저장하지 않습니다. 작업 공간의 사본과 백업은 스테이션의 데이터와 함께 옮겨 다닙니다</translation>
     </message>
     <message>
         <location line="-5103"/>
@@ -1304,142 +1304,142 @@
     <message>
         <location line="-3850"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
-        <translation type="unfinished"></translation>
+        <translation>{board} ({view}) 드리프트: 최근 {of}장 중 {count}장이 NG. 그 전 {baseline}장에서는 {before} %</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called WARN; {before} % of the {baseline} before</source>
-        <translation type="unfinished"></translation>
+        <translation>{board} ({view}) 드리프트: 최근 {of}장 중 {count}장이 WARN. 그 전 {baseline}장에서는 {before} %</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Drift on {board} ({view}): the AI score of the last {of} OK boards averages {recent}, up from {before} over the {baseline} OK boards before</source>
-        <translation type="unfinished"></translation>
+        <translation>{board} ({view}) 드리프트: 최근 OK 보드 {of}장의 AI 점수 평균이 {recent}(으)로, 그 전 OK 보드 {baseline}장의 {before}에서 올랐습니다</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Drift on {board} ({view}): the last {of} OK boards matched {recent} features to the Golden board on average, down from {before} over the {baseline} OK boards before</source>
-        <translation type="unfinished"></translation>
+        <translation>{board} ({view}) 드리프트: 최근 OK 보드 {of}장이 골든 보드와 맞춘 특징점이 평균 {recent}개로, 그 전 OK 보드 {baseline}장의 {before}개에서 줄었습니다</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Drift on {board} ({view}): {count} of the last {of} reviewed calls were False calls; {before} % of the {baseline} reviews before</source>
-        <translation type="unfinished"></translation>
+        <translation>{board} ({view}) 드리프트: 최근 검토한 판정 {of}건 중 {count}건이 과검출. 그 전 검토 {baseline}건에서는 {before} %</translation>
     </message>
     <message>
         <location line="+33"/>
         <source>its AI model file {file} cannot be loaded ({reason})</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 파일 {file}을(를) 불러올 수 없습니다 ({reason})</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>no board was judged with AI model {version}</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}(으)로 판정한 보드가 없습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the AI Model Test judged no image after it and stored no run</source>
-        <translation type="unfinished"></translation>
+        <translation>그 뒤 AI 모델 테스트가 이미지를 판정하지 않았고 실행을 저장하지 않았습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI model {version} was not made active</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}이(가) 활성화되지 않았습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the AI model just trained was not kept as a version</source>
-        <translation type="unfinished"></translation>
+        <translation>방금 학습한 AI 모델이 버전으로 보관되지 않았습니다</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>the run used a folder, not a frozen dataset version&apos;s locked validation set</source>
-        <translation type="unfinished"></translation>
+        <translation>실행이 동결된 데이터셋 버전의 잠긴 검증 세트가 아니라 폴더를 사용했습니다</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>no labeller agreement check is stored for the board model</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델에 저장된 라벨러 일치도 검사가 없습니다</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>the run tested the locked validation set of {dataset}, a Trial version that one person froze without a second person checking its labels or an agreement check</source>
-        <translation type="unfinished"></translation>
+        <translation>실행이 {dataset}의 잠긴 검증 세트를 테스트했습니다. 이것은 한 사람이 두 번째 사람의 라벨 검토나 일치도 검사 없이 동결한 Trial 버전입니다</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>the run tested AI model {version}, trained from {dataset}, a Trial version that one person froze without a second person checking its labels or an agreement check</source>
-        <translation type="unfinished"></translation>
+        <translation>실행이 {dataset}(으)로 학습한 AI 모델 {version}을(를) 테스트했습니다. 이것은 한 사람이 두 번째 사람의 라벨 검토나 일치도 검사 없이 동결한 Trial 버전입니다</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>the workspace holds no such board model</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간에 그런 보드 모델이 없습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>missed Critical defects must be a whole number from {low} to {high}</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 Critical 결함은 {low}~{high}의 정수여야 합니다</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>the false call rate must be from {low} % to {high} %</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출률은 {low} %~{high} %여야 합니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the time per image must be from {low} s to {high} s</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지당 시간은 {low}초~{high}초여야 합니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>who at the customer agreed them is not given</source>
-        <translation type="unfinished"></translation>
+        <translation>고객 측에서 누가 합의했는지 적혀 있지 않습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>who agreed them is longer than {chars} characters</source>
-        <translation type="unfinished"></translation>
+        <translation>합의한 사람이 {chars}자보다 깁니다</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>its validation set is not split and locked</source>
-        <translation type="unfinished"></translation>
+        <translation>검증 세트가 분할되어 잠기지 않았습니다</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>no shift check has run for it yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 교대 점검을 실행한 적이 없습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>its last shift check judged a master sample wrongly</source>
-        <translation type="unfinished"></translation>
+        <translation>마지막 교대 점검이 마스터 샘플을 잘못 판정했습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>its last shift check is more than {hours} hours old</source>
-        <translation type="unfinished"></translation>
+        <translation>마지막 교대 점검이 {hours}시간보다 오래되었습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>its AI model, recipe, Golden board or scale changed after its last shift check</source>
-        <translation type="unfinished"></translation>
+        <translation>마지막 교대 점검 뒤에 AI 모델, 레시피, 골든 보드 또는 배율이 바뀌었습니다</translation>
     </message>
     <message>
         <location line="+1776"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨링된 보드로 비교 임계값 설정</translation>
     </message>
     <message>
         <location line="+49"/>
         <source>it has {count} NG image(s) with defect boxes in the {view} view, and at least {least} are needed</source>
-        <translation type="unfinished"></translation>
+        <translation>{view} 뷰에 결함 박스가 있는 NG 이미지가 {count}장 있으며, 최소 {least}장이 필요합니다</translation>
     </message>
     <message>
         <location line="+1142"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 교대 점검: 마스터 샘플 {count}개 중 {wrong}개를 잘못 판정함</translation>
     </message>
     <message>
         <location line="+524"/>
@@ -1501,32 +1501,32 @@
     <message>
         <location line="-38"/>
         <source>Creating a board model in a customer&apos;s dataset store</source>
-        <translation type="unfinished"></translation>
+        <translation>고객의 데이터셋 저장소에 보드 모델 만들기</translation>
     </message>
     <message>
         <location line="+26"/>
         <source>board model {board} exists already; an Admin moves it in on Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}이(가) 이미 있습니다. 관리자가 설정에서 옮겨 넣습니다</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>images/{board} holds files already; make the board model with no customer, then an Admin moves it in on Settings, which encrypts them</source>
-        <translation type="unfinished"></translation>
+        <translation>images/{board}에 이미 파일이 있습니다. 고객 없이 보드 모델을 만든 뒤 관리자가 설정에서 옮겨 넣으면 암호화됩니다</translation>
     </message>
     <message>
         <location line="+39"/>
         <source>a recovery key is never saved in a folder OneDrive copies off the station; use a USB drive</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 키는 OneDrive가 스테이션 밖으로 복사하는 폴더에 저장하지 않습니다. USB 드라이브를 사용하십시오</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Saving a dataset store&apos;s recovery key</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터셋 저장소의 복구 키 저장</translation>
     </message>
     <message>
         <location line="-11"/>
         <source>a recovery key is never saved in the workspace, whose copies hold the files it opens</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 키는 작업 공간에 저장하지 않습니다. 작업 공간의 사본에는 이 키로 여는 파일이 들어 있습니다</translation>
     </message>
     <message>
         <location line="+38"/>
@@ -1636,32 +1636,32 @@
     <message>
         <location line="+38"/>
         <source>Activating an AI model version</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 버전 활성화</translation>
     </message>
     <message>
         <location line="+493"/>
         <source>Exporting an AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 내보내기</translation>
     </message>
     <message>
         <location line="+179"/>
         <source>Saving a board image</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 이미지 저장</translation>
     </message>
     <message>
         <location line="-539"/>
         <source>Changing users</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 변경</translation>
     </message>
     <message>
         <location line="-4532"/>
         <source>no earlier version of this board model was active</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드 모델에 이전에 활성이었던 버전이 없습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>its Golden board {file} cannot be read ({error})</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드 {file}을(를) 읽을 수 없습니다 ({error})</translation>
     </message>
     <message>
         <location line="+47"/>
@@ -1676,12 +1676,12 @@
     <message>
         <location line="+16"/>
         <source>there is no board model of that name</source>
-        <translation type="unfinished"></translation>
+        <translation>그 이름의 보드 모델이 없습니다</translation>
     </message>
     <message>
         <location line="+1670"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
-        <translation type="unfinished"></translation>
+        <translation>UUID {found}이(가) AI 모델 등록부의 {uuid}와(과) 다릅니다</translation>
     </message>
     <message>
         <location line="+1627"/>
@@ -1706,7 +1706,7 @@
     <message>
         <location line="+125"/>
         <source>Printing a dataset store&apos;s recovery key</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터셋 저장소의 복구 키 인쇄</translation>
     </message>
     <message>
         <location line="+123"/>
@@ -1746,622 +1746,622 @@
     <message>
         <location line="+51"/>
         <source>Rolling back an AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 롤백</translation>
     </message>
     <message>
         <location line="+146"/>
         <source>Changing settings</source>
-        <translation type="unfinished"></translation>
+        <translation>설정 변경</translation>
     </message>
     <message>
         <location line="+29"/>
         <source>Archiving records</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 보관</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Deleting records</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 삭제</translation>
     </message>
     <message>
         <location line="+228"/>
         <source>Confirming the retention policy</source>
-        <translation type="unfinished"></translation>
+        <translation>보관 정책 확인</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Building a support bundle</source>
-        <translation type="unfinished"></translation>
+        <translation>지원 번들 만들기</translation>
     </message>
     <message>
         <location line="+91"/>
         <location line="+47"/>
         <source>Exporting overlay images</source>
-        <translation type="unfinished"></translation>
+        <translation>오버레이 이미지 내보내기</translation>
     </message>
     <message>
         <location line="+51"/>
         <location line="+13"/>
         <source>Exporting CSV</source>
-        <translation type="unfinished"></translation>
+        <translation>CSV 내보내기</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>Exporting a report</source>
-        <translation type="unfinished"></translation>
+        <translation>보고서 내보내기</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>the report came out empty</source>
-        <translation type="unfinished"></translation>
+        <translation>보고서가 비어 있습니다</translation>
     </message>
     <message>
         <location line="-4985"/>
         <source>unhandled</source>
-        <translation type="unfinished"></translation>
+        <translation>처리되지 않은 오류</translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+164"/>
         <location filename="../ui/main_window.py" line="+1353"/>
         <source>start-up</source>
-        <translation type="unfinished"></translation>
+        <translation>시작</translation>
     </message>
     <message>
         <location filename="../ui/pages/compare.py" line="-230"/>
         <source>Changing recipes</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 변경</translation>
     </message>
     <message>
         <location filename="../ui/pages/recipe_editor.py" line="+59"/>
         <source>its Golden board was replaced after the points were picked on it</source>
-        <translation type="unfinished"></translation>
+        <translation>점을 고른 뒤에 골든 보드가 바뀌었습니다</translation>
     </message>
     <message>
         <location line="+508"/>
         <source>Height</source>
-        <translation type="unfinished"></translation>
+        <translation>높이</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Volume</source>
-        <translation type="unfinished"></translation>
+        <translation>부피</translation>
     </message>
     <message>
         <location filename="../core/imaging.py" line="+374"/>
         <source>it has {count} tiles, more than the {most} this app decodes</source>
-        <translation type="unfinished"></translation>
+        <translation>타일이 {count}개로, 이 앱이 디코딩하는 {most}개보다 많습니다</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>it has {count} strips, more than the {most} this app decodes</source>
-        <translation type="unfinished"></translation>
+        <translation>스트립이 {count}개로, 이 앱이 디코딩하는 {most}개보다 많습니다</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>its {count} tiles add up to more than the {size} bytes of the file</source>
-        <translation type="unfinished"></translation>
+        <translation>타일 {count}개의 합이 파일 크기 {size}바이트보다 큽니다</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>its {count} strips add up to more than the {size} bytes of the file</source>
-        <translation type="unfinished"></translation>
+        <translation>스트립 {count}개의 합이 파일 크기 {size}바이트보다 큽니다</translation>
     </message>
     <message>
         <location line="+19"/>
         <source>its tiles {first} and {second} share bytes of the file, so the decoder would read them again</source>
-        <translation type="unfinished"></translation>
+        <translation>타일 {first}와(과) {second}이(가) 파일의 같은 바이트를 가리켜 디코더가 다시 읽게 됩니다</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>its strips {first} and {second} share bytes of the file, so the decoder would read them again</source>
-        <translation type="unfinished"></translation>
+        <translation>스트립 {first}와(과) {second}이(가) 파일의 같은 바이트를 가리켜 디코더가 다시 읽게 됩니다</translation>
     </message>
     <message>
         <location line="+37"/>
         <source>it holds {scans} scans, more than the {most} this app decodes</source>
-        <translation type="unfinished"></translation>
+        <translation>스캔이 {scans}개로, 이 앱이 디코딩하는 {most}개보다 많습니다</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>it gives the size of its tiles or strips twice</source>
-        <translation type="unfinished"></translation>
+        <translation>타일 또는 스트립의 크기가 두 번 적혀 있습니다</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>there was not enough free memory to check its strips or tiles</source>
-        <translation type="unfinished"></translation>
+        <translation>스트립이나 타일을 확인할 여유 메모리가 부족했습니다</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>its tiles are {cols} × {rows} px, more than its {width} × {height} px image needs</source>
-        <translation type="unfinished"></translation>
+        <translation>타일이 {cols} × {rows} px로, {width} × {height} px 이미지에 필요한 것보다 큽니다</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>its strips are {cols} × {rows} px, more than its {width} × {height} px image needs</source>
-        <translation type="unfinished"></translation>
+        <translation>스트립이 {cols} × {rows} px로, {width} × {height} px 이미지에 필요한 것보다 큽니다</translation>
     </message>
     <message>
         <location line="+65"/>
         <source>{megabytes} MB ({count} bytes)</source>
-        <translation type="unfinished"></translation>
+        <translation>{megabytes} MB ({count}바이트)</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>its header holds no image size</source>
-        <translation type="unfinished"></translation>
+        <translation>헤더에 이미지 크기가 없습니다</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>the decoder refused it</source>
-        <translation type="unfinished"></translation>
+        <translation>디코더가 거부했습니다</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>it is cut short, damaged, or a variant this app does not read</source>
-        <translation type="unfinished"></translation>
+        <translation>잘렸거나 손상되었거나 이 앱이 읽지 못하는 형식입니다</translation>
     </message>
     <message>
         <location filename="../core/inspector.py" line="+38"/>
         <source>no Golden board is set</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드가 설정되지 않았습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the Golden board comparison did not run when the board was inspected</source>
-        <translation type="unfinished"></translation>
+        <translation>보드를 검사할 때 골든 보드 비교가 실행되지 않았습니다</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>no AI model is active</source>
-        <translation type="unfinished"></translation>
+        <translation>활성 AI 모델이 없습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the AI check did not run when the board was inspected</source>
-        <translation type="unfinished"></translation>
+        <translation>보드를 검사할 때 AI 검사가 실행되지 않았습니다</translation>
     </message>
     <message>
         <location line="+287"/>
         <source>board image</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 이미지</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Golden board</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드</translation>
     </message>
     <message>
         <location line="+192"/>
         <source>the recipe turns the Golden board comparison off</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피가 골든 보드 비교를 꺼 두었습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the recipe turns the AI model off</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피가 AI 모델을 꺼 두었습니다</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>{first}; {rest}</source>
-        <translation type="unfinished"></translation>
+        <translation>{first}; {rest}</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>no check ran</source>
-        <translation type="unfinished"></translation>
+        <translation>실행된 검사 항목이 없습니다</translation>
     </message>
     <message>
         <location filename="../core/maps.py" line="+38"/>
         <source>the file is damaged</source>
-        <translation type="unfinished"></translation>
+        <translation>파일이 손상되었습니다</translation>
     </message>
     <message>
         <location filename="../errors.py" line="+173"/>
         <source>Image cannot be read</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지를 읽을 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The file {path} could not be opened as an image.</source>
-        <translation type="unfinished"></translation>
+        <translation>{path} 파일을 이미지로 열 수 없습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Check that the file exists and is a PNG, JPG, BMP or TIFF image.</source>
-        <translation type="unfinished"></translation>
+        <translation>파일이 있고 PNG, JPG, BMP 또는 TIFF 이미지인지 확인하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Image cannot be written</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지를 쓸 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The image {path} could not be encoded for writing.</source>
-        <translation type="unfinished"></translation>
+        <translation>{path} 이미지를 쓰기 위해 인코딩할 수 없습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Check the file name&apos;s extension (.png or .jpg) and try again.</source>
-        <translation type="unfinished"></translation>
+        <translation>파일 이름의 확장자(.png 또는 .jpg)를 확인하고 다시 시도하십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Review the result on the Compare page before the board moves on.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드를 넘기기 전에 비교 페이지에서 결과를 확인하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>File format not supported</source>
-        <translation type="unfinished"></translation>
+        <translation>지원하지 않는 파일 형식</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The file {path} does not hold a PNG, JPG, BMP or TIFF image; the format is read from the file&apos;s content, not its name.</source>
-        <translation type="unfinished"></translation>
+        <translation>{path} 파일에 PNG, JPG, BMP 또는 TIFF 이미지가 들어 있지 않습니다. 형식은 파일 이름이 아니라 내용에서 읽습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Save the image as PNG, JPG, BMP or TIFF with an image tool and load that file.</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 도구로 PNG, JPG, BMP 또는 TIFF로 저장한 뒤 그 파일을 불러오십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Image over the size limit</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지가 크기 제한을 넘음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The image {path} is {size}, over the limit of {limit}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{path} 이미지는 {size}(으)로, 제한 {limit}을(를) 넘습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Use a smaller image, or ask an Admin to raise the limit: max_image_megapixels or max_image_megabytes in settings.json, in the default workspace folder.</source>
-        <translation type="unfinished"></translation>
+        <translation>더 작은 이미지를 쓰거나 관리자에게 제한을 올려 달라고 하십시오: 기본 작업 공간 폴더의 settings.json에 있는 max_image_megapixels 또는 max_image_megabytes.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Image file cannot be decoded</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 파일을 디코딩할 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The {kind} image {path} could not be decoded: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{kind} 이미지 {path}을(를) 디코딩할 수 없습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Copy the file again from the camera or its source; if it fails again, save it as PNG or JPG with an image tool and load that file.</source>
-        <translation type="unfinished"></translation>
+        <translation>카메라나 원본에서 파일을 다시 복사하십시오. 또 실패하면 이미지 도구로 PNG나 JPG로 저장한 뒤 그 파일을 불러오십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Image side too long</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지의 변이 너무 김</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The image {path} is {width} × {height} px; a side over {limit} px is beyond what this app decodes.</source>
-        <translation type="unfinished"></translation>
+        <translation>{path} 이미지는 {width} × {height} px입니다. 변이 {limit} px를 넘으면 이 앱이 디코딩할 수 없습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Crop or scale the image so that no side is over {limit} px; this limit is the decoder&apos;s and cannot be raised.</source>
-        <translation type="unfinished"></translation>
+        <translation>어느 변도 {limit} px를 넘지 않게 이미지를 자르거나 줄이십시오. 이 제한은 디코더의 것이어서 올릴 수 없습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Result not saved</source>
-        <translation type="unfinished"></translation>
+        <translation>결과가 저장되지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The result of {file} was shown but could not be saved, so it is not in Logs &amp; Export.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}의 결과를 표시했지만 저장하지 못해 로그 및 내보내기에 없습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Check the free disk space and that the workspace folder can be written, then press Next Board to carry on and inspect {file} again later.</source>
-        <translation type="unfinished"></translation>
+        <translation>디스크 여유 공간과 작업 공간 폴더에 쓸 수 있는지 확인한 뒤, 다음 보드를 눌러 계속하고 {file}은(는) 나중에 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Golden board file not available</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드 파일을 사용할 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board model {board} names {file} as its Golden board, but {reason}, so no board of it can be compared with the Golden board. The board was not inspected.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}의 골든 보드는 {file}인데, {reason}. 그래서 이 보드 모델의 보드를 골든 보드와 비교할 수 없습니다. 보드는 검사되지 않았습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Put the file back, for example from a backup of the workspace, or have an Engineer choose another OK sample as the Golden board with Set Reference on Training; then inspect the board again.</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 백업 등에서 파일을 제자리에 돌려놓거나, 엔지니어가 학습의 기준 설정으로 다른 OK 샘플을 골든 보드로 고르게 한 뒤 보드를 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Nothing can judge the board</source>
-        <translation type="unfinished"></translation>
+        <translation>보드를 판정할 수단이 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No check can judge this board of board model {board}: {reason}. The board was given no verdict.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}의 이 보드를 판정할 수 있는 검사 항목이 없습니다: {reason}. 보드에 판정을 내리지 않았습니다.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Image too small to inspect</source>
-        <translation type="unfinished"></translation>
+        <translation>검사하기에 이미지가 너무 작음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The {image} is {width} × {height} px; inspecting needs at least {minimum} px on each side.</source>
-        <translation type="unfinished"></translation>
+        <translation>{image}이(가) {width} × {height} px입니다. 검사하려면 각 변이 최소 {minimum} px여야 합니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Load a picture of the whole board as the camera takes it; if the Golden board is the small one, an Engineer sets another on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>카메라가 찍은 그대로의 보드 전체 사진을 불러오십시오. 골든 보드가 작은 것이라면 엔지니어가 학습에서 다른 것으로 설정합니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Run stopped: board model changed</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 정지: 보드 모델이 바뀜</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The board model changed from {old} to {new} during a run, so the run stopped after the board in hand; the boards inspected before the change are saved under {old}.</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 중에 보드 모델이 {old}에서 {new}(으)로 바뀌어, 진행 중이던 보드를 마치고 실행을 멈췄습니다. 바뀌기 전에 검사한 보드는 {old}에 저장되었습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Check the board model in the header, then press Start to carry on with the queue under it.</source>
-        <translation type="unfinished"></translation>
+        <translation>헤더의 보드 모델을 확인한 뒤 시작을 눌러 그 보드 모델로 대기열을 계속하십시오.</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>Result not saved: path too long</source>
-        <translation type="unfinished"></translation>
+        <translation>결과가 저장되지 않음: 경로가 너무 김</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The result of {file} was shown but could not be saved, so it is not in Logs &amp; Export: the system refused the path of its evidence files in the workspace folder {workspace} as too long.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}의 결과를 표시했지만 저장하지 못해 로그 및 내보내기에 없습니다: 시스템이 작업 공간 폴더 {workspace}에 있는 증거 파일의 경로가 너무 길다며 거부했습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed, to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows; then inspect {file} again.</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자에게 설정에서 경로가 더 짧은 작업 공간 폴더를 저장한 다음, 앱을 닫은 상태에서 {workspace} 폴더의 모든 것을 그 폴더로 복사하거나 Windows에서 긴 경로를 켜 달라고 하십시오. 그런 다음 {file}을(를) 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+20"/>
         <source>Boards of {board_model} are inspected only after a shift check judges every master sample right, and {reason}. No board was inspected.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 보드는 교대 점검이 모든 마스터 샘플을 올바르게 판정한 뒤에만 검사하는데, {reason}. 보드를 검사하지 않았습니다.</translation>
     </message>
     <message>
         <location line="+43"/>
         <source>{file} was judged and its record saved, but its result files could not be written to the output folder {folder}: {reason}. The line&apos;s systems will not see this board&apos;s result from that folder, nor those of the boards after it until the folder takes them again; this alarm is not repeated meanwhile.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}을(를) 판정하고 기록을 저장했지만, 결과 파일을 출력 폴더 {folder}에 쓰지 못했습니다: {reason}. 라인의 시스템은 그 폴더에서 이 보드의 결과를 볼 수 없으며, 폴더가 다시 파일을 받을 때까지 이후 보드의 결과도 볼 수 없습니다. 그동안 이 알람은 반복되지 않습니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Check that the output folder exists, that its drive or share is connected and has space, and that the station may write to it. The records are kept: export the boards missed from Logs &amp; Export.</source>
-        <translation type="unfinished"></translation>
+        <translation>출력 폴더가 있는지, 드라이브나 공유가 연결되어 있고 공간이 있는지, 스테이션이 쓸 수 있는지 확인하십시오. 기록은 보관되어 있습니다: 빠진 보드는 로그 및 내보내기에서 내보내십시오.</translation>
     </message>
     <message>
         <location line="+112"/>
         <source>Result has no stored heatmaps</source>
-        <translation type="unfinished"></translation>
+        <translation>결과에 저장된 히트맵이 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The result of {file} was saved without its difference and AI maps, or they were deleted after the retention period of {days} days.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}의 결과가 차이 맵과 AI 맵 없이 저장되었거나, 보관 기간 {days}일이 지나 삭제되었습니다.</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Result has no stored decision table</source>
-        <translation type="unfinished"></translation>
+        <translation>결과에 저장된 판정 표가 없음</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Inspect the board again on Inspection; Compare then opens the new result.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사에서 보드를 다시 검사하십시오. 그러면 비교가 새 결과를 엽니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Stored map cannot be read</source>
-        <translation type="unfinished"></translation>
+        <translation>저장된 맵을 읽을 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The stored map {file} could not be read: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>저장된 맵 {file}을(를) 읽을 수 없습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+42"/>
         <source>The stored verdict and decision table still stand. Close any program that has the file open and open the result again; if the file is damaged, inspect the board again on Inspection.</source>
-        <translation type="unfinished"></translation>
+        <translation>저장된 판정과 판정 표는 그대로 유효합니다. 파일을 열고 있는 프로그램을 닫고 결과를 다시 여십시오. 파일이 손상되었다면 검사에서 보드를 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="-34"/>
         <source>Result cannot be judged again</source>
-        <translation type="unfinished"></translation>
+        <translation>결과를 다시 판정할 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The result of {file} cannot be judged again with other thresholds: what it was judged on is no longer stored ({missing}).</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}의 결과를 다른 임계값으로 다시 판정할 수 없습니다: 판정의 근거가 더 이상 저장되어 있지 않습니다 ({missing}).</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>Thresholds of another board model</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 보드 모델의 임계값</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The thresholds tried are board model {tried}&apos;s, but the result of {file} was judged for board model {judged}.</source>
-        <translation type="unfinished"></translation>
+        <translation>시험한 임계값은 보드 모델 {tried}의 것인데, {file}의 결과는 보드 모델 {judged}(으)로 판정되었습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Nothing was judged. Open the result on Compare with its own board model picked, then try the thresholds again.</source>
-        <translation type="unfinished"></translation>
+        <translation>아무것도 판정하지 않았습니다. 해당 보드 모델을 고른 상태로 비교에서 결과를 연 뒤 임계값을 다시 시험하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Stored board picture cannot be read</source>
-        <translation type="unfinished"></translation>
+        <translation>저장된 보드 사진을 읽을 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The stored board picture {file} of this result could not be read ({error_code} {error_title}).</source>
-        <translation type="unfinished"></translation>
+        <translation>이 결과의 저장된 보드 사진 {file}을(를) 읽을 수 없습니다 ({error_code} {error_title}).</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>AI model file refused</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 파일이 거부됨</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Not enough good boards to train</source>
-        <translation type="unfinished"></translation>
+        <translation>학습할 양품 보드가 부족함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Training needs at least 2 OK (good board) images; {found} found.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습에는 OK(양품) 이미지가 최소 2장 필요합니다. {found}장을 찾았습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Upload more OK images for this board model, then train again.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드 모델의 OK 이미지를 더 올린 뒤 다시 학습하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>No trained AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>학습된 AI 모델 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board model {board} has no trained AI model, so only the golden-board comparison runs.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}에 학습된 AI 모델이 없어 골든 보드 비교만 실행됩니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Training gave an AI model that cannot judge boards</source>
-        <translation type="unfinished"></translation>
+        <translation>학습으로 만든 AI 모델이 보드를 판정할 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Training made an AI model that cannot judge boards ({reason}), so it was not saved; the AI model in use is unchanged.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습으로 만든 AI 모델이 보드를 판정할 수 없어({reason}) 저장하지 않았습니다. 사용 중인 AI 모델은 그대로입니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Import photos of several different good boards (copies of one photo leave nothing to learn), then train again.</source>
-        <translation type="unfinished"></translation>
+        <translation>서로 다른 양품 보드 여러 장의 사진을 가져온 뒤(한 사진의 사본으로는 배울 것이 없습니다) 다시 학습하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Board model name already taken</source>
-        <translation type="unfinished"></translation>
+        <translation>이미 있는 보드 모델 이름</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board model {existing} already exists, and {name} differs from it only in upper and lower case; Windows would store the AI model and golden board files of both as the same files.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {existing}이(가) 이미 있고, {name}은(는) 대소문자만 다릅니다. Windows는 두 보드 모델의 AI 모델과 골든 보드 파일을 같은 파일로 저장합니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Select {existing} in the top bar, or give the new board model a name that differs in more than case.</source>
-        <translation type="unfinished"></translation>
+        <translation>상단 표시줄에서 {existing}을(를) 고르거나, 새 보드 모델에 대소문자 외에도 다른 이름을 주십시오.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Reference must be a good board</source>
-        <translation type="unfinished"></translation>
+        <translation>기준은 양품 보드여야 함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Sample {sample} is labelled {label}; only an OK (good board) sample can be the reference image that inspections compare against.</source>
-        <translation type="unfinished"></translation>
+        <translation>샘플 {sample}의 라벨은 {label}입니다. 검사가 비교하는 기준 이미지는 OK(양품) 샘플만 될 수 있습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Select an OK sample, or relabel this one OK if it shows a good board, then press Set Reference again.</source>
-        <translation type="unfinished"></translation>
+        <translation>OK 샘플을 고르거나, 이 샘플이 양품이라면 OK로 다시 라벨링한 뒤 기준 설정을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Reference sample cannot change</source>
-        <translation type="unfinished"></translation>
+        <translation>기준 샘플은 바꿀 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Sample {sample} is the reference image that inspections compare against, so it cannot be {change} while it is; it was left unchanged.</source>
-        <translation type="unfinished"></translation>
+        <translation>샘플 {sample}은(는) 검사가 비교하는 기준 이미지여서, 기준인 동안에는 {change} 수 없습니다. 그대로 두었습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Select another good (OK) sample and press Set Reference; then try again.</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 양품(OK) 샘플을 고르고 기준 설정을 누른 뒤 다시 시도하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Images not imported</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지를 가져오지 못함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Copying {path} into the workspace failed ({reason}), so none of the {count} image(s) picked were imported.</source>
-        <translation type="unfinished"></translation>
+        <translation>{path}을(를) 작업 공간으로 복사하지 못해({reason}), 고른 이미지 {count}장을 하나도 가져오지 않았습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Check that the file is still there and can be opened and that the workspace drive has free space, then import the images again.</source>
-        <translation type="unfinished"></translation>
+        <translation>파일이 그대로 있고 열 수 있는지, 작업 공간 드라이브에 여유 공간이 있는지 확인한 뒤 이미지를 다시 가져오십시오.</translation>
     </message>
     <message>
         <location line="+38"/>
         <source>Images not imported: path too long</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지를 가져오지 못함: 경로가 너무 김</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>None of the {count} image(s) picked were imported: the system refused the path of the copy of {path} in the workspace folder {workspace} as too long.</source>
-        <translation type="unfinished"></translation>
+        <translation>고른 이미지 {count}장을 하나도 가져오지 않았습니다: 시스템이 작업 공간 폴더 {workspace}에 만들 {path} 사본의 경로가 너무 길다며 거부했습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Ask an Admin to save a workspace folder with a shorter path on Settings and then, with the app closed, to copy everything in the folder {workspace} into that folder, or to turn on long paths in Windows; then import the images again.</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자에게 설정에서 경로가 더 짧은 작업 공간 폴더를 저장한 다음, 앱을 닫은 상태에서 {workspace} 폴더의 모든 것을 그 폴더로 복사하거나 Windows에서 긴 경로를 켜 달라고 하십시오. 그런 다음 이미지를 다시 가져오십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>AI model calibration cannot be read</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 보정값을 읽을 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI model {version} of board model {board} has no usable calibration in the AI model registry.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}의 AI 모델 {version}에 AI 모델 등록부에서 쓸 수 있는 보정값이 없습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>For the next boards, train again or activate another version on Training, or set a value of your own.</source>
-        <translation type="unfinished"></translation>
+        <translation>다음 보드부터는 학습에서 다시 학습하거나 다른 버전을 활성화하거나, 직접 값을 설정하십시오.</translation>
     </message>
     <message>
         <location line="-418"/>
         <source>AI model, recipe, scale or Golden board changed during a run</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 중에 AI 모델, 레시피, 배율 또는 골든 보드가 바뀜</translation>
     </message>
     <message>
         <location line="-215"/>
@@ -2461,187 +2461,187 @@
     <message>
         <location line="+1"/>
         <source>it is no longer UTF-8 text, as when a spreadsheet has saved over it</source>
-        <translation type="unfinished"></translation>
+        <translation>스프레드시트가 덮어썼을 때처럼, 더 이상 UTF-8 텍스트가 아닙니다</translation>
     </message>
     <message>
         <location line="+164"/>
         <source>An Engineer sets a Golden board, or trains or activates an AI model, on Training, or turns on the Golden board comparison or the AI model in the Recipe Editor; then inspect the board again.</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어가 학습에서 골든 보드를 설정하거나 AI 모델을 학습 또는 활성화하거나, 레시피 편집기에서 골든 보드 비교나 AI 모델을 켠 뒤 보드를 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+33"/>
         <source>The AI model, recipe, scale or Golden board of {board} changed during a run (training ended, a version was activated while the recipe has the AI check on, a recipe saved, a scale set while it holds a size in mm, or a Golden board set), so {file} and the boards after it are judged with what is active now; the boards before keep what judged them.</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 중에 {board}의 AI 모델, 레시피, 배율 또는 골든 보드가 바뀌어(학습이 끝남, 레시피의 AI 검사가 켜진 상태에서 버전이 활성화됨, 레시피가 저장됨, mm 크기가 있는 상태에서 배율이 설정됨, 또는 골든 보드가 설정됨), {file}과(와) 그 뒤의 보드는 지금 활성인 것으로 판정합니다. 그 앞의 보드는 판정한 것을 그대로 유지합니다.</translation>
     </message>
     <message>
         <location line="+31"/>
         <source>Board cannot be reviewed</source>
-        <translation type="unfinished"></translation>
+        <translation>보드를 검토할 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Record {record} cannot be reviewed: {reason}. Nothing was changed.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {record}을(를) 검토할 수 없습니다: {reason}. 아무것도 바뀌지 않았습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Review an NG or WARN board that is still in Logs &amp; Export, and give a reason when you mark a False call.</source>
-        <translation type="unfinished"></translation>
+        <translation>로그 및 내보내기에 남아 있는 NG 또는 WARN 보드를 검토하고, 과검출로 표시할 때는 사유를 적으십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Shift check needed</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검 필요</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Press Shift Check (F7) to judge the master samples. If one is judged wrongly, call an Engineer to check the recipe, the AI model and the Golden board before production goes on.</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검(F7)을 눌러 마스터 샘플을 판정하십시오. 잘못 판정된 것이 있으면 생산을 계속하기 전에 엔지니어를 불러 레시피, AI 모델, 골든 보드를 확인하게 하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Shift check has no master samples</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검에 마스터 샘플이 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board model {board_model} has no sample labelled {label} to judge, so the shift check cannot run. Nothing was stored.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}에 판정할 {label} 라벨 샘플이 없어 교대 점검을 실행할 수 없습니다. 아무것도 저장되지 않았습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Ask an Engineer to import a known-OK board and a known-NG board of each Critical defect type in Training. Until then, an Admin can turn the shift check off on Settings.</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어에게 학습에서 확실한 OK 보드 하나와 Critical 결함 유형마다 확실한 NG 보드 하나씩을 가져오게 하십시오. 그때까지는 관리자가 설정에서 교대 점검을 끌 수 있습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>The line has drifted</source>
-        <translation type="unfinished"></translation>
+        <translation>라인에 드리프트가 생김</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>On {board} ({view}), a measure of the newest boards judged by the active AI model and recipe moved further than chance explains from the boards judged before them: {measure}. No verdict was changed.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board} ({view})에서, 활성 AI 모델과 레시피로 판정한 최근 보드의 측정값이 그 전에 판정한 보드에서 우연으로 설명되는 정도 이상으로 달라졌습니다: {measure}. 판정은 바뀌지 않았습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Look at the boards and the station: the lighting, the camera and its focus, the board revision and the parts supplier. Review the calls on Logs &amp; Export; if one of these changed, retrain the AI model or tune the recipe and validate it again.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드와 스테이션을 살펴보십시오: 조명, 카메라와 초점, 보드 리비전, 부품 공급처. 로그 및 내보내기에서 판정을 검토하십시오. 이 중 하나가 바뀌었다면 AI 모델을 다시 학습하거나 레시피를 조정한 뒤 다시 검증하십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Result files not written</source>
-        <translation type="unfinished"></translation>
+        <translation>결과 파일을 쓰지 못함</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Shift file not updated</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 파일이 갱신되지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{file} was judged and its record saved, and its own result files were written to the output folder {folder}, but its line could not be added to the shift file {shift}: {reason}. The line, and any after it, is kept and added once the file takes it again, with the next board or within a minute, while the app stays open; this alarm is not repeated meanwhile.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}을(를) 판정하고 기록을 저장했으며 결과 파일도 출력 폴더 {folder}에 썼지만, 교대 파일 {shift}에 그 줄을 추가하지 못했습니다: {reason}. 이 줄과 이후의 줄은 보관했다가, 앱이 열려 있는 동안 다음 보드 때 또는 1분 안에 파일이 다시 받으면 추가합니다. 그동안 이 알람은 반복되지 않습니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Close the shift file in any app that has it open, such as a spreadsheet. If a spreadsheet saved over it, move that copy out of the output folder: the station starts the file again with the lines it kept, and the boards before them are in the copy and in Logs &amp; Export. For any other reason, an Admin makes the output folder take files again. Lines still kept when the app closes are not added; every record is in Logs &amp; Export.</source>
-        <translation type="unfinished"></translation>
+        <translation>스프레드시트 등 교대 파일을 열고 있는 앱에서 파일을 닫으십시오. 스프레드시트가 덮어썼다면 그 사본을 출력 폴더 밖으로 옮기십시오: 스테이션이 보관한 줄로 파일을 새로 시작하며, 그 앞의 보드는 사본과 로그 및 내보내기에 있습니다. 다른 이유라면 관리자가 출력 폴더에 다시 파일을 쓸 수 있게 합니다. 앱을 닫을 때 보관 중이던 줄은 추가되지 않지만, 모든 기록은 로그 및 내보내기에 있습니다.</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>ROI off the image</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI가 이미지 밖에 있음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>ROI {roi} of board model {board} is not wholly on the image it is judged on: its box is {x}, {y}, {w} × {h} px and the image {width} × {height} px, so part of it would go unjudged. The board gets no verdict.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}의 ROI {roi}이(가) 판정하는 이미지 안에 온전히 있지 않습니다: 박스는 {x}, {y}, {w} × {h} px이고 이미지는 {width} × {height} px여서 일부가 판정되지 않습니다. 보드에 판정을 내리지 않습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Tell an Engineer. After a camera change, they calibrate the scale on its new Golden board; else, in the Recipe Editor, they move the ROI inside the Golden board, or turn it off, and save the recipe. Then judge the board again.</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어에게 알리십시오. 카메라를 바꾼 뒤라면 새 골든 보드에서 배율을 보정하고, 아니라면 레시피 편집기에서 ROI를 골든 보드 안으로 옮기거나 끈 뒤 레시피를 저장합니다. 그런 다음 보드를 다시 판정하십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Input file name not in the contract</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 파일 이름이 규약과 다름</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{file} in the input folder was not inspected: {reason}. It is now in failed/ there.</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더의 {file}을(를) 검사하지 않았습니다: {reason}. 지금은 그 안의 failed/에 있습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Name it &lt;board model&gt;_&lt;revision&gt;_&lt;serial&gt;_&lt;view&gt;_&lt;UTC time&gt;.png, as the input-file naming contract says, and put it in the input folder again. Ask the imaging station&apos;s owner to name every board image so.</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 파일 이름 규약대로 &lt;보드 모델&gt;_&lt;리비전&gt;_&lt;일련번호&gt;_&lt;뷰&gt;_&lt;UTC 시각&gt;.png로 이름을 붙여 입력 폴더에 다시 넣으십시오. 촬영 스테이션 담당자에게 모든 보드 이미지에 이렇게 이름을 붙여 달라고 하십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Board image already inspected</source>
-        <translation type="unfinished"></translation>
+        <translation>이미 검사한 보드 이미지</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{file} in the input folder was not inspected again: {reason}. It is now in failed/ there; the first record stays as it was.</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더의 {file}을(를) 다시 검사하지 않았습니다: {reason}. 지금은 그 안의 failed/에 있으며, 첫 기록은 그대로입니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Nothing is lost. If it is another board, the imaging station must give it its own serial and time; to inspect the same image again, load it with Load Images….</source>
-        <translation type="unfinished"></translation>
+        <translation>잃은 것은 없습니다. 다른 보드라면 촬영 스테이션이 고유한 일련번호와 시각을 붙여야 합니다. 같은 이미지를 다시 검사하려면 이미지 불러오기…로 불러오십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Input image cannot be read</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 이미지를 읽을 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{file} in the input folder was not inspected: {reason} It is now in failed/ there.</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더의 {file}을(를) 검사하지 않았습니다: {reason} 지금은 그 안의 failed/에 있습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Check that the imaging station writes whole image files, under a temporary name it renames once the file is complete, then put the image in the input folder again.</source>
-        <translation type="unfinished"></translation>
+        <translation>촬영 스테이션이 임시 이름으로 파일을 다 쓴 뒤 이름을 바꾸는 방식으로 온전한 이미지 파일을 쓰는지 확인한 뒤, 이미지를 입력 폴더에 다시 넣으십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Board image of another board model</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 보드 모델의 보드 이미지</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{file} in the input folder is a board of {named}, and the line runs {board_model}. The line is paused; the image stays in the input folder.</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더의 {file}은(는) {named}의 보드인데, 라인은 {board_model}을(를) 실행 중입니다. 라인을 일시 정지했고 이미지는 입력 폴더에 그대로 있습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Pick {named} in the top bar and press Start to inspect it, or move the image out of the input folder if it came there by mistake. A line runs one board model at a time.</source>
-        <translation type="unfinished"></translation>
+        <translation>상단 표시줄에서 {named}을(를) 고르고 시작을 눌러 검사하거나, 잘못 들어온 이미지라면 입력 폴더 밖으로 옮기십시오. 라인은 한 번에 보드 모델 하나만 실행합니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Input folder not reachable</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더에 접근할 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The input folder {folder} cannot be read: {reason}. No board is taken from it until it can; this alarm is not repeated meanwhile.</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더 {folder}을(를) 읽을 수 없습니다: {reason}. 읽을 수 있을 때까지 이 폴더에서 보드를 가져오지 않으며, 그동안 이 알람은 반복되지 않습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Check that the folder exists, that its drive or share is connected, and that the station may read and write it. The line goes on by itself once the folder answers.</source>
-        <translation type="unfinished"></translation>
+        <translation>폴더가 있는지, 드라이브나 공유가 연결되어 있는지, 스테이션이 읽고 쓸 수 있는지 확인하십시오. 폴더가 응답하면 라인은 스스로 계속됩니다.</translation>
     </message>
     <message>
         <location line="+48"/>
         <source>Its stored verdict and decision table still stand. Inspect the board again on Inspection, then try the thresholds on the new result. The maps of OK results are deleted {days} days after inspection, and not saved at all while the drive is 95 % full; NG and WARN maps are kept.</source>
-        <translation type="unfinished"></translation>
+        <translation>저장된 판정과 판정 표는 그대로 유효합니다. 검사에서 보드를 다시 검사한 뒤 새 결과에서 임계값을 시험하십시오. OK 결과의 맵은 검사 {days}일 뒤에 삭제되며, 드라이브가 95 % 차 있는 동안에는 아예 저장되지 않습니다. NG와 WARN의 맵은 보관됩니다.</translation>
     </message>
     <message>
         <location line="+37"/>
@@ -3097,698 +3097,698 @@
     <message>
         <location line="+8"/>
         <source>AI model not made active</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델이 활성화되지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI model {version} of board model {board} was not made active: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}의 AI 모델 {version}이(가) 활성화되지 않았습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Activate another version on Training, or train again; the active AI model and its Golden board are unchanged.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습에서 다른 버전을 활성화하거나 다시 학습하십시오. 활성 AI 모델과 그 골든 보드는 그대로입니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Activation refused: no AI model card</source>
-        <translation type="unfinished"></translation>
+        <translation>활성화 거부: AI 모델 카드 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI model {version} of board model {board} was not made active: it has no AI model card.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}의 AI 모델 {version}이(가) 활성화되지 않았습니다: AI 모델 카드가 없습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Train again, so the new version has its card, or activate a version that has one; the active AI model and its Golden board are unchanged.</source>
-        <translation type="unfinished"></translation>
+        <translation>새 버전에 카드가 생기도록 다시 학습하거나, 카드가 있는 버전을 활성화하십시오. 활성 AI 모델과 그 골든 보드는 그대로입니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Board not added to Training</source>
-        <translation type="unfinished"></translation>
+        <translation>보드가 학습에 추가되지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Record {record} was not added to Training: {reason}. Nothing was changed.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {record}이(가) 학습에 추가되지 않았습니다: {reason}. 아무것도 바뀌지 않았습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Add a board that is still listed on Logs &amp; Export with its board image and reviewed as a False call (F11); review it first if the board is good.</source>
-        <translation type="unfinished"></translation>
+        <translation>로그 및 내보내기에 보드 이미지와 함께 남아 있고 과검출(F11)로 검토된 보드를 추가하십시오. 양품이라면 먼저 검토하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>AI model not active</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델이 활성 상태가 아님</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board model {board} has AI model {version}, trained but not active, so only the golden-board comparison runs.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}에 AI 모델 {version}이(가) 학습되어 있지만 활성 상태가 아니어서 골든 보드 비교만 실행됩니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>An Engineer activates it with Activate {version} on Inspection, or with Activate Selected on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어가 검사의 {version} 활성화 또는 학습의 선택 항목 활성화로 활성화합니다.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>AI model {version} of board model {board} was not made active: a Validated AI model already judges the boards of {board}, and a Trial AI model never replaces one. It was trained from {dataset}, a Trial version that one person froze without a second person checking its labels or an agreement check.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}의 AI 모델 {version}이(가) 활성화되지 않았습니다: Validated AI 모델이 이미 {board}의 보드를 판정하고 있으며, Trial AI 모델은 이를 대체하지 않습니다. 이 모델은 {dataset}(으)로 학습되었는데, 이것은 한 사람이 두 번째 사람의 라벨 검토나 일치도 검사 없이 동결한 Trial 버전입니다.</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>No dataset store on this system</source>
-        <translation type="unfinished"></translation>
+        <translation>이 시스템에는 데이터셋 저장소를 만들 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No dataset store was made for {customer}: this system keeps a store&apos;s key in memory only, so the key would be gone when the app closes and the store&apos;s files would open again only from its recovery sheet.</source>
-        <translation type="unfinished"></translation>
+        <translation>{customer}의 데이터셋 저장소를 만들지 않았습니다: 이 시스템은 저장소의 키를 메모리에만 보관하므로, 앱을 닫으면 키가 사라지고 저장소의 파일은 복구용 종이로만 다시 열 수 있게 됩니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Make customers&apos; dataset stores on the Windows station, whose Credential Manager keeps each key on the PC. This system serves development and testing only. Nothing was made.</source>
-        <translation type="unfinished"></translation>
+        <translation>고객의 데이터셋 저장소는 자격 증명 관리자가 키를 PC에 보관하는 Windows 스테이션에서 만드십시오. 이 시스템은 개발과 테스트 전용입니다. 아무것도 만들지 않았습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Board model name not allowed: no Latin letter or digit</source>
-        <translation type="unfinished">보드 모델 이름 사용 불가: 라틴 문자나 숫자 없음</translation>
+        <translation>허용되지 않는 보드 모델 이름: 영문자나 숫자가 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The board model name &quot;{name}&quot; has no Latin letter or digit (A to Z, 0 to 9, as an English keyboard types them), and a board model&apos;s dataset versions are named with those in its name.</source>
-        <translation type="unfinished">보드 모델 이름 &quot;{name}&quot;에 라틴 문자나 숫자(영문 키보드로 입력하는 A~Z, 0~9)가 없습니다. 보드 모델의 데이터셋 버전은 이름에 든 라틴 문자와 숫자로 이름이 붙습니다.</translation>
+        <translation>보드 모델 이름 &quot;{name}&quot;에 영문자나 숫자(영문 자판으로 입력하는 A~Z, 0~9)가 없습니다. 보드 모델의 데이터셋 버전 이름은 이름에 든 영문자와 숫자로 만듭니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Give the board model a name with at least one Latin letter or digit, such as TBOX-A1; other letters, such as Korean ones, may be added to it, as in &quot;TBOX-A1 메인보드&quot;. Nothing was made.</source>
-        <translation type="unfinished">라틴 문자나 숫자가 하나 이상 든 이름을 보드 모델에 지정하십시오(예: TBOX-A1). 한글 같은 다른 문자는 함께 쓸 수 있습니다(예: &quot;TBOX-A1 메인보드&quot;). 아무것도 만들어지지 않았습니다.</translation>
+        <translation>TBOX-A1처럼 영문자나 숫자가 하나 이상 든 이름을 주십시오. &quot;TBOX-A1 메인보드&quot;처럼 한글 등 다른 글자를 덧붙여도 됩니다. 아무것도 만들지 않았습니다.</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>Board model name not allowed: version names would mix</source>
-        <translation type="unfinished">보드 모델 이름 사용 불가: 버전 이름이 섞임</translation>
+        <translation>허용되지 않는 보드 모델 이름: 버전 이름이 섞임</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Train makes a Trial AI model, which does not replace a Validated one</source>
-        <translation type="unfinished"></translation>
+        <translation>학습은 Trial AI 모델을 만들며, Validated 모델을 대체하지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Nothing was trained for board model {board}: Validated AI model {version} judges its boards, and the first-run guide&apos;s Train makes a Trial AI model, which never replaces a Validated one.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}에 아무것도 학습하지 않았습니다: Validated AI 모델 {version}이(가) 보드를 판정하고 있고, 첫 실행 안내의 학습은 Trial AI 모델을 만드는데 Trial 모델은 Validated 모델을 대체하지 않습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Train a next AI model on Training from a Validated version. The active AI model and Golden board stay as they are. Nothing was written.</source>
-        <translation type="unfinished"></translation>
+        <translation>다음 AI 모델은 학습에서 Validated 버전으로 학습하십시오. 활성 AI 모델과 골든 보드는 그대로입니다. 아무것도 쓰지 않았습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Board model&apos;s dataset store shredded</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델의 데이터셋 저장소가 파기됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The dataset store of board model {board} was shredded on {date}, and nothing learned from its images judges boards again: {refused}.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}의 데이터셋 저장소가 {date}에 파기되었으며, 그 이미지에서 학습한 것은 다시 보드를 판정하지 않습니다: {refused}.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Nothing of board model {board} can be trained or made active again. To inspect these boards again, an Admin makes a new board model under another name with + New, naming its customer, which puts it in a dataset store that is not shredded; an Engineer then imports its images on Training, freezes a dataset version, locks its validation set and trains from it.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}은(는) 다시 학습하거나 활성화할 수 없습니다. 이 보드를 다시 검사하려면 관리자가 + 새로 만들기로 다른 이름의 새 보드 모델을 만들고 고객을 지정해, 파기되지 않은 데이터셋 저장소에 넣습니다. 그런 다음 엔지니어가 학습에서 이미지를 가져오고, 데이터셋 버전을 동결하고, 검증 세트를 잠그고, 그것으로 학습합니다.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>AI model, recipe, scale or Golden board changed since the run</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 이후 AI 모델, 레시피, 배율 또는 골든 보드가 바뀜</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{file} was judged in this run by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}, so a preview could show another verdict than its row.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 실행에서 {file}은(는) {run_model}, 레시피 리비전 {run_recipe}, {run_golden}, {run_scale}(으)로 판정되었습니다. {board_model}은(는) 지금 {model}, 레시피 리비전 {recipe}, {golden}, {scale}을(를) 사용하므로, 미리보기가 행과 다른 판정을 보여 줄 수 있습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Press Run Test Again in the preview pane to test the run&apos;s folder with what is in use now; the run&apos;s rows, CSV and report keep the verdicts it gave.</source>
-        <translation type="unfinished"></translation>
+        <translation>미리보기 창에서 테스트 다시 실행을 눌러 그 실행의 폴더를 지금 사용 중인 것으로 테스트하십시오. 실행의 행, CSV, 보고서는 당시의 판정을 유지합니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>The validation did not start</source>
-        <translation type="unfinished"></translation>
+        <translation>검증이 시작되지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Dataset version {name} was not tested: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터셋 버전 {name}을(를) 테스트하지 않았습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Split and lock its validation set on Training&apos;s Datasets tab, or pick another dataset version; nothing was stored.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습의 데이터셋 탭에서 검증 세트를 분할해 잠그거나 다른 데이터셋 버전을 고르십시오. 아무것도 저장되지 않았습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>The validation report was not made</source>
-        <translation type="unfinished"></translation>
+        <translation>검증 보고서가 만들어지지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+20"/>
         <source>No customer validation report was made: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>고객 검증 보고서를 만들지 않았습니다: {reason}.</translation>
     </message>
     <message>
         <location line="-19"/>
         <source>Run Test on a frozen dataset version&apos;s locked validation set, with a labeller agreement check stored on Training&apos;s Datasets tab, then make the report from that run.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습의 데이터셋 탭에 라벨러 일치도 검사가 저장된 상태에서, 동결된 데이터셋 버전의 잠긴 검증 세트로 테스트 실행을 한 뒤 그 실행으로 보고서를 만드십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Targets not saved</source>
-        <translation type="unfinished"></translation>
+        <translation>목표가 저장되지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The targets of {board_model} were not saved: {reason}. Nothing was changed.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 목표를 저장하지 않았습니다: {reason}. 아무것도 바뀌지 않았습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Enter each target within its range and who at the customer agreed them, then save again; the next run keeps the targets in force until then.</source>
-        <translation type="unfinished"></translation>
+        <translation>각 목표를 범위 안의 값으로, 고객 측에서 누가 합의했는지와 함께 입력한 뒤 다시 저장하십시오. 그때까지 다음 실행은 현재 목표를 유지합니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>No validation report from a Trial version</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial 버전으로는 검증 보고서를 만들 수 없음</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Recipe saved since it was opened</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피를 연 뒤에 다른 저장이 있었음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Revision {latest} of board model {board_model} was saved after revision {revision}, the one the Recipe Editor holds; saving it would undo revision {latest}, so nothing was saved.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}의 리비전 {latest}이(가) 레시피 편집기가 가진 리비전 {revision} 뒤에 저장되었습니다. 저장하면 리비전 {latest}을(를) 되돌리게 되므로 아무것도 저장하지 않았습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Press Save Recipe again and choose Yes to load revision {latest}, then make your changes again on it; until then they stay on screen.</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 저장을 다시 누르고 예를 골라 리비전 {latest}을(를) 불러온 뒤, 그 위에서 변경을 다시 하십시오. 그때까지 변경은 화면에 남습니다.</translation>
     </message>
     <message>
         <location line="+22"/>
         <source>Recipe saved while Save to Recipe was open</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피에 저장이 열려 있는 동안 레시피가 저장됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Revision {latest} of board model {board_model} was saved after revision {revision}, the one Save to Recipe listed its changes against; saving them would undo revision {latest}, so the sheet closed and nothing was saved. Compare now shows the thresholds of revision {latest}.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}의 리비전 {latest}이(가) 레시피에 저장이 변경 내용의 기준으로 삼은 리비전 {revision} 뒤에 저장되었습니다. 저장하면 리비전 {latest}을(를) 되돌리게 되므로 시트를 닫고 아무것도 저장하지 않았습니다. 비교는 이제 리비전 {latest}의 임계값을 표시합니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Try your thresholds again on revision {latest}, then press Save to Recipe.</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 {latest}에서 임계값을 다시 시험한 뒤 레시피에 저장을 누르십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Sizes are shown in px</source>
-        <translation type="unfinished"></translation>
+        <translation>크기가 px로 표시됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board model {board_model} has no scale yet, so its recipe&apos;s minimum defect size and ROIs are in px of its images: a recipe saves so and judges as before, but its sizes keep their px after a camera change, where sizes in mm would follow the scale set again on the new Golden board.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}에 아직 배율이 없어, 레시피의 최소 결함 크기와 ROI는 이미지의 px 단위입니다. 레시피는 그대로 저장되고 전과 같이 판정하지만, 카메라를 바꾼 뒤에도 크기가 px 그대로 남습니다. mm 크기였다면 새 골든 보드에서 다시 설정한 배율을 따릅니다.</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>Minimum defect size under 4 px</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 크기가 4 px 미만</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The minimum defect size, {size}, spans {px:.1f} px in the board images: under 4 px, a defect is not told from image noise.</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 크기 {size}은(는) 보드 이미지에서 {px:.1f} px입니다: 4 px 미만에서는 결함을 이미지 노이즈와 구별할 수 없습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Raise it to {least} or more, or use images of a higher resolution. The recipe saves as it is; its audit entry keeps this code.</source>
-        <translation type="unfinished"></translation>
+        <translation>{least} 이상으로 올리거나 해상도가 더 높은 이미지를 쓰십시오. 레시피는 그대로 저장되며, 감사 기록에 이 코드가 남습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Scale not set</source>
-        <translation type="unfinished"></translation>
+        <translation>배율이 설정되지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The scale of board model {board_model} was not set: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}의 배율을 설정하지 않았습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Nothing was changed. On the Recipe Editor, press Calibrate Scale…, click two points on the Golden board a known distance apart, enter that distance in mm and press Set Scale.</source>
-        <translation type="unfinished"></translation>
+        <translation>아무것도 바뀌지 않았습니다. 레시피 편집기에서 배율 보정…을 누르고, 골든 보드에서 거리를 아는 두 점을 클릭한 뒤 그 거리를 mm로 입력하고 배율 설정을 누르십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Sizes are held in px</source>
-        <translation type="unfinished"></translation>
+        <translation>크기가 px로 저장되어 있음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Revision {revision} of board model {board_model} holds {count} of its {total} size(s) in px of its images (the minimum defect size and each ROI&apos;s box): shown in mm at this scale, they keep their px when the scale is set again, as after a camera change, while sizes in mm follow it.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}의 리비전 {revision}은(는) 크기 {total}개 중 {count}개(최소 결함 크기와 각 ROI의 박스)를 이미지의 px로 가지고 있습니다. 지금 배율에서 mm로 표시되지만, 카메라를 바꾼 뒤처럼 배율을 다시 설정해도 px 그대로 남습니다. mm 크기는 배율을 따릅니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Press Save Recipe to store them in mm, so that they follow the scale; that alone changes no verdict at this scale.</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 저장을 눌러 mm로 저장하면 배율을 따르게 됩니다. 그것만으로는 지금 배율에서 판정이 바뀌지 않습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Scale set after Compare showed the recipe</source>
-        <translation type="unfinished"></translation>
+        <translation>비교가 레시피를 표시한 뒤에 배율이 설정됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The scale of board model {board_model} was set to {scale:.2f} px/mm after Compare showed revision {revision}, so Save to Recipe listed its changes at the scale before, or in px without one; the sheet closed and nothing was saved. Compare now shows the thresholds of revision {revision} at the new scale.</source>
-        <translation type="unfinished"></translation>
+        <translation>비교가 리비전 {revision}을(를) 표시한 뒤에 보드 모델 {board_model}의 배율이 {scale:.2f} px/mm로 설정되어, 레시피에 저장이 이전 배율 또는 배율 없는 px 기준으로 변경 내용을 보여 주었습니다. 시트를 닫고 아무것도 저장하지 않았습니다. 비교는 이제 새 배율로 리비전 {revision}의 임계값을 표시합니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Try your thresholds again at this scale, then press Save to Recipe.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 배율에서 임계값을 다시 시험한 뒤 레시피에 저장을 누르십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Size in mm refused</source>
-        <translation type="unfinished"></translation>
+        <translation>mm 크기가 거부됨</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Nothing was saved. Correct the size, then save the recipe again.</source>
-        <translation type="unfinished"></translation>
+        <translation>아무것도 저장하지 않았습니다. 크기를 고친 뒤 레시피를 다시 저장하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Scale cannot be read</source>
-        <translation type="unfinished"></translation>
+        <translation>배율을 읽을 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The stored scale of board model {board_model}, {value}, is not a finite number above 0.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}에 저장된 배율 {value}이(가) 0보다 큰 유한한 수가 아닙니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Nothing was judged or saved with it. On the Recipe Editor, press Calibrate Scale… and set the scale again; Set Scale replaces it.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 배율로는 아무것도 판정하거나 저장하지 않았습니다. 레시피 편집기에서 배율 보정…을 눌러 배율을 다시 설정하십시오. 배율 설정이 기존 값을 대체합니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Too few labelled boards to learn from</source>
-        <translation type="unfinished"></translation>
+        <translation>학습할 라벨링된 보드가 부족함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The comparison&apos;s thresholds of board model {board_model} cannot be learned: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}의 비교 임계값을 학습할 수 없습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Nothing was changed. On Training, label more boards of this board model: NG images with each defect boxed, and OK images, in the Golden board&apos;s view; then press Learn From Labelled Boards… again.</source>
-        <translation type="unfinished"></translation>
+        <translation>아무것도 바뀌지 않았습니다. 학습에서 이 보드 모델의 보드를 더 라벨링하십시오: 골든 보드와 같은 뷰로, 결함마다 박스를 그린 NG 이미지와 OK 이미지. 그런 다음 라벨링된 보드에서 학습…을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>ROI off the Golden board</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI가 골든 보드 밖에 있음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>ROI {roi} of board model {board_model} is not wholly on its Golden board: at the board model&apos;s scale its box is {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}의 ROI {roi}이(가) 골든 보드 안에 온전히 있지 않습니다: 보드 모델의 배율에서 박스는 {x}, {y}, {w} × {h} px이고 골든 보드는 {width} × {height} px입니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Nothing was saved. Move the ROI inside the Golden board in the Recipe Editor, or turn it off, then save the recipe again.</source>
-        <translation type="unfinished"></translation>
+        <translation>아무것도 저장하지 않았습니다. 레시피 편집기에서 ROI를 골든 보드 안으로 옮기거나 끈 뒤 레시피를 다시 저장하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>ROI would be off the image</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI가 이미지 밖으로 나가게 됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The new scale would leave ROI {roi} of board model {board_model} not wholly on its Golden board: its box would be {x}, {y}, {w} × {h} px and the Golden board {width} × {height} px, so every board would get no verdict (AOI-INSP-021).</source>
-        <translation type="unfinished"></translation>
+        <translation>새 배율로는 보드 모델 {board_model}의 ROI {roi}이(가) 골든 보드 안에 온전히 있지 않게 됩니다: 박스는 {x}, {y}, {w} × {h} px, 골든 보드는 {width} × {height} px가 되어 모든 보드가 판정을 받지 못합니다(AOI-INSP-021).</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Nothing was changed. Check the length and the distance measured. If they are right, move the ROI to fit {width} × {height} px in the Recipe Editor, or turn it off, and save the recipe; then calibrate the scale again.</source>
-        <translation type="unfinished"></translation>
+        <translation>아무것도 바뀌지 않았습니다. 측정한 길이와 거리를 확인하십시오. 맞다면 레시피 편집기에서 ROI를 {width} × {height} px 안에 들어가게 옮기거나 끄고 레시피를 저장한 뒤, 배율을 다시 보정하십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Export stopped part-way</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내기가 도중에 멈춤</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Copying {file} to {folder} failed ({reason}), so the export stopped after {copied} of {total} overlay image(s); the audit trail records those {copied}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}을(를) {folder}(으)로 복사하지 못해({reason}), 오버레이 이미지 {total}장 중 {copied}장까지 내보내고 멈췄습니다. 감사 기록에는 그 {copied}장이 남습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Check that the drive is connected, has free space and can be written, that nothing in the folder already has the name {file}, and that the record&apos;s overlay image is still in the results folder; then export again.</source>
-        <translation type="unfinished"></translation>
+        <translation>드라이브가 연결되어 있고 여유 공간이 있으며 쓸 수 있는지, 폴더에 {file}이라는 이름이 이미 없는지, 기록의 오버레이 이미지가 results 폴더에 그대로 있는지 확인한 뒤 다시 내보내십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Export not written</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내기를 쓰지 못함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The export {path} could not be written: {reason}. Nothing was exported, and a file of that name already there is left as it was.</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내기 {path}을(를) 쓸 수 없습니다: {reason}. 아무것도 내보내지 않았고, 그 이름으로 이미 있던 파일은 그대로 두었습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Choose a folder that can be written, close any program that has the file open and check the free disk space, then export again.</source>
-        <translation type="unfinished"></translation>
+        <translation>쓸 수 있는 폴더를 고르고, 파일을 열고 있는 프로그램을 닫고, 디스크 여유 공간을 확인한 뒤 다시 내보내십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Reason needed</source>
-        <translation type="unfinished"></translation>
+        <translation>사유 필요</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Deleting {count} record(s) needs a reason, which the audit trail keeps with the deletion.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {count}건을 삭제하려면 사유가 필요하며, 감사 기록이 삭제와 함께 보관합니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Nothing was deleted. Press Delete Records… again and type why they go.</source>
-        <translation type="unfinished"></translation>
+        <translation>아무것도 삭제하지 않았습니다. 기록 삭제…를 다시 누르고 삭제하는 이유를 입력하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Evidence files left</source>
-        <translation type="unfinished"></translation>
+        <translation>증거 파일이 남음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{count} record(s) were deleted and the audit trail records it, but {left} of their evidence file(s) would not go, {file} first ({reason}).</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {count}건을 삭제했고 감사 기록에 남겼지만, 증거 파일 {left}개가 지워지지 않았습니다. 첫 번째는 {file}입니다 ({reason}).</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Close the image viewer or other app that has the file open, then delete the files the log names (records.evidence_left) from the results folder.</source>
-        <translation type="unfinished"></translation>
+        <translation>파일을 열고 있는 이미지 뷰어나 다른 앱을 닫은 뒤, 로그에 적힌 파일(records.evidence_left)을 results 폴더에서 삭제하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Drive nearly full</source>
-        <translation type="unfinished"></translation>
+        <translation>드라이브가 거의 참</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Ask an Admin to free space on the drive: move exports and old results to an archive drive, or move the workspace to a larger drive (installation guide, Backup and restore).</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자에게 드라이브 공간을 확보해 달라고 하십시오: 내보낸 파일과 오래된 결과를 보관용 드라이브로 옮기거나, 작업 공간을 더 큰 드라이브로 옮깁니다(설치 안내서, 백업 및 복원).</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Drive full: OK evidence not kept</source>
-        <translation type="unfinished"></translation>
+        <translation>드라이브가 가득 참: OK 증거를 보관하지 않음</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Free space on the drive now, as an Admin: when it is full no result can be saved. Move exports and old results to an archive drive, or move the workspace to a larger drive.</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자가 지금 드라이브 공간을 확보하십시오: 가득 차면 결과를 저장할 수 없습니다. 내보낸 파일과 오래된 결과를 보관용 드라이브로 옮기거나, 작업 공간을 더 큰 드라이브로 옮기십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Not allowed for this role</source>
-        <translation type="unfinished"></translation>
+        <translation>이 역할에는 허용되지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{what} needs the {roles} role.</source>
-        <translation type="unfinished"></translation>
+        <translation>{what}에는 {roles} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Sign in as a user with that role, or ask one to do it.</source>
-        <translation type="unfinished"></translation>
+        <translation>그 역할의 사용자로 로그인하거나, 그런 사용자에게 요청하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Last Admin</source>
-        <translation type="unfinished"></translation>
+        <translation>마지막 관리자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name} is the only user with the Admin role, so it cannot change to {role}: no one could then manage users or settings.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}은(는) 관리자 역할을 가진 유일한 사용자여서 {role}(으)로 바꿀 수 없습니다: 그러면 사용자나 설정을 관리할 사람이 없게 됩니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Give another user the Admin role first, then change this one.</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 다른 사용자에게 관리자 역할을 준 뒤 이 사용자를 바꾸십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Unknown user</source>
-        <translation type="unfinished"></translation>
+        <translation>알 수 없는 사용자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>There is no user named {name} in this workspace, so no role to sign in with.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 작업 공간에 {name}(이)라는 사용자가 없어 로그인할 역할이 없습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Pick a user from the list under Switch User; an Admin adds users on the Settings page.</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 전환의 목록에서 사용자를 고르십시오. 사용자는 관리자가 설정 페이지에서 추가합니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Password not accepted</source>
-        <translation type="unfinished"></translation>
+        <translation>비밀번호가 맞지 않음</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Type the password again, checking Caps Lock and the input language; an Admin can reset it.</source>
-        <translation type="unfinished"></translation>
+        <translation>Caps Lock과 입력 언어를 확인하고 비밀번호를 다시 입력하십시오. 관리자가 재설정할 수 있습니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Password not allowed</source>
-        <translation type="unfinished"></translation>
+        <translation>허용되지 않는 비밀번호</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The password chosen for {name} {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}의 비밀번호로 고른 것은 {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Choose a passphrase of 15 to 64 characters, such as a few words you remember; any language is fine.</source>
-        <translation type="unfinished"></translation>
+        <translation>기억하기 쉬운 단어 몇 개처럼 15~64자의 암호 문구를 정하십시오. 어떤 언어든 됩니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Account locked</source>
-        <translation type="unfinished"></translation>
+        <translation>계정 잠김</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name} is locked for {minutes} more minutes after too many wrong passwords.</source>
-        <translation type="unfinished"></translation>
+        <translation>잘못된 비밀번호가 너무 많아 {name}이(가) {minutes}분 더 잠깁니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Wait, or ask an Admin to unlock it on Settings; the Operator view still works.</source>
-        <translation type="unfinished"></translation>
+        <translation>기다리거나 관리자에게 설정에서 잠금을 풀어 달라고 하십시오. 작업자 화면은 계속 쓸 수 있습니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Account locked until unlocked</source>
-        <translation type="unfinished"></translation>
+        <translation>해제할 때까지 계정 잠김</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name} is locked after 100 wrong passwords, or its lock time cannot be read.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}이(가) 잘못된 비밀번호 100회로 잠겼거나, 잠금 시간을 읽을 수 없습니다.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>PIN not allowed</source>
-        <translation type="unfinished"></translation>
+        <translation>허용되지 않는 PIN</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The PIN chosen for {name} {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}의 PIN으로 고른 것은 {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Choose 4 to 6 digits and type them twice.</source>
-        <translation type="unfinished"></translation>
+        <translation>숫자 4~6자리를 정해 두 번 입력하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>An Admin hands the account over</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자가 계정을 넘겨줌</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name} has no password yet, and one is chosen only with an Admin signed in.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}에게 아직 비밀번호가 없으며, 비밀번호는 관리자가 로그인한 상태에서만 정합니다.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>User disabled</source>
-        <translation type="unfinished"></translation>
+        <translation>사용 중지된 사용자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name} is disabled, so cannot sign in; their name stays on past records.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}은(는) 사용 중지되어 로그인할 수 없습니다. 이름은 과거 기록에 남습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Ask an Admin to enable the user again on Settings, under Users &amp; roles.</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자에게 설정의 사용자 및 역할에서 다시 사용하게 해 달라고 하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Signed-in Admin</source>
-        <translation type="unfinished"></translation>
+        <translation>로그인한 관리자</translation>
     </message>
     <message>
         <location line="+38"/>
         <source>Recovery code not accepted</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 코드가 맞지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The recovery code typed is not the one {name} was given last.</source>
-        <translation type="unfinished"></translation>
+        <translation>입력한 복구 코드가 {name}에게 마지막으로 발급된 것이 아닙니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Type the code from the sheet saved or printed when it was made; a code used once is replaced. Without it, another Admin resets the password on Settings.</source>
-        <translation type="unfinished"></translation>
+        <translation>코드를 만들 때 저장하거나 인쇄한 종이의 코드를 입력하십시오. 한 번 쓴 코드는 새것으로 바뀝니다. 코드가 없으면 다른 관리자가 설정에서 비밀번호를 재설정합니다.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Workspace from version 0.1</source>
-        <translation type="unfinished"></translation>
+        <translation>0.1 버전의 작업 공간</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>This workspace was created by AOI PoC Inspector 0.1 and cannot be upgraded.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 작업 공간은 AOI PoC Inspector 0.1로 만들어져 업그레이드할 수 없습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Choose a new workspace folder in the window that opens next; Cancel there closes the app.</source>
-        <translation type="unfinished"></translation>
+        <translation>다음에 열리는 창에서 새 작업 공간 폴더를 고르십시오. 거기서 취소하면 앱이 닫힙니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Workspace newer than the app</source>
-        <translation type="unfinished"></translation>
+        <translation>앱보다 새로운 작업 공간</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The workspace database was written by a newer build of the app: it records migration {migration}, which this build does not have.</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 데이터베이스가 더 새로운 빌드의 앱으로 쓰였습니다: 이 빌드에 없는 마이그레이션 {migration}이(가) 기록되어 있습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Update the app, or choose another workspace folder in the window that opens next; Cancel there closes the app.</source>
-        <translation type="unfinished"></translation>
+        <translation>앱을 업데이트하거나, 다음에 열리는 창에서 다른 작업 공간 폴더를 고르십시오. 거기서 취소하면 앱이 닫힙니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Migration file changed</source>
-        <translation type="unfinished"></translation>
+        <translation>마이그레이션 파일이 바뀜</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Migration {file} differs from the one recorded in the workspace database; a shipped migration is never edited.</source>
-        <translation type="unfinished"></translation>
+        <translation>마이그레이션 {file}이(가) 작업 공간 데이터베이스에 기록된 것과 다릅니다. 배포된 마이그레이션은 수정하지 않습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Reinstall the app to restore the file, or choose another workspace folder in the window that opens next; Cancel there closes the app.</source>
-        <translation type="unfinished"></translation>
+        <translation>앱을 다시 설치해 파일을 복원하거나, 다음에 열리는 창에서 다른 작업 공간 폴더를 고르십시오. 거기서 취소하면 앱이 닫힙니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Migration failed</source>
-        <translation type="unfinished"></translation>
+        <translation>마이그레이션 실패</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Migration {file} failed and was rolled back: {error}.</source>
-        <translation type="unfinished"></translation>
+        <translation>마이그레이션 {file}이(가) 실패해 되돌렸습니다: {error}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Restart the app; if it happens again, report it with the log file. To go back to the version you upgraded from, close the app and copy the backup aoi.sqlite.bak-… in the workspace folder over aoi.sqlite (engineer manual, chapter 1).</source>
-        <translation type="unfinished"></translation>
+        <translation>앱을 다시 시작하십시오. 또 발생하면 로그 파일과 함께 알려 주십시오. 업그레이드 전 버전으로 돌아가려면 앱을 닫고 작업 공간 폴더의 백업 aoi.sqlite.bak-…을 aoi.sqlite 위에 복사하십시오(엔지니어 설명서 1장).</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Workspace folder cannot hold the database</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 폴더에 데이터베이스를 둘 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The workspace folder does not support the database&apos;s write-ahead log (is it on a network drive?).</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 폴더가 데이터베이스의 미리 쓰기 로그를 지원하지 않습니다(네트워크 드라이브입니까?).</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Choose a folder on this computer in the window that opens next; Cancel there closes the app.</source>
-        <translation type="unfinished"></translation>
+        <translation>다음에 열리는 창에서 이 컴퓨터의 폴더를 고르십시오. 거기서 취소하면 앱이 닫힙니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Migration files invalid</source>
-        <translation type="unfinished"></translation>
+        <translation>마이그레이션 파일이 올바르지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The app&apos;s migration files are not valid: {problem}.</source>
-        <translation type="unfinished"></translation>
+        <translation>앱의 마이그레이션 파일이 올바르지 않습니다: {problem}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Reinstall the app and report it; this is a defect in the build.</source>
-        <translation type="unfinished"></translation>
+        <translation>앱을 다시 설치하고 알려 주십시오. 빌드의 결함입니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Unexpected error</source>
-        <translation type="unfinished"></translation>
+        <translation>예기치 않은 오류</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3828,442 +3828,442 @@
     <message>
         <location line="+8"/>
         <source>Workspace database damaged</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 데이터베이스 손상</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>At start, SQLite&apos;s check of the workspace database aoi.sqlite found {problems} problems in it.</source>
-        <translation type="unfinished"></translation>
+        <translation>시작할 때 SQLite가 작업 공간 데이터베이스 aoi.sqlite를 검사해 문제 {problems}개를 찾았습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Have an Admin close the app and restore the newest backup aoi.sqlite.bak-… (engineer manual, chapter 1), then send a support bundle. Results saved meanwhile may not be kept.</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자가 앱을 닫고 최신 백업 aoi.sqlite.bak-…을 복원한 뒤(엔지니어 설명서 1장) 지원 번들을 보내게 하십시오. 그사이 저장한 결과는 남지 않을 수 있습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Dataset store key missing</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터셋 저장소 키 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>This station&apos;s key store holds no key for the dataset store of {store}, or another key, so its board models cannot be trained or tested here.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 스테이션의 키 저장소에 {store}의 데이터셋 저장소 키가 없거나 다른 키가 있어, 그 보드 모델을 여기서 학습하거나 테스트할 수 없습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>An Admin restores the key from the store&apos;s recovery sheet: Settings, Advanced, Restore Key….</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자가 저장소의 복구용 종이로 키를 복원합니다: 설정, 고급, 키 복원….</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Evidence files missing</source>
-        <translation type="unfinished"></translation>
+        <translation>증거 파일 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{count} overlay or map files that inspection records name are not in the workspace folder.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 기록에 적힌 오버레이 또는 맵 파일 {count}개가 작업 공간 폴더에 없습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>If they were moved or deleted by hand, put them back from a backup; those records show no overlay or map until then. Verdicts and checks are kept in the database.</source>
-        <translation type="unfinished"></translation>
+        <translation>손으로 옮기거나 삭제했다면 백업에서 되돌려 놓으십시오. 그때까지 해당 기록에는 오버레이나 맵이 표시되지 않습니다. 판정과 검사 항목은 데이터베이스에 보관되어 있습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Files left by a crash</source>
-        <translation type="unfinished"></translation>
+        <translation>비정상 종료로 남은 파일</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{count} temporary files that a crash left in the workspace could not be removed at start.</source>
-        <translation type="unfinished"></translation>
+        <translation>비정상 종료로 작업 공간에 남은 임시 파일 {count}개를 시작할 때 지우지 못했습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Close any program that holds files in the workspace open, or restart the PC, then the app.</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간의 파일을 열고 있는 프로그램을 닫거나 PC를 다시 시작한 뒤 앱을 시작하십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Line folder not usable</source>
-        <translation type="unfinished"></translation>
+        <translation>라인 폴더를 쓸 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The {setting} {folder} set on Settings cannot be read and written: it is not there, its drive or share is not connected, or the station may not write to it.</source>
-        <translation type="unfinished"></translation>
+        <translation>설정에 지정된 {setting} {folder}을(를) 읽고 쓸 수 없습니다: 폴더가 없거나, 드라이브나 공유가 연결되지 않았거나, 스테이션에 쓰기 권한이 없습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Connect its drive or share, or have an Admin set another folder on Settings. Until then the line takes no board from an input folder and writes no result file to an output folder.</source>
-        <translation type="unfinished"></translation>
+        <translation>드라이브나 공유를 연결하거나, 관리자가 설정에서 다른 폴더를 지정하게 하십시오. 그때까지 라인은 입력 폴더에서 보드를 가져오지 않고 출력 폴더에 결과 파일을 쓰지 않습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Workspace folder not allowed</source>
-        <translation type="unfinished"></translation>
+        <translation>허용되지 않는 작업 공간 폴더</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The folder {path} cannot hold the workspace: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{path} 폴더에는 작업 공간을 둘 수 없습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Choose a folder on a drive of this PC that OneDrive does not copy, such as C:\AOI_Workspace. To keep the records, close the app and move the whole workspace folder there first, then choose it (install guide, &quot;Where the workspace goes&quot;); at start, choose it in the window that opens next.</source>
-        <translation type="unfinished"></translation>
+        <translation>C:\AOI_Workspace처럼 이 PC의 드라이브에 있고 OneDrive가 복사하지 않는 폴더를 고르십시오. 기록을 유지하려면 먼저 앱을 닫고 작업 공간 폴더 전체를 그곳으로 옮긴 뒤 고르십시오(설치 안내서, &quot;작업 공간의 위치&quot;). 시작할 때는 다음에 열리는 창에서 고르십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Workspace drive full</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 드라이브가 가득 참</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The workspace folder {path} could not be opened: its drive is full, with no room for the database&apos;s working files.</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 폴더 {path}을(를) 열 수 없습니다: 드라이브가 가득 차 데이터베이스의 작업 파일을 둘 공간이 없습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Restore no backup: the database is not damaged, only out of room. Free space on that drive, for example by moving old exports off it, and start the app again. Or choose another workspace folder in the window that opens next; Cancel there closes the app.</source>
-        <translation type="unfinished"></translation>
+        <translation>백업을 복원하지 마십시오: 데이터베이스는 손상되지 않았고 공간만 부족합니다. 오래된 내보내기 파일을 옮기는 등 그 드라이브의 공간을 확보한 뒤 앱을 다시 시작하십시오. 또는 다음에 열리는 창에서 다른 작업 공간 폴더를 고르십시오. 거기서 취소하면 앱이 닫힙니다.</translation>
     </message>
     <message>
         <location line="+20"/>
         <source>Leave out / : * ? &quot; &lt; &gt; \ | and control characters, end with no dot or space, and use no device name such as CON or NUL.</source>
-        <translation type="unfinished">/ : * ? &quot; &lt; &gt; \ | 와 제어 문자를 빼고, 점이나 공백으로 끝내지 말고, CON이나 NUL 같은 장치 이름은 쓰지 마십시오.</translation>
+        <translation>/ : * ? &quot; &lt; &gt; \ | 와 제어 문자는 빼고, 점이나 공백으로 끝내지 말고, CON이나 NUL 같은 장치 이름은 쓰지 마십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Add a letter A to Z or a digit, such as TBOX-A1 or 기판 2호.</source>
-        <translation type="unfinished">TBOX-A1이나 기판 2호처럼 A부터 Z까지의 문자나 숫자를 하나 넣으십시오.</translation>
+        <translation>TBOX-A1이나 기판 2호처럼 A~Z의 영문자나 숫자를 넣으십시오.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{existing} is already here. Pick it in the top bar, or type another name.</source>
-        <translation type="unfinished">{existing}이 이미 있습니다. 상단 막대에서 선택하거나 다른 이름을 입력하십시오.</translation>
+        <translation>{existing}이(가) 이미 있습니다. 상단 표시줄에서 고르거나 다른 이름을 입력하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>This has the letters and digits of {existing}. Change or add a letter or digit.</source>
-        <translation type="unfinished">{existing}과 문자와 숫자가 같습니다. 문자나 숫자를 바꾸거나 더하십시오.</translation>
+        <translation>{existing}와(과) 영문자와 숫자가 같습니다. 영문자나 숫자를 바꾸거나 더하십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Nothing was made: {reason}.</source>
-        <translation type="unfinished">아무것도 만들지 않았습니다: {reason}.</translation>
+        <translation>아무것도 만들지 않았습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>This computer cannot keep the key, so nothing was made. Set up on the station itself.</source>
-        <translation type="unfinished">이 컴퓨터는 키를 보관할 수 없어 아무것도 만들지 않았습니다. 스테이션에서 직접 설정하십시오.</translation>
+        <translation>이 컴퓨터는 키를 보관할 수 없어 아무것도 만들지 않았습니다. 스테이션에서 직접 설정하십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The key was not saved there ({reason}). Save it on a USB drive, or print it.</source>
-        <translation type="unfinished">키를 그곳에 저장하지 못했습니다({reason}). USB 드라이브에 저장하거나 인쇄하십시오.</translation>
+        <translation>키를 그곳에 저장하지 않았습니다 ({reason}). USB 드라이브에 저장하거나 인쇄하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Not an image this app reads. Save it as PNG or JPG and pick the folder again.</source>
-        <translation type="unfinished">이 앱이 읽을 수 있는 이미지가 아닙니다. PNG나 JPG로 저장한 다음 폴더를 다시 선택하십시오.</translation>
+        <translation>이 앱이 읽는 이미지가 아닙니다. PNG나 JPG로 저장한 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Not the camera&apos;s usual size. Use the image as the camera takes it.</source>
-        <translation type="unfinished">카메라의 보통 크기가 아닙니다. 카메라가 찍은 그대로의 이미지를 쓰십시오.</translation>
+        <translation>카메라의 평소 크기가 아닙니다. 카메라가 찍은 그대로의 이미지를 쓰십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Put it in a folder of ng named after its defect, then pick the folder again.</source>
-        <translation type="unfinished">ng 안에 결함 이름의 폴더를 만들어 넣은 다음 폴더를 다시 선택하십시오.</translation>
+        <translation>ng 안의 결함 이름을 딴 폴더에 넣은 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Wait until copying from the camera has ended, then pick the folder again.</source>
-        <translation type="unfinished">카메라에서 복사가 끝날 때까지 기다린 다음 폴더를 다시 선택하십시오.</translation>
+        <translation>카메라에서 복사가 끝날 때까지 기다린 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Taken once already; nothing to do. Not counted twice.</source>
-        <translation type="unfinished">이미 한 번 들어왔으므로 할 일이 없습니다. 두 번 세지 않습니다.</translation>
+        <translation>이미 한 번 가져왔습니다. 할 일이 없으며 두 번 세지 않습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Not in ok or ng. Move it into one and pick the folder again.</source>
-        <translation type="unfinished">ok나 ng 폴더에 없습니다. 둘 중 하나로 옮긴 다음 폴더를 다시 선택하십시오.</translation>
+        <translation>ok나 ng 안에 없습니다. 둘 중 하나로 옮긴 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Not copied ({reason}). Check the USB drive and the free space, then pick the folder again.</source>
-        <translation type="unfinished">복사하지 못했습니다({reason}). USB 드라이브와 여유 공간을 확인한 다음 폴더를 다시 선택하십시오.</translation>
+        <translation>복사하지 않았습니다 ({reason}). USB 드라이브와 여유 공간을 확인한 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Copying stopped at image {at} of {total}; the ones before it are kept. Check the USB drive and the free space, then pick the folder again.</source>
-        <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다. 그 앞의 이미지는 유지됩니다. USB 드라이브와 여유 공간을 확인한 다음 폴더를 다시 선택하십시오.</translation>
+        <translation>이미지 {at}/{total}에서 복사가 멈췄습니다. 그 앞의 이미지는 보관됩니다. USB 드라이브와 여유 공간을 확인한 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Copying stopped at image {at} of {total} ({reason}); the ones before it are kept. Fix that, then pick the folder again.</source>
-        <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다({reason}). 그 앞의 이미지는 유지됩니다. 그 문제를 고친 다음 폴더를 다시 선택하십시오.</translation>
+        <translation>이미지 {at}/{total}에서 복사가 멈췄습니다 ({reason}). 그 앞의 이미지는 보관됩니다. 원인을 해결한 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The workspace folder&apos;s path is too long. Pick a shorter one on Settings, then the folder again.</source>
-        <translation type="unfinished">작업 공간 폴더의 경로가 너무 깁니다. 설정에서 더 짧은 경로를 고른 다음 폴더를 다시 선택하십시오.</translation>
+        <translation>작업 공간 폴더의 경로가 너무 깁니다. 설정에서 더 짧은 폴더를 고른 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>{store}&apos;s images cannot be opened on this station: {reason}. An Admin types the saved recovery key on Settings (Restore Key…).</source>
-        <translation type="unfinished">이 스테이션에서 {store}의 이미지를 열 수 없습니다: {reason}. 관리자가 설정에서 저장해 둔 복구 키를 입력합니다(키 복원…).</translation>
+        <translation>{store}의 이미지를 이 스테이션에서 열 수 없습니다: {reason}. 관리자가 설정(키 복원…)에서 저장해 둔 복구 키를 입력합니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The box was not kept: {reason}. Draw it again.</source>
-        <translation type="unfinished">박스를 저장하지 않았습니다: {reason}. 다시 그리십시오.</translation>
+        <translation>박스를 보관하지 않았습니다: {reason}. 다시 그리십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The box was not kept: it lies outside the image. Draw it again.</source>
-        <translation type="unfinished">박스를 저장하지 않았습니다. 이미지 밖에 있습니다. 다시 그리십시오.</translation>
+        <translation>박스를 보관하지 않았습니다: 이미지 밖에 있습니다. 다시 그리십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The box was not kept: the image is no longer in the workspace. Pick the folder again.</source>
-        <translation type="unfinished">박스를 저장하지 않았습니다. 이미지가 더 이상 작업 공간에 없습니다. 폴더를 다시 선택하십시오.</translation>
+        <translation>박스를 보관하지 않았습니다: 이미지가 더 이상 작업 공간에 없습니다. 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Train stopped: {reason}. Fix that, then press Train again.</source>
-        <translation type="unfinished">학습이 멈췄습니다: {reason}. 그 문제를 고친 다음 학습을 다시 누르십시오.</translation>
+        <translation>학습이 멈췄습니다: {reason}. 원인을 해결한 뒤 학습을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Another board model&apos;s names would mix with this one&apos;s. Set the boards up under a new name.</source>
-        <translation type="unfinished">다른 보드 모델의 이름과 이 보드 모델의 이름이 섞입니다. 새 이름으로 보드를 설정하십시오.</translation>
+        <translation>다른 보드 모델의 이름과 섞이게 됩니다. 새 이름으로 보드를 설정하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Nothing was kept. Free space on the workspace drive, or pick a shorter workspace folder on Settings.</source>
-        <translation type="unfinished">아무것도 남지 않았습니다. 작업 공간 드라이브의 공간을 비우거나, 설정에서 더 짧은 작업 공간 폴더를 고르십시오.</translation>
+        <translation>아무것도 보관하지 않았습니다. 작업 공간 드라이브의 공간을 확보하거나 설정에서 더 짧은 작업 공간 폴더를 고르십시오.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Wait for the training under way to end, then press Train again.</source>
-        <translation type="unfinished">진행 중인 학습이 끝난 뒤 학습을 다시 누르십시오.</translation>
+        <translation>진행 중인 학습이 끝나기를 기다린 뒤 학습을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>No AI model was made: {reason}. Add images of more good boards on Training, then press Train again.</source>
-        <translation type="unfinished">AI 모델을 만들지 않았습니다: {reason}. 학습 페이지에서 양품 보드 이미지를 더 추가한 다음 학습을 다시 누르십시오.</translation>
+        <translation>AI 모델을 만들지 않았습니다: {reason}. 학습에서 양품 보드 이미지를 더 추가한 뒤 학습을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>No AI model was made: {count} of the images it would train on are kept apart already. Add images of more good boards on Training, then press Train again.</source>
-        <translation type="unfinished">AI 모델을 만들지 않았습니다. 학습할 이미지 중 {count}장이 이미 따로 두어져 있습니다. 학습 페이지에서 양품 보드 이미지를 더 추가한 다음 학습을 다시 누르십시오.</translation>
+        <translation>AI 모델을 만들지 않았습니다: 학습에 쓸 이미지 중 {count}장이 이미 따로 보관되어 있습니다. 학습에서 양품 보드 이미지를 더 추가한 뒤 학습을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The AI model was made but does not judge boards yet: {reason}.</source>
-        <translation type="unfinished">AI 모델을 만들었지만 아직 보드를 판정하지 않습니다: {reason}.</translation>
+        <translation>AI 모델을 만들었지만 아직 보드를 판정하지 않습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The AI model was made but does not judge boards yet: it has no AI model card. Press Train again.</source>
-        <translation type="unfinished">AI 모델을 만들었지만 아직 보드를 판정하지 않습니다. AI 모델 카드가 없습니다. 학습을 다시 누르십시오.</translation>
+        <translation>AI 모델을 만들었지만 아직 보드를 판정하지 않습니다: AI 모델 카드가 없습니다. 학습을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The AI model was made but does not judge boards yet: a Validated AI model judges {board}&apos;s boards, and a Trial one never replaces it.</source>
-        <translation type="unfinished">AI 모델을 만들었지만 아직 보드를 판정하지 않습니다. Validated AI 모델이 {board}의 보드를 판정하며, Trial 모델은 그 모델을 대신하지 않습니다.</translation>
+        <translation>AI 모델을 만들었지만 아직 보드를 판정하지 않습니다: Validated AI 모델이 {board}의 보드를 판정하고 있으며, Trial 모델은 이를 대체하지 않습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Nothing was made: Validated AI model {version} judges {board}&apos;s boards, and Train makes a Trial one, which never replaces it.</source>
-        <translation type="unfinished">아무것도 만들지 않았습니다. Validated AI 모델 {version}이 {board}의 보드를 판정하며, 학습은 Trial AI 모델을 만드는데 Trial 모델은 Validated 모델을 대신하지 않습니다.</translation>
+        <translation>아무것도 만들지 않았습니다: Validated AI 모델 {version}이(가) {board}의 보드를 판정하고 있고, 학습은 Trial 모델을 만드는데 Trial 모델은 이를 대체하지 않습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The images of {board} were shredded on {date}, so no AI model trained from them judges boards. An Admin makes a board model under another name with + New, naming its customer; then add its images.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board}의 이미지가 {date}에 파기되어, 그것으로 학습한 AI 모델은 보드를 판정하지 않습니다. 관리자가 + 새로 만들기로 다른 이름의 보드 모델을 만들고 고객을 지정한 뒤 이미지를 추가하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Not tested: {reason}. The AI model judges boards; AI Model Test tests it again.</source>
-        <translation type="unfinished">테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
+        <translation>테스트하지 않았습니다: {reason}. AI 모델은 보드를 판정하며, AI 모델 테스트에서 다시 테스트합니다.</translation>
     </message>
     <message>
         <location line="-360"/>
         <source>Try again; if it happens again, restart the app and send the log file (the workspace&apos;s logs folder) to support.</source>
-        <translation type="unfinished"></translation>
+        <translation>다시 시도하십시오. 또 발생하면 앱을 다시 시작하고 로그 파일(작업 공간의 logs 폴더)을 지원팀에 보내십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Setting invalid</source>
-        <translation type="unfinished"></translation>
+        <translation>잘못된 설정</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The setting {name} is {value}; it must be {expected}.</source>
-        <translation type="unfinished"></translation>
+        <translation>설정 {name}의 값이 {value}입니다. {expected}이어야 합니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>On the Settings page, correct it and save again. If the app stopped at start-up, fix or remove that line in settings.json, in the default workspace folder, and start the app again.</source>
-        <translation type="unfinished"></translation>
+        <translation>설정 페이지에서 고친 뒤 다시 저장하십시오. 앱이 시작할 때 멈췄다면 기본 작업 공간 폴더의 settings.json에서 그 줄을 고치거나 지운 뒤 앱을 다시 시작하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Backup before upgrade failed</source>
-        <translation type="unfinished"></translation>
+        <translation>업그레이드 전 백업 실패</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The workspace database could not be copied to {file} before this version upgrades it: {error}. Nothing was changed.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 버전으로 업그레이드하기 전에 작업 공간 데이터베이스를 {file}(으)로 복사하지 못했습니다: {error}. 아무것도 바뀌지 않았습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Free disk space on the workspace folder&apos;s drive and check that the folder can be written, then start the app again.</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 폴더가 있는 드라이브의 공간을 확보하고 폴더에 쓸 수 있는지 확인한 뒤 앱을 다시 시작하십시오.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Settings file cannot be read</source>
-        <translation type="unfinished"></translation>
+        <translation>설정 파일을 읽을 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The settings file {path} could not be read: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>설정 파일 {path}을(를) 읽을 수 없습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Correct the file, or rename it so the app starts with the default settings, then start the app again.</source>
-        <translation type="unfinished"></translation>
+        <translation>파일을 고치거나, 앱이 기본 설정으로 시작하도록 파일 이름을 바꾼 뒤 앱을 다시 시작하십시오.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Workspace cannot be opened</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간을 열 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The workspace folder {path} could not be opened: {error}.</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 폴더 {path}을(를) 열 수 없습니다: {error}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>If the folder is on a drive that is not connected, connect it and start the app again; if its database aoi.sqlite is damaged, restore the backup aoi.sqlite.bak-… (engineer manual, chapter 1). Or choose another workspace folder in the window that opens next; Cancel there closes the app.</source>
-        <translation type="unfinished"></translation>
+        <translation>폴더가 연결되지 않은 드라이브에 있다면 연결한 뒤 앱을 다시 시작하십시오. 데이터베이스 aoi.sqlite가 손상되었다면 백업 aoi.sqlite.bak-…을 복원하십시오(엔지니어 설명서 1장). 또는 다음에 열리는 창에서 다른 작업 공간 폴더를 고르십시오. 거기서 취소하면 앱이 닫힙니다.</translation>
     </message>
     <message>
         <location line="+33"/>
         <source>No board model selected</source>
-        <translation type="unfinished"></translation>
+        <translation>선택한 보드 모델 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{page} needs a board model, and none is selected in the top bar.</source>
-        <translation type="unfinished"></translation>
+        <translation>{page}에는 보드 모델이 필요한데, 상단 표시줄에 선택된 것이 없습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Select a board model in the top bar. If the list is empty, an Engineer or Admin creates one with + New.</source>
-        <translation type="unfinished"></translation>
+        <translation>상단 표시줄에서 보드 모델을 고르십시오. 목록이 비어 있으면 엔지니어나 관리자가 + 새로 만들기로 만듭니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Demo bundle cannot be used</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 번들을 사용할 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The demo bundle {path} cannot be used: {reason}.</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 번들 {path}을(를) 사용할 수 없습니다: {reason}.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Folder is not a demo workspace</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간이 아닌 폴더</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The folder {path} holds files and is not a demo workspace, so the demo was not written there.</source>
-        <translation type="unfinished"></translation>
+        <translation>{path} 폴더에 파일이 있고 데모 작업 공간이 아니어서, 데모를 그곳에 쓰지 않았습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Move or rename that folder, then load the demo again; the app never deletes a folder it did not make for the demo.</source>
-        <translation type="unfinished"></translation>
+        <translation>그 폴더를 옮기거나 이름을 바꾼 뒤 데모를 다시 불러오십시오. 앱은 데모용으로 직접 만들지 않은 폴더를 삭제하지 않습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Demo reset did not finish</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 초기화가 끝나지 않음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The demo workspace could not be put back: {path}: {error}.</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간을 되돌리지 못했습니다: {path}: {error}.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Close the program that holds the file (an image viewer, Explorer or a backup), then press Reset Demo again; the production workspace is not touched.</source>
-        <translation type="unfinished"></translation>
+        <translation>파일을 잡고 있는 프로그램(이미지 뷰어, 탐색기 또는 백업)을 닫은 뒤 데모 초기화를 다시 누르십시오. 생산 작업 공간은 건드리지 않습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>A stored path leads outside the workspace</source>
-        <translation type="unfinished"></translation>
+        <translation>저장된 경로가 작업 공간 밖을 가리킴</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The database names {path}, which leads outside the workspace folder {root}, so the app neither opens nor writes it. The app never stores such a path: the database was changed outside the app.</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터베이스에 적힌 {path}이(가) 작업 공간 폴더 {root} 밖을 가리켜, 앱이 열지도 쓰지도 않습니다. 앱은 이런 경로를 저장하지 않습니다: 데이터베이스가 앱 밖에서 바뀌었습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Ask an Admin to restore the workspace from its backup (installation guide, Backup and restore).</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자에게 백업에서 작업 공간을 복원해 달라고 하십시오(설치 안내서, 백업 및 복원).</translation>
     </message>
     <message>
         <location line="-1661"/>
         <source>Board judged NG</source>
-        <translation type="unfinished"></translation>
+        <translation>보드가 NG로 판정됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board {board} was judged NG with {defects} defect(s).</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 {board}이(가) 결함 {defects}개로 NG 판정을 받았습니다.</translation>
     </message>
     <message>
         <location line="+121"/>
         <source>No action is needed: each record names the AI model version active when its board was judged, the recipe revision that judged it, which says whether the AI check ran, and the Golden board it was judged against.</source>
-        <translation type="unfinished"></translation>
+        <translation>조치할 것은 없습니다: 각 기록에는 보드를 판정할 때 활성이던 AI 모델 버전, 판정한 레시피 리비전(AI 검사가 실행되었는지 알려 줍니다), 비교한 골든 보드가 적힙니다.</translation>
     </message>
     <message>
         <location line="+203"/>
         <source>The decision table is the stored one; use Side by side or Defect boxes only, or inspect the board again on Inspection to see its heatmaps.</source>
-        <translation type="unfinished"></translation>
+        <translation>판정 표는 저장된 것입니다. 나란히 보기나 결함 박스만을 쓰거나, 히트맵을 보려면 검사에서 보드를 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Record {id} ({file}) has no stored decision table that can be read: it was saved before migration 0006, it is damaged, or no record has that number or UUID.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {id} ({file})에 읽을 수 있는 저장된 판정 표가 없습니다: 마이그레이션 0006 이전에 저장되었거나, 손상되었거나, 그 번호나 UUID의 기록이 없습니다.</translation>
     </message>
     <message>
         <location line="+66"/>
         <source>Train the board model again.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델을 다시 학습하십시오.</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>Train an AI model on the Training page when the AI checks are needed.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 검사가 필요하면 학습 페이지에서 AI 모델을 학습시키십시오.</translation>
     </message>
     <message>
         <location line="+68"/>
@@ -4313,7 +4313,7 @@
     <message>
         <location line="+38"/>
         <source>An Admin types the store&apos;s recovery key into Settings › Dataset stores › Advanced › Restore Key… on this station when its key is missing or wrong; a file changed outside the app comes back only from a backup. Nothing was changed.</source>
-        <translation type="unfinished"></translation>
+        <translation>키가 없거나 틀리면 관리자가 이 스테이션의 설정 › 데이터셋 저장소 › 고급 › 키 복원…에 저장소의 복구 키를 입력합니다. 앱 밖에서 바뀐 파일은 백업으로만 되돌릴 수 있습니다. 아무것도 바뀌지 않았습니다.</translation>
     </message>
     <message>
         <location line="+29"/>
@@ -4343,162 +4343,162 @@
     <message>
         <location line="+99"/>
         <source>A Trial AI model does not replace a Validated one</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial AI 모델은 Validated 모델을 대체하지 않음</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check; then freeze a Validated version and train from it. The active AI model and Golden board stay as they are.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습에서 점검 시작을 누르십시오: 두 번째 사람이 라벨을 검토하고 두 사람이 일치도 검사를 실행한 뒤, Validated 버전을 동결해 그것으로 학습합니다. 활성 AI 모델과 골든 보드는 그대로입니다.</translation>
     </message>
     <message>
         <location line="+38"/>
         <source>Board model name not allowed: reads as another</source>
-        <translation type="unfinished">보드 모델 이름 사용 불가: 다른 이름과 똑같이 읽힘</translation>
+        <translation>허용되지 않는 보드 모델 이름: 다른 이름과 같게 읽힘</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The board model name &quot;{name}&quot; reads the same as board model &quot;{existing}&quot;, which exists already, once upper and lower case, full-width and other forms of the same letter or digit, the kind of space and characters that show nothing are set aside.</source>
-        <translation type="unfinished">대소문자, 같은 문자나 숫자의 전각 및 기타 형태, 공백의 종류, 보이지 않는 문자를 빼고 보면 보드 모델 이름 &quot;{name}&quot;은(는) 이미 있는 보드 모델 &quot;{existing}&quot;과(와) 똑같이 읽힙니다.</translation>
+        <translation>보드 모델 이름 &quot;{name}&quot;은(는) 대소문자, 전각 등 같은 글자나 숫자의 다른 형태, 공백의 종류, 보이지 않는 문자를 빼고 보면 이미 있는 보드 모델 &quot;{existing}&quot;와(과) 같게 읽힙니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Select &quot;{existing}&quot; in the top bar to work on that board model, or type a name that differs from it in a letter A to Z or a digit 0 to 9, typed on an English keyboard. Nothing was made.</source>
-        <translation type="unfinished">그 보드 모델로 작업하려면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니면 영문 키보드로 입력한 A~Z 문자나 0~9 숫자가 다른 이름을 입력하십시오. 아무것도 만들지 않았습니다.</translation>
+        <translation>그 보드 모델로 작업하려면 상단 표시줄에서 &quot;{existing}&quot;을(를) 고르고, 아니면 영문 자판으로 입력한 A~Z의 영문자나 0~9의 숫자가 다른 이름을 입력하십시오. 아무것도 만들지 않았습니다.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>The board model name &quot;{name}&quot; has the same letters A to Z and digits 0 to 9 as board model &quot;{existing}&quot;, case aside, so the dataset versions of both would be named DS-{token}-…, and their names would mix.</source>
-        <translation type="unfinished">보드 모델 이름 &quot;{name}&quot;의 A~Z 문자와 0~9 숫자가 대소문자를 빼면 보드 모델 &quot;{existing}&quot;과(와) 같아, 두 보드 모델의 데이터셋 버전 이름이 모두 DS-{token}-…이 되어 섞이게 됩니다.</translation>
+        <translation>보드 모델 이름 &quot;{name}&quot;은(는) 대소문자를 빼면 보드 모델 &quot;{existing}&quot;와(과) A~Z의 영문자와 0~9의 숫자가 같아, 둘의 데이터셋 버전 이름이 모두 DS-{token}-…이 되어 섞이게 됩니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Select &quot;{existing}&quot; in the top bar if it is the same board, or give the new board model a name whose letters A to Z or digits 0 to 9 differ from those of &quot;{existing}&quot;, such as one with another digit added. Nothing was made.</source>
-        <translation type="unfinished">같은 보드라면 상단 바에서 &quot;{existing}&quot;을(를) 선택하고, 아니라면 새 보드 모델에 A~Z 문자나 0~9 숫자가 &quot;{existing}&quot;과(와) 다른 이름(예: 숫자를 하나 더 붙인 이름)을 지정하십시오. 아무것도 만들지 않았습니다.</translation>
+        <translation>같은 보드라면 상단 표시줄에서 &quot;{existing}&quot;을(를) 고르고, 아니면 숫자를 하나 더하는 식으로 &quot;{existing}&quot;와(과) A~Z의 영문자나 0~9의 숫자가 다른 이름을 주십시오. 아무것도 만들지 않았습니다.</translation>
     </message>
     <message>
         <location line="+86"/>
         <source>Start the Checks on Training: a second person checks the labels and two people run an agreement check, then freeze a Validated version, train from it and test again. The run and its CSV are kept.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습에서 점검 시작을 누르십시오: 두 번째 사람이 라벨을 검토하고 두 사람이 일치도 검사를 실행한 뒤, Validated 버전을 동결해 그것으로 학습하고 다시 테스트합니다. 실행과 CSV는 보관됩니다.</translation>
     </message>
     <message>
         <location line="+22"/>
         <source>ROI thresholds refused</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI 임계값이 거부됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>ROI {roi}: {quantity} min {low} and max {high} cannot be stored; a threshold is 0 or more, and min is not above max.</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI {roi}: {quantity} 최소 {low}, 최대 {high}은(는) 저장할 수 없습니다. 임계값은 0 이상이고, 최소는 최대보다 클 수 없습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Nothing was applied. Correct the two values, or step a threshold down below 0 to — to leave it unset, then press Apply again.</source>
-        <translation type="unfinished"></translation>
+        <translation>아무것도 적용하지 않았습니다. 두 값을 고치거나, 임계값을 0 아래의 —까지 내려 설정하지 않은 상태로 둔 뒤 적용을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+26"/>
         <source>To give them in mm, press Calibrate Scale…, click two points on the Golden board a known distance apart, enter that distance in mm and press Set Scale.</source>
-        <translation type="unfinished"></translation>
+        <translation>mm로 입력하려면 배율 보정…을 누르고, 골든 보드에서 거리를 아는 두 점을 클릭한 뒤 그 거리를 mm로 입력하고 배율 설정을 누르십시오.</translation>
     </message>
     <message>
         <location line="+60"/>
         <source>The {size} of board model {board_model} cannot be {value} mm: a size in mm is a number above 0 and at most {most}, and an ROI&apos;s box is four of them, its x and y 0 or more.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model}의 {size}은(는) {value} mm가 될 수 없습니다: mm 크기는 0보다 크고 {most} 이하인 수이며, ROI의 박스는 그런 수 네 개이고 x와 y는 0 이상입니다.</translation>
     </message>
     <message>
         <location line="+115"/>
         <source>The drive that holds the workspace is {used} % full, with {free} GB free. Inspection goes on; at 95 % the app stops keeping the overlay and maps of OK boards.</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간이 있는 드라이브가 {used} % 찼고 {free} GB 남았습니다. 검사는 계속됩니다. 95 %가 되면 앱이 OK 보드의 오버레이와 맵을 보관하지 않습니다.</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>The drive that holds the workspace is {used} % full, with {free} GB free. OK boards are saved without their overlay and maps, and their record says so; NG and WARN boards keep all their evidence.</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간이 있는 드라이브가 {used} % 찼고 {free} GB 남았습니다. OK 보드는 오버레이와 맵 없이 저장되고 기록에 그렇게 적힙니다. NG와 WARN 보드는 모든 증거를 보관합니다.</translation>
     </message>
     <message>
         <location line="+39"/>
         <source>{name} was not signed in: the password or PIN typed is not theirs.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}(으)로 로그인하지 못했습니다: 입력한 비밀번호 또는 PIN이 맞지 않습니다.</translation>
     </message>
     <message>
         <location line="+29"/>
         <source>Ask an Admin to unlock it with Unlock User on Settings. An Admin with no other Admin to do it signs in with Use Recovery Code… at Switch User.</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자에게 설정의 사용자 잠금 해제로 풀어 달라고 하십시오. 풀어 줄 다른 관리자가 없는 관리자는 사용자 전환에서 복구 코드 사용…으로 로그인합니다.</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>Ask an Admin to sign in (on a new station, the Admin chooses theirs first), then choose {name} under Switch User and type the new password twice.</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자에게 로그인해 달라고 한 뒤(새 스테이션에서는 관리자가 먼저 자기 비밀번호를 정합니다), 사용자 전환에서 {name}을(를) 고르고 새 비밀번호를 두 번 입력하십시오.</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>{name} is signed in now, so cannot disable or reset their own account.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}은(는) 지금 로그인해 있어 자기 계정을 사용 중지하거나 재설정할 수 없습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Another Admin does it, from their own sign-in.</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 관리자가 자기 계정으로 로그인해 처리합니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Admin without a password</source>
-        <translation type="unfinished"></translation>
+        <translation>비밀번호 없는 관리자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name} signed in without a password, so cannot manage users while another Admin has one.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}은(는) 비밀번호 없이 로그인했으므로, 비밀번호가 있는 다른 관리자가 있는 동안에는 사용자를 관리할 수 없습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Ask an Admin with a password to sign in under Switch User and do it.</source>
-        <translation type="unfinished"></translation>
+        <translation>비밀번호가 있는 관리자에게 사용자 전환으로 로그인해 처리해 달라고 하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Last Admin who can sign in</source>
-        <translation type="unfinished"></translation>
+        <translation>비밀번호로 로그인할 수 있는 마지막 관리자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name} is the last Admin who can sign in with a password, so no one could then manage users or settings.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}은(는) 비밀번호로 로그인할 수 있는 마지막 관리자여서, 그러면 사용자나 설정을 관리할 사람이 없게 됩니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>First add another Admin and have them sign in once, to choose their password and get their recovery code, or unlock a locked Admin.</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 다른 관리자를 추가해 한 번 로그인하게 하여 비밀번호를 정하고 복구 코드를 받게 하거나, 잠긴 관리자의 잠금을 푸십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Last Operator</source>
-        <translation type="unfinished"></translation>
+        <translation>마지막 작업자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name} is the last enabled Operator, whom the app signs in when it starts.</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}은(는) 사용 중인 마지막 작업자이며, 앱이 시작할 때 이 사용자로 로그인합니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Add another Operator first.</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 다른 작업자를 추가하십시오.</translation>
     </message>
     <message>
         <location line="+134"/>
         <source>Workspace in use</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 사용 중</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Another program is using {path} in the workspace, so the app could not open it: {error}.</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 프로그램이 작업 공간의 {path}을(를) 사용하고 있어 앱이 열지 못했습니다: {error}.</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Workspace database busy</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 데이터베이스 사용 중</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -4513,47 +4513,47 @@
     <message>
         <location line="+1"/>
         <source>it is not UTF-8 text</source>
-        <translation type="unfinished"></translation>
+        <translation>UTF-8 텍스트가 아닙니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>it does not hold a JSON object of settings</source>
-        <translation type="unfinished"></translation>
+        <translation>설정의 JSON 객체가 들어 있지 않습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the full path of a folder</source>
-        <translation type="unfinished"></translation>
+        <translation>폴더의 전체 경로</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>a whole number</source>
-        <translation type="unfinished"></translation>
+        <translation>정수</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>a whole number above 0</source>
-        <translation type="unfinished"></translation>
+        <translation>0보다 큰 정수</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>a whole number of 0 or more</source>
-        <translation type="unfinished"></translation>
+        <translation>0 이상의 정수</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>text</source>
-        <translation type="unfinished"></translation>
+        <translation>텍스트</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>true or false</source>
-        <translation type="unfinished"></translation>
+        <translation>true 또는 false</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>a whole number from {least} to {most}</source>
-        <translation type="unfinished"></translation>
+        <translation>{least}~{most}의 정수</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -4563,37 +4563,37 @@
     <message>
         <location line="+1"/>
         <source>one of {values}</source>
-        <translation type="unfinished"></translation>
+        <translation>{values} 중 하나</translation>
     </message>
     <message>
         <location filename="../core/anomaly.py" line="+42"/>
         <source>the file is damaged ({damaged})</source>
-        <translation type="unfinished"></translation>
+        <translation>파일이 손상되었습니다 ({damaged})</translation>
     </message>
     <message>
         <location line="+20"/>
         <source>its image threshold {value} is not a number above 0</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 임계값 {value}이(가) 0보다 큰 수가 아닙니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>its pixel threshold {value} is not a number above 0</source>
-        <translation type="unfinished"></translation>
+        <translation>픽셀 임계값 {value}이(가) 0보다 큰 수가 아닙니다</translation>
     </message>
     <message>
         <location line="-19"/>
         <source>{entry} is marked as a folder</source>
-        <translation type="unfinished"></translation>
+        <translation>{entry}이(가) 폴더로 표시되어 있습니다</translation>
     </message>
     <message>
         <location line="+283"/>
         <source>its weights do not fit this app&apos;s AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>가중치가 이 앱의 AI 모델에 맞지 않습니다</translation>
     </message>
     <message>
         <location line="-282"/>
         <source>its input size {size} is not a multiple of {stride} pixels</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 크기 {size}이(가) {stride}픽셀의 배수가 아닙니다</translation>
     </message>
     <message>
         <location line="-2"/>
@@ -4603,7 +4603,7 @@
     <message>
         <location line="+3"/>
         <source>its {key} is not a {size} x {size} map of finite numbers</source>
-        <translation type="unfinished"></translation>
+        <translation>{key}이(가) 유한한 수로 된 {size} x {size} 맵이 아닙니다</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -4623,87 +4623,87 @@
     <message>
         <location line="+300"/>
         <source>its err_std holds a spread of 0 or less</source>
-        <translation type="unfinished"></translation>
+        <translation>err_std에 0 이하의 편차가 들어 있습니다</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>its weights hold numbers that are not finite</source>
-        <translation type="unfinished"></translation>
+        <translation>가중치에 유한하지 않은 수가 들어 있습니다</translation>
     </message>
     <message>
         <location filename="../data/migrate.py" line="+37"/>
         <source>file name is not NNNN_name.sql: {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>파일 이름이 NNNN_name.sql이 아닙니다: {file}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{file} manages its own transaction; the runner does that</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}이(가) 트랜잭션을 직접 관리합니다. 그것은 실행기가 합니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>numbers must run 1, 2, 3 ... without gaps: found {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>번호는 빈 곳 없이 1, 2, 3 ... 으로 이어져야 합니다: {file} 발견</translation>
     </message>
     <message>
         <location filename="../ui/pages/training_import.py" line="+39"/>
         <source>{code} {title}</source>
-        <translation type="unfinished"></translation>
+        <translation>{code} {title}</translation>
     </message>
     <message>
         <location filename="../ui/pages/model_test.py" line="+71"/>
         <source>AI model {version}</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>no AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>no AI model (the AI check off)</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 없음 (AI 검사 꺼짐)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Golden board {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드 {file}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>no Golden board</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>a scale of {scale:.{digits}f} px/mm</source>
-        <translation type="unfinished"></translation>
+        <translation>배율 {scale:.{digits}f} px/mm</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>no scale</source>
-        <translation type="unfinished"></translation>
+        <translation>배율 없음</translation>
     </message>
     <message>
         <location filename="../core/recipe.py" line="+15"/>
         <source>minimum defect size</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 크기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>box of ROI {roi}</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI {roi}의 박스</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{mm:.2f} mm</source>
-        <translation type="unfinished"></translation>
+        <translation>{mm:.2f} mm</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{area} px of area</source>
-        <translation type="unfinished"></translation>
+        <translation>면적 {area} px</translation>
     </message>
     <message>
         <location filename="../core/labels.py" line="+48"/>
@@ -4763,12 +4763,12 @@
     <message>
         <location filename="../core/demo.py" line="+109"/>
         <source>it has no readable bundle.json</source>
-        <translation type="unfinished"></translation>
+        <translation>읽을 수 있는 bundle.json이 없습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>its bundle.json is not one this version of the app reads</source>
-        <translation type="unfinished"></translation>
+        <translation>bundle.json이 이 버전의 앱이 읽는 것이 아닙니다</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -4779,17 +4779,17 @@
     <message>
         <location line="+1"/>
         <source>{count} file(s) do not match its bundle.json, the first {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>파일 {count}개가 bundle.json과 맞지 않습니다. 첫 번째는 {file}</translation>
     </message>
     <message>
         <location line="+100"/>
         <source>its store-key.json cannot be read</source>
-        <translation type="unfinished"></translation>
+        <translation>store-key.json을 읽을 수 없습니다</translation>
     </message>
     <message>
         <location filename="../ui/main_window.py" line="-46"/>
         <source>demo reset</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 초기화</translation>
     </message>
     <message>
         <location filename="../core/annotation_files.py" line="+43"/>
@@ -4799,62 +4799,62 @@
     <message>
         <location filename="../data/workspace_guard.py" line="+19"/>
         <source>it is on a network drive, where the database&apos;s locks are not safe</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터베이스의 잠금이 안전하지 않은 네트워크 드라이브에 있습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>it is in a folder OneDrive copies to the cloud, which holds and puts back files</source>
-        <translation type="unfinished"></translation>
+        <translation>OneDrive가 클라우드로 복사하는 폴더에 있습니다. OneDrive는 파일을 잡아 두고 되돌려 놓습니다</translation>
     </message>
     <message>
         <location filename="../core/passwords.py" line="+32"/>
         <source>is shorter than {length} characters</source>
-        <translation type="unfinished"></translation>
+        <translation>{length}자보다 짧습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>is longer than {length} characters</source>
-        <translation type="unfinished"></translation>
+        <translation>{length}자보다 깁니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>is the name of a user, a customer or the product</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자, 고객 또는 제품의 이름입니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>is the demo workspace&apos;s published password</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 작업 공간의 공개된 비밀번호입니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>is not 4 to 6 digits</source>
-        <translation type="unfinished"></translation>
+        <translation>숫자 4~6자리가 아닙니다</translation>
     </message>
     <message>
         <location filename="../core/folder_watch.py" line="+40"/>
         <source>its name is not &lt;board model&gt;_&lt;revision&gt;_&lt;serial&gt;_&lt;view&gt;_&lt;UTC time&gt;.png, such as {example}</source>
-        <translation type="unfinished"></translation>
+        <translation>이름이 {example}처럼 &lt;보드 모델&gt;_&lt;리비전&gt;_&lt;일련번호&gt;_&lt;뷰&gt;_&lt;UTC 시각&gt;.png 형식이 아닙니다</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>its time {time} is not a real date and time</source>
-        <translation type="unfinished"></translation>
+        <translation>시각 {time}이(가) 실제 날짜와 시각이 아닙니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>a file of the same name is in done/</source>
-        <translation type="unfinished"></translation>
+        <translation>같은 이름의 파일이 done/에 있습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>the same image was inspected before, as {earlier}</source>
-        <translation type="unfinished"></translation>
+        <translation>같은 이미지를 이전에 {earlier}(으)로 검사했습니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>it could not be decoded as an image.</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지로 디코딩할 수 없습니다.</translation>
     </message>
 </context>
 <context>
@@ -4862,162 +4862,162 @@
     <message>
         <location filename="../core/explain.py" line="+34"/>
         <source>Similarity to the Golden board is {value}, below its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드와의 유사도가 {value}(으)로, 임계값 {threshold}보다 낮습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Similarity to the Golden board is {value}, at or just above its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드와의 유사도가 {value}(으)로, 임계값 {threshold}와(과) 같거나 조금 높습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The changed area is {value} of the board, at or above its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>변화 면적이 보드의 {value}(으)로, 임계값 {threshold} 이상입니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The changed area is {value} of the board, close to its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>변화 면적이 보드의 {value}(으)로, 임계값 {threshold}에 가깝습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The number of difference regions is {value}, more than the threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>차이 영역 수가 {value}(으)로, 임계값 {threshold}보다 많습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The number of alignment points is {value}, fewer than the threshold of {threshold}, so the other checks may be off: check that the board lies flat, then inspect it again.</source>
-        <translation type="unfinished"></translation>
+        <translation>정렬 점 수가 {value}(으)로 임계값 {threshold}보다 적어 다른 검사 항목이 어긋날 수 있습니다. 보드가 평평하게 놓였는지 확인한 뒤 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>The photo shows {value} of the Golden board&apos;s frame, where {threshold} is needed and every ROI whole: the rest of the board was not inspected. Place the board fully in view, then inspect it again.</source>
-        <translation type="unfinished"></translation>
+        <translation>사진에 골든 보드 프레임의 {value}만 찍혔습니다. {threshold}이(가) 필요하고 모든 ROI가 온전히 찍혀야 합니다. 보드의 나머지는 검사되지 않았습니다. 보드 전체가 보이게 놓은 뒤 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+25"/>
         <source>Every check that decides the verdict is inside its threshold.</source>
-        <translation type="unfinished"></translation>
+        <translation>판정을 결정하는 모든 검사 항목이 임계값 안에 있습니다.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>No check is NG or WARN with these thresholds, but they would mark a defect above Minor severity, so a person would need to look; the boxes on the board are the stored result&apos;s.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 임계값으로는 NG나 WARN인 검사 항목이 없지만, Minor보다 심각한 결함 하나가 표시되므로 사람이 확인해야 합니다. 보드 위의 박스는 저장된 결과의 것입니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>No check is NG or WARN with these thresholds, but they would mark {count} defects above Minor severity, so a person would need to look; the boxes on the board are the stored result&apos;s.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 임계값으로는 NG나 WARN인 검사 항목이 없지만, Minor보다 심각한 결함 {count}개가 표시되므로 사람이 확인해야 합니다. 보드 위의 박스는 저장된 결과의 것입니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The stored checks do not show why; inspect the board again.</source>
-        <translation type="unfinished"></translation>
+        <translation>저장된 검사 항목으로는 이유를 알 수 없습니다. 보드를 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>No Golden board is set for this board model, so the board was not compared with one: an Engineer makes one by training an AI model on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드 모델에 골든 보드가 설정되지 않아 골든 보드와 비교하지 않았습니다. 엔지니어가 학습에서 AI 모델을 학습시켜 만듭니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>No AI model is trained for this board model, so the AI check did not run: an Engineer trains one on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드 모델에 학습된 AI 모델이 없어 AI 검사가 실행되지 않았습니다. 엔지니어가 학습에서 학습시킵니다.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>The board was not compared with the Golden board when it was inspected, so the comparison is not judged again here: inspect the board again with the Golden board comparison in use.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 당시 골든 보드와 비교하지 않았으므로 여기서 비교를 다시 판정하지 않습니다. 골든 보드 비교를 켠 상태로 보드를 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The AI check did not run when the board was inspected, so it is not judged again here: inspect the board again with the AI model in use.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 당시 AI 검사가 실행되지 않았으므로 여기서 다시 판정하지 않습니다. AI 모델을 사용하는 상태로 보드를 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="-61"/>
         <source>The AI score is {value}, at or above its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수가 {value}(으)로, 임계값 {threshold} 이상입니다.</translation>
     </message>
     <message>
         <location line="-11"/>
         <source>The photo&apos;s lighting differs from the Golden board&apos;s by {value}, more than the {threshold} that can be corrected safely, so the other checks may be off: check the lamp and the camera&apos;s settings, then inspect the board again.</source>
-        <translation type="unfinished"></translation>
+        <translation>사진의 조명이 골든 보드와 {value} 다르며, 안전하게 보정할 수 있는 {threshold}을(를) 넘어 다른 검사 항목이 어긋날 수 있습니다. 조명과 카메라 설정을 확인한 뒤 보드를 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>The AI score is {value}, close to its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수가 {value}(으)로, 임계값 {threshold}에 가깝습니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>In ROI {roi}, the AI score is {value} the AI score threshold, at or above the ROI&apos;s threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI {roi}에서 AI 점수가 AI 점수 임계값의 {value}(으)로, ROI의 임계값 {threshold} 이상입니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>In ROI {roi}, the AI score is {value} the AI score threshold, close to the ROI&apos;s threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI {roi}에서 AI 점수가 AI 점수 임계값의 {value}(으)로, ROI의 임계값 {threshold}에 가깝습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>{check} is {value}, against its threshold of {threshold}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{check}: {value}, 임계값 {threshold}.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>No check is NG or WARN, but a defect above Minor severity is marked on the board, so a person needs to look.</source>
-        <translation type="unfinished"></translation>
+        <translation>NG나 WARN인 검사 항목은 없지만, Minor보다 심각한 결함 하나가 보드에 표시되어 사람이 확인해야 합니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>No check is NG or WARN, but {count} defects above Minor severity are marked on the board, so a person needs to look.</source>
-        <translation type="unfinished"></translation>
+        <translation>NG나 WARN인 검사 항목은 없지만, Minor보다 심각한 결함 {count}개가 보드에 표시되어 사람이 확인해야 합니다.</translation>
     </message>
     <message>
         <location line="+26"/>
         <source>The recipe turns the AI check off, so the AI check did not run and no AI model judged the board: an Engineer can turn it on in the Recipe Editor.</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피가 AI 검사를 꺼 두어 AI 검사가 실행되지 않았고 AI 모델이 보드를 판정하지 않았습니다. 엔지니어가 레시피 편집기에서 켤 수 있습니다.</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>The recipe&apos;s ROIs are judged on the AI model&apos;s map, and the AI check did not run, so no ROI was judged on this board.</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피의 ROI는 AI 모델의 맵에서 판정하는데 AI 검사가 실행되지 않아, 이 보드에서는 ROI를 판정하지 않았습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The drive was at least 95 % full when the board was saved, so its overlay and maps were not kept, only its verdict and checks: an Admin frees space on the drive.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드를 저장할 때 드라이브가 95 % 이상 차 있어 오버레이와 맵은 보관하지 않고 판정과 검사 항목만 보관했습니다. 관리자가 드라이브 공간을 확보합니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>AI model {version} is trained for this board model but not active, so the AI check did not run: an Engineer activates it on Inspection or Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드 모델에 AI 모델 {version}이(가) 학습되어 있지만 활성 상태가 아니어서 AI 검사가 실행되지 않았습니다. 엔지니어가 검사 또는 학습에서 활성화합니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>No Golden board was in use for this board model when the board was inspected, so it was not compared with one: inspect the board again once one is set.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 당시 이 보드 모델에 사용 중인 골든 보드가 없어 비교하지 않았습니다. 골든 보드가 설정되면 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>No AI model was trained for this board model when the board was inspected, so the AI check did not run: inspect the board again once one is trained.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 당시 이 보드 모델에 학습된 AI 모델이 없어 AI 검사가 실행되지 않았습니다. 학습된 뒤 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The recipe turned the AI check off when the board was inspected, so the AI check did not run and no AI model judged the board: inspect the board again once the recipe turns it on.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 당시 레시피가 AI 검사를 꺼 두어 AI 검사가 실행되지 않았고 AI 모델이 보드를 판정하지 않았습니다. 레시피에서 켠 뒤 다시 검사하십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>The recipe turns the AI check off, so these thresholds judge the board without it: an Engineer can turn it on in the Recipe Editor.</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피가 AI 검사를 꺼 두어 이 임계값은 AI 검사 없이 보드를 판정합니다. 엔지니어가 레시피 편집기에서 켤 수 있습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Note: {note}</source>
-        <translation type="unfinished"></translation>
+        <translation>참고: {note}</translation>
     </message>
 </context>
 <context>
@@ -5025,143 +5025,143 @@
     <message>
         <location filename="../ui/pages/guide.py" line="+52"/>
         <source>Board model</source>
-        <translation type="unfinished">보드 모델</translation>
+        <translation>보드 모델</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Images</source>
-        <translation type="unfinished">이미지</translation>
+        <translation>이미지</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Train</source>
-        <translation type="unfinished">학습</translation>
+        <translation>학습</translation>
     </message>
     <message>
         <location line="+48"/>
         <source>Show All Steps ›</source>
-        <translation type="unfinished">모든 단계 보기 ›</translation>
+        <translation>모든 단계 보기 ›</translation>
     </message>
     <message>
         <location line="+26"/>
         <source>First, choose the Admin&apos;s password: Create stays off until it is chosen, as an account without one could be claimed by anyone at this station. A recovery code shows once after it, to save or print.</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 관리자 비밀번호를 정하십시오. 비밀번호가 없는 계정은 이 스테이션의 누구나 차지할 수 있으므로, 정하기 전에는 만들기가 꺼져 있습니다. 그 뒤 복구 코드가 한 번 표시되니 저장하거나 인쇄하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Choose the Admin&apos;s Password…</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자 비밀번호 정하기…</translation>
     </message>
     <message>
         <location line="+25"/>
         <source>as on the board or its drawing, such as TBOX-A1</source>
-        <translation type="unfinished">보드나 도면에 적힌 그대로, 예: TBOX-A1</translation>
+        <translation>보드나 도면에 적힌 대로, 예: TBOX-A1</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>whose boards these are; your company&apos;s name for your own</source>
-        <translation type="unfinished">이 보드의 주인; 자사 보드면 자사 이름</translation>
+        <translation>보드의 주인. 자사 보드라면 회사 이름</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Board model name</source>
-        <translation type="unfinished">보드 모델 이름</translation>
+        <translation>보드 모델 이름</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Customer</source>
-        <translation type="unfinished">고객</translation>
+        <translation>고객</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Each customer&apos;s images are kept encrypted on this station, apart from every other customer&apos;s.</source>
-        <translation type="unfinished">고객마다 이미지는 이 스테이션에 암호화되어, 다른 모든 고객의 이미지와 따로 보관됩니다.</translation>
+        <translation>각 고객의 이미지는 이 스테이션에 암호화되어, 다른 고객의 이미지와 따로 보관됩니다.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Create  Enter</source>
-        <translation type="unfinished">만들기  Enter</translation>
+        <translation>만들기  Enter</translation>
     </message>
     <message>
         <location line="+25"/>
         <source>{action}  {key}</source>
-        <translation type="unfinished">{action}  {key}</translation>
+        <translation>{action}  {key}</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Save it on a USB drive that stays away from this station, not the one that brings the images, or print it.</source>
-        <translation type="unfinished">이 스테이션과 떨어져 보관하는 USB 드라이브(이미지를 가져오는 드라이브 말고)에 저장하거나 인쇄하십시오.</translation>
+        <translation>이미지를 가져오는 USB가 아닌, 이 스테이션과 떨어져 보관할 USB 드라이브에 저장하거나 인쇄하십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Sign In as Admin…  Enter</source>
-        <translation type="unfinished">관리자로 로그인…  Enter</translation>
+        <translation>관리자로 로그인…  Enter</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Sign In as Admin…</source>
-        <translation type="unfinished">관리자로 로그인…</translation>
+        <translation>관리자로 로그인…</translation>
     </message>
     <message>
         <location line="-4"/>
         <source>I Have Saved the Key</source>
-        <translation type="unfinished">키를 저장했습니다</translation>
+        <translation>키를 저장했습니다</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>I Have Saved the Key  Enter</source>
-        <translation type="unfinished">키를 저장했습니다  Enter</translation>
+        <translation>키를 저장했습니다  Enter</translation>
     </message>
     <message>
         <location line="+53"/>
         <source>Set up your first board model</source>
-        <translation type="unfinished">첫 보드 모델 설정</translation>
+        <translation>첫 보드 모델 설정</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Set up {board_model}</source>
-        <translation type="unfinished">{board_model} 설정</translation>
+        <translation>{board_model} 설정</translation>
     </message>
     <message>
         <location line="+42"/>
         <source>✓ {name} can be used.</source>
-        <translation type="unfinished">✓ {name}을(를) 쓸 수 있습니다.</translation>
+        <translation>✓ {name}을(를) 사용할 수 있습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Setting up a board model for a customer needs the {role} role.</source>
-        <translation type="unfinished">고객용 보드 모델을 설정하려면 {role} 역할이 필요합니다.</translation>
+        <translation>고객의 보드 모델을 설정하려면 {role} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+22"/>
         <source>Choose the Admin&apos;s password first, with Choose the Admin&apos;s Password….</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 관리자 비밀번호 정하기…로 관리자 비밀번호를 정하십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Type a board model name and its customer</source>
-        <translation type="unfinished">보드 모델 이름과 고객을 입력하십시오</translation>
+        <translation>보드 모델 이름과 고객을 입력하십시오</translation>
     </message>
     <message>
         <location line="+18"/>
         <location line="+66"/>
         <source>Board model {name} is set up for {customer}.</source>
-        <translation type="unfinished">보드 모델 {name}이(가) {customer}용으로 설정되었습니다.</translation>
+        <translation>보드 모델 {name}이(가) {customer}용으로 설정되었습니다.</translation>
     </message>
     <message>
         <location line="-52"/>
         <source>✓ {name} · for {customer}</source>
-        <translation type="unfinished">✓ {name} · {customer}용</translation>
+        <translation>✓ {name} · {customer}용</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>If this station&apos;s own key is ever lost, this key opens the images of {customer} again. It is shown only now.</source>
-        <translation type="unfinished">이 스테이션의 키를 잃어버리면 이 키로 {customer}의 이미지를 다시 열 수 있습니다. 지금 한 번만 표시됩니다.</translation>
+        <translation>이 스테이션의 키를 잃어버리면 이 키로 {customer}의 이미지를 다시 열 수 있습니다. 지금만 표시됩니다.</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in to save it. The station does nothing else until then.</source>
-        <translation type="unfinished">{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 키는 보관되며, 그때까지 스테이션은 다른 작업을 하지 않습니다.</translation>
+        <translation>{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 보관합니다. 그때까지 스테이션은 다른 일을 하지 않습니다.</translation>
     </message>
 </context>
 <context>
@@ -5184,27 +5184,27 @@
     <message>
         <location line="+8"/>
         <source>Checks</source>
-        <translation type="unfinished"></translation>
+        <translation>검토</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Validated</source>
-        <translation type="unfinished"></translation>
+        <translation>Validated</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Trial: one person, no checks</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial: 한 사람, 검토 없음</translation>
     </message>
     <message>
         <location line="+21"/>
         <source>A Trial version and every AI model trained from it are marked Trial: such an AI model can judge boards only while no Validated AI model has gone live, and never backs a customer validation report.</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial 버전과 그것으로 학습한 모든 AI 모델에는 Trial 표시가 붙습니다. 이런 AI 모델은 Validated AI 모델이 적용되기 전까지만 보드를 판정할 수 있고, 고객 검증 보고서의 근거가 될 수 없습니다.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -5265,12 +5265,12 @@
     <message>
         <location line="+2"/>
         <source>Not needed for a Trial version: {line}</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial 버전에는 필요 없음: {line}</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>– {line}</source>
-        <translation type="unfinished"></translation>
+        <translation>– {line}</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -5290,7 +5290,7 @@
     <message>
         <location line="+8"/>
         <source>Freeze as Trial</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial로 동결</translation>
     </message>
     <message>
         <location line="+10"/>
@@ -5300,7 +5300,7 @@
     <message>
         <location line="+45"/>
         <source>Froze {name} as a Trial version: {files} files and their manifest</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}을(를) Trial 버전으로 동결함: 파일 {files}개와 매니페스트</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -5318,37 +5318,37 @@
     <message>
         <location filename="../ui/pages/guide_images.py" line="+137"/>
         <source>Pick one folder with two folders in it: ok, with the good boards&apos; images, and ng, with a folder for each defect named after it, such as {example}.</source>
-        <translation type="unfinished">두 폴더가 든 폴더 하나를 고르십시오. ok에는 양품 보드 이미지를, ng에는 불량마다 그 이름을 붙인 폴더(예: {example})를 둡니다.</translation>
+        <translation>폴더 두 개가 든 폴더 하나를 고르십시오: 양품 이미지가 든 ok, 그리고 {example}처럼 결함 이름을 딴 폴더가 결함마다 하나씩 든 ng.</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>View</source>
-        <translation type="unfinished">뷰</translation>
+        <translation>뷰</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Pick Folder…  Ctrl+O</source>
-        <translation type="unfinished">폴더 선택…  Ctrl+O</translation>
+        <translation>폴더 선택…  Ctrl+O</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Pick Folder…</source>
-        <translation type="unfinished">폴더 선택…</translation>
+        <translation>폴더 선택…</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Defect type for the images in ng</source>
-        <translation type="unfinished">ng 폴더에 바로 있는 이미지의 불량 유형</translation>
+        <translation>ng에 있는 이미지의 결함 유형</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Cancel  Esc</source>
-        <translation type="unfinished">취소  Esc</translation>
+        <translation>취소  Esc</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+12"/>
@@ -5356,162 +5356,162 @@
         <location line="+209"/>
         <location line="+27"/>
         <source>Show Why</source>
-        <translation type="unfinished">이유 보기</translation>
+        <translation>이유 보기</translation>
     </message>
     <message>
         <location line="-303"/>
         <source>NG image: drag across the defect</source>
-        <translation type="unfinished">NG 이미지: 불량 위로 드래그하십시오</translation>
+        <translation>NG 이미지: 결함 위를 드래그하십시오</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Draw a box around the defect.</source>
-        <translation type="unfinished">불량 둘레에 박스를 그리십시오.</translation>
+        <translation>결함 둘레에 박스를 그리십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>The next image opens after each box.</source>
-        <translation type="unfinished">박스를 그릴 때마다 다음 이미지가 열립니다.</translation>
+        <translation>박스를 그릴 때마다 다음 이미지가 열립니다.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>← Back</source>
-        <translation type="unfinished">← 이전</translation>
+        <translation>← 뒤로</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Undo</source>
-        <translation type="unfinished">실행 취소</translation>
+        <translation>실행 취소</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Zoom In</source>
-        <translation type="unfinished">확대</translation>
+        <translation>확대</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Zoom Out</source>
-        <translation type="unfinished">축소</translation>
+        <translation>축소</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Fit</source>
-        <translation type="unfinished">화면에 맞춤</translation>
+        <translation>화면에 맞춤</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>{action}  {key}</source>
-        <translation type="unfinished">{action}  {key}</translation>
+        <translation>{action}  {key}</translation>
     </message>
     <message>
         <location line="+99"/>
         <source>A copy into {board_model} is running: Cancel (Esc) stops it.</source>
-        <translation type="unfinished">{board_model}(으)로 복사하는 중입니다. 취소(Esc)로 멈출 수 있습니다.</translation>
+        <translation>{board_model}(으)로 복사가 진행 중입니다: 취소(Esc)로 멈춥니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>This is the first NG image.</source>
-        <translation type="unfinished">첫 번째 NG 이미지입니다.</translation>
+        <translation>첫 번째 NG 이미지입니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>No box drawn on this screen to undo.</source>
-        <translation type="unfinished">이 화면에서 그린 박스가 없어 실행 취소할 것이 없습니다.</translation>
+        <translation>이 화면에서 그린 박스 중 취소할 것이 없습니다.</translation>
     </message>
     <message>
         <location line="+231"/>
         <source>Skipped, as they cannot be read:</source>
-        <translation type="unfinished">읽을 수 없어 건너뛴 이미지:</translation>
+        <translation>읽을 수 없어 건너뜀:</translation>
     </message>
     <message>
         <location line="-290"/>
         <source>No images of {board_model} yet</source>
-        <translation type="unfinished">아직 {board_model}의 이미지가 없습니다</translation>
+        <translation>{board_model}의 이미지가 아직 없음</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>{mark} {name}: {have} of {need}</source>
-        <translation type="unfinished">{mark} {name}: {need}장 중 {have}장</translation>
+        <translation>{mark} {name}: {have}/{need}</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Add {more} more to the ok folder and pick it again; images already in are skipped.</source>
-        <translation type="unfinished">ok 폴더에 {more}장을 더 넣고 다시 선택하십시오. 이미 들어간 이미지는 건너뜁니다.</translation>
+        <translation>ok 폴더에 {more}장을 더 넣고 다시 고르십시오. 이미 들어온 이미지는 건너뜁니다.</translation>
     </message>
     <message>
         <location line="+43"/>
         <source>A copy is running: Cancel (Esc) stops it.</source>
-        <translation type="unfinished">복사가 진행 중입니다. 취소(Esc)로 멈출 수 있습니다.</translation>
+        <translation>복사가 진행 중입니다: 취소(Esc)로 멈춥니다.</translation>
     </message>
     <message>
         <location line="+27"/>
         <source>Pick the folder with ok and ng in it</source>
-        <translation type="unfinished">ok와 ng가 든 폴더 선택</translation>
+        <translation>ok와 ng가 든 폴더를 고르십시오</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>No images in ok or ng folders in {folder}. Put the good boards&apos; images in ok and the defective ones in ng, in a folder named after the defect, then pick the folder again.</source>
-        <translation type="unfinished">{folder}의 ok 또는 ng 폴더에 이미지가 없습니다. 양품 보드 이미지는 ok에, 불량 보드 이미지는 ng 안의 불량 이름 폴더에 넣은 뒤 폴더를 다시 선택하십시오.</translation>
+        <translation>{folder}의 ok, ng 폴더에 이미지가 없습니다. 양품 이미지는 ok에, 불량 이미지는 ng 안의 결함 이름을 딴 폴더에 넣은 뒤 폴더를 다시 고르십시오.</translation>
     </message>
     <message>
         <location line="+46"/>
         <source>Copying the images…</source>
-        <translation type="unfinished">이미지 복사 중…</translation>
+        <translation>이미지를 복사하는 중…</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Copying image {n} of {count} · {percent} % · {left}</source>
-        <translation type="unfinished">이미지 {count}장 중 {n}장째 복사 중 · {percent} % · {left}</translation>
+        <translation>이미지 {n}/{count} 복사 중 · {percent} % · {left}</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>{board_model}: {line}</source>
-        <translation type="unfinished">{board_model}: {line}</translation>
+        <translation>{board_model}: {line}</translation>
     </message>
     <message>
         <location line="+22"/>
         <source>The copy into {board_model} ended: {added} copied, {count} not taken.</source>
-        <translation type="unfinished">{board_model}(으)로 복사를 마쳤습니다: {added}개 복사, {count}개 가져오지 않음.</translation>
+        <translation>{board_model}(으)로 복사가 끝났습니다: {added}장 복사, {count}장 제외.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>From {folder}, {view} view. Not taken: {count}.</source>
-        <translation type="unfinished">{folder}에서, {view} 뷰. 가져오지 않음: {count}장.</translation>
+        <translation>{folder}에서, {view} 뷰. 제외: {count}.</translation>
     </message>
     <message>
         <location line="-8"/>
         <source>Copying stopped at image {at} of {total}; the ones before it are kept.</source>
-        <translation type="unfinished">이미지 {total}장 중 {at}번째에서 복사가 멈췄습니다. 그 전 이미지는 유지됩니다.</translation>
+        <translation>이미지 {at}/{total}에서 복사가 멈췄습니다. 그 앞의 이미지는 보관됩니다.</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Already in: {count}.</source>
-        <translation type="unfinished">이미 있음: {count}개.</translation>
+        <translation>이미 있음: {count}.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Boxes from annotation files: {count}.</source>
-        <translation type="unfinished">주석 파일에서 가져온 박스: {count}개.</translation>
+        <translation>주석 파일의 박스: {count}.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>copied, but not every box of its annotation file was stored: {why}.</source>
-        <translation type="unfinished">복사했지만 주석 파일의 박스 중 일부는 저장되지 않았습니다: {why}.</translation>
+        <translation>복사했지만 주석 파일의 박스가 모두 저장되지는 않았습니다: {why}.</translation>
     </message>
     <message>
         <location line="+32"/>
         <source>Hide Why</source>
-        <translation type="unfinished">이유 숨기기</translation>
+        <translation>이유 숨기기</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>Image {n} of {count} · {file}</source>
-        <translation type="unfinished">이미지 {count}장 중 {n}번째 · {file}</translation>
+        <translation>이미지 {n}/{count} · {file}</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{type} (its folder)</source>
-        <translation type="unfinished">{type} (폴더 이름)</translation>
+        <translation>{type} (폴더 이름)</translation>
     </message>
 </context>
 <context>
@@ -5519,183 +5519,183 @@
     <message>
         <location filename="../ui/pages/guide_train.py" line="+89"/>
         <source>Board revision</source>
-        <translation type="unfinished">보드 리비전</translation>
+        <translation>보드 리비전</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>as printed on the board; leave R1 if it shows none</source>
-        <translation type="unfinished">보드에 인쇄된 대로, 없으면 R1 그대로</translation>
+        <translation>보드에 인쇄된 대로. 없으면 R1 그대로</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Train  Enter</source>
-        <translation type="unfinished">학습  Enter</translation>
+        <translation>학습  Enter</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Train</source>
-        <translation type="unfinished">학습</translation>
+        <translation>학습</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Cancel  Esc</source>
-        <translation type="unfinished">취소  Esc</translation>
+        <translation>취소  Esc</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+27"/>
         <source>Trial: one person labelled the images and no one else checked them.</source>
-        <translation type="unfinished">Trial: 한 사람이 이미지를 라벨링했고 다른 사람은 확인하지 않았습니다.</translation>
+        <translation>Trial: 한 사람이 이미지에 라벨을 붙였고 다른 사람이 검토하지 않았습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Boards are inspected only after every master sample is judged right.</source>
-        <translation type="unfinished">모든 마스터 샘플이 올바르게 판정된 뒤에만 보드를 검사합니다.</translation>
+        <translation>모든 마스터 샘플이 올바르게 판정된 뒤에만 보드를 검사합니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Inspect a Board…  Enter</source>
-        <translation type="unfinished">보드 검사…  Enter</translation>
+        <translation>보드 검사…  Enter</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Inspect a Board…</source>
-        <translation type="unfinished">보드 검사…</translation>
+        <translation>보드 검사…</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Open Logs &amp; Export ›</source>
-        <translation type="unfinished">로그 및 내보내기 열기 ›</translation>
+        <translation>로그 및 내보내기 열기 ›</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Start the Checks ›</source>
-        <translation type="unfinished">점검 시작 ›</translation>
+        <translation>점검 시작 ›</translation>
     </message>
     <message>
         <location line="+65"/>
         <source>{ok} OK and {ng} NG images of the {view} view are ready, every defect boxed.</source>
-        <translation type="unfinished">{view} 뷰의 OK 이미지 {ok}장과 NG 이미지 {ng}장이 준비되었고, 모든 불량에 박스가 있습니다.</translation>
+        <translation>{view} 뷰의 OK {ok}장, NG {ng}장이 준비되었고 모든 결함에 박스가 있습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>AI model {version} was trained before on {ok} OK and {ng} NG of these images as a Trial. Train makes it the AI model that judges {board_model}&apos;s boards and tests it on the {held_ok} OK and {held_ng} NG images kept apart. Other pages can be used while it runs.</source>
-        <translation type="unfinished">AI 모델 {version}은 이 이미지 중 OK {ok}장과 NG {ng}장으로 이미 Trial로 학습되었습니다. 학습은 그 모델이 {board_model}의 보드를 판정하게 하고, 따로 둔 OK {held_ok}장과 NG {held_ng}장으로 테스트합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
+        <translation>AI 모델 {version}은(는) 이전에 이 이미지 중 OK {ok}장, NG {ng}장으로 Trial로 학습되었습니다. 학습을 누르면 이 모델이 {board_model}의 보드를 판정하는 AI 모델이 되고, 따로 둔 OK {held_ok}장, NG {held_ng}장으로 테스트합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>AI model {version} was trained before on {ok} OK and {ng} NG of these images as a Trial. Train makes it the AI model that judges {board_model}&apos;s boards, tests it on the {held_ok} OK and {held_ng} NG images kept apart and runs the first shift check. Other pages can be used while it runs.</source>
-        <translation type="unfinished">AI 모델 {version}은 이 이미지 중 OK {ok}장과 NG {ng}장으로 이미 Trial로 학습되었습니다. 학습은 그 모델이 {board_model}의 보드를 판정하게 하고, 따로 둔 OK {held_ok}장과 NG {held_ng}장으로 테스트한 뒤 첫 교대 점검을 실행합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
+        <translation>AI 모델 {version}은(는) 이전에 이 이미지 중 OK {ok}장, NG {ng}장으로 Trial로 학습되었습니다. 학습을 누르면 이 모델이 {board_model}의 보드를 판정하는 AI 모델이 되고, 따로 둔 OK {held_ok}장, NG {held_ng}장으로 테스트한 뒤 첫 교대 점검을 실행합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Train keeps {held_ok} OK and {held_ng} NG images apart, trains the AI model on the other {ok} OK and {ng} NG as a Trial, since one person labelled them, makes it the AI model that judges {board_model}&apos;s boards and tests it on the images kept apart. Other pages can be used while it runs.</source>
-        <translation type="unfinished">학습은 OK 이미지 {held_ok}장과 NG 이미지 {held_ng}장을 따로 두고, 한 사람이 라벨링했으므로 나머지 OK {ok}장과 NG {ng}장으로 AI 모델을 Trial로 학습한 뒤, 그 모델이 {board_model}의 보드를 판정하게 하고 따로 둔 이미지로 테스트합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
+        <translation>학습은 OK {held_ok}장, NG {held_ng}장을 따로 두고, 한 사람이 라벨을 붙였으므로 나머지 OK {ok}장, NG {ng}장으로 AI 모델을 Trial로 학습시켜 {board_model}의 보드를 판정하는 AI 모델로 만든 뒤, 따로 둔 이미지로 테스트합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Train keeps {held_ok} OK and {held_ng} NG images apart, trains the AI model on the other {ok} OK and {ng} NG as a Trial, since one person labelled them, makes it the AI model that judges {board_model}&apos;s boards, tests it on the images kept apart and runs the first shift check. Other pages can be used while it runs.</source>
-        <translation type="unfinished">학습은 OK 이미지 {held_ok}장과 NG 이미지 {held_ng}장을 따로 두고, 한 사람이 라벨링했으므로 나머지 OK {ok}장과 NG {ng}장으로 AI 모델을 Trial로 학습한 뒤, 그 모델이 {board_model}의 보드를 판정하게 하고, 따로 둔 이미지로 테스트하고 첫 교대 점검을 실행합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
+        <translation>학습은 OK {held_ok}장, NG {held_ng}장을 따로 두고, 한 사람이 라벨을 붙였으므로 나머지 OK {ok}장, NG {ng}장으로 AI 모델을 Trial로 학습시켜 {board_model}의 보드를 판정하는 AI 모델로 만든 뒤, 따로 둔 이미지로 테스트하고 첫 교대 점검을 실행합니다. 실행 중에도 다른 페이지를 쓸 수 있습니다.</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>✓ AI model {version} judges {board_model}&apos;s boards.</source>
-        <translation type="unfinished">✓ AI 모델 {version}이(가) {board_model}의 보드를 판정합니다.</translation>
+        <translation>✓ AI 모델 {version}이(가) {board_model}의 보드를 판정합니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Trained on {ok} OK and {ng} NG images.</source>
-        <translation type="unfinished">OK 이미지 {ok}장과 NG 이미지 {ng}장으로 학습했습니다.</translation>
+        <translation>OK {ok}장, NG {ng}장으로 학습했습니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>On the {ok} OK and {ng} NG images kept apart:</source>
-        <translation type="unfinished">따로 둔 OK 이미지 {ok}장과 NG 이미지 {ng}장에서:</translation>
+        <translation>따로 둔 OK {ok}장, NG {ng}장에서:</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Missed defects  {rate}</source>
-        <translation type="unfinished">미검출  {rate}</translation>
+        <translation>놓친 결함  {rate}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>False calls  {rate}</source>
-        <translation type="unfinished">과검출  {rate}</translation>
+        <translation>과검출  {rate}</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Not tested yet on the {ok} OK and {ng} NG images kept apart: AI Model Test tests it.</source>
-        <translation type="unfinished">따로 둔 OK 이미지 {ok}장과 NG 이미지 {ng}장으로 아직 테스트하지 않았습니다. AI 모델 테스트에서 테스트합니다.</translation>
+        <translation>따로 둔 OK {ok}장, NG {ng}장으로 아직 테스트하지 않았습니다: AI 모델 테스트에서 테스트합니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
-        <translation type="unfinished">✓ 교대 점검: 모든 판정이 올바름 · {until}까지 보드를 검사할 수 있습니다</translation>
+        <translation>✓ 교대 점검: 모든 판정이 맞음 · {until}까지 보드를 검사할 수 있음</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Shift check of {board_model}: {right} of {count} master samples judged right.</source>
-        <translation type="unfinished">{board_model} 교대 점검: 마스터 샘플 {count}개 중 {right}개를 올바르게 판정했습니다.</translation>
+        <translation>{board_model}의 교대 점검: 마스터 샘플 {count}개 중 {right}개를 올바르게 판정했습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>No shift check counts now: Inspection asks for Shift Check (F7) before the first board.</source>
-        <translation type="unfinished">지금 유효한 교대 점검이 없습니다. 검사 페이지가 첫 보드 전에 교대 점검(F7)을 요청합니다.</translation>
+        <translation>지금 유효한 교대 점검이 없습니다: 검사에서 첫 보드 전에 교대 점검(F7)을 요구합니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>{file}{kind}, labelled {expected}, judged {verdict}</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}{kind}, 라벨 {expected}, 판정 {verdict}</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Judged wrongly: {samples}. Check that the image is labelled as the board is; an Engineer then looks at it on Compare and sets the recipe, and Shift Check (F7) on Inspection judges them again.</source>
-        <translation type="unfinished"></translation>
+        <translation>잘못 판정됨: {samples}. 이미지의 라벨이 보드와 맞는지 확인하십시오. 그런 다음 엔지니어가 비교에서 살펴보고 레시피를 설정하며, 검사의 교대 점검(F7)으로 다시 판정합니다.</translation>
     </message>
     <message>
         <location line="+18"/>
         <location line="+15"/>
         <source>Type the board revision: 1 to 16 letters and digits, such as R1.</source>
-        <translation type="unfinished">보드 리비전을 입력하십시오. R1처럼 1~16자의 영문자와 숫자입니다.</translation>
+        <translation>보드 리비전을 입력하십시오: R1처럼 영문자와 숫자 1~16자.</translation>
     </message>
     <message>
         <location line="-3"/>
         <source>Train is running: Cancel (Esc) stops it.</source>
-        <translation type="unfinished">학습이 실행 중입니다. 취소(Esc)로 멈춥니다.</translation>
+        <translation>학습이 실행 중입니다: 취소(Esc)로 멈춥니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Wait for the training under way to end, then press Train again.</source>
-        <translation type="unfinished">진행 중인 학습이 끝난 뒤 학습을 다시 누르십시오.</translation>
+        <translation>진행 중인 학습이 끝나기를 기다린 뒤 학습을 다시 누르십시오.</translation>
     </message>
     <message>
         <location line="+21"/>
         <source>Starting Train…</source>
-        <translation type="unfinished">학습 시작 중…</translation>
+        <translation>학습을 시작하는 중…</translation>
     </message>
     <message>
         <location line="+19"/>
         <source>{phase} · {percent} % · {left}</source>
-        <translation type="unfinished">{phase} · {percent} % · {left}</translation>
+        <translation>{phase} · {percent} % · {left}</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Stopping Train after the step in hand…</source>
-        <translation type="unfinished">진행 중인 단계를 마친 뒤 학습을 멈추는 중…</translation>
+        <translation>진행 중인 단계가 끝나면 학습을 멈춥니다…</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Train was cancelled. What it had done is kept, and the next Train goes on from there.</source>
-        <translation type="unfinished">학습이 취소되었습니다. 그때까지 한 작업은 유지되며, 다음 학습은 거기서부터 이어집니다.</translation>
+        <translation>학습이 취소되었습니다. 그때까지 한 작업은 보관되며, 다음 학습은 거기서 이어집니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Train for {board_model} has ended: pick it in the header to see what it made.</source>
-        <translation type="unfinished">{board_model}의 학습이 끝났습니다. 헤더에서 선택하면 만든 결과를 볼 수 있습니다.</translation>
+        <translation>{board_model}의 학습이 끝났습니다: 헤더에서 골라 결과를 확인하십시오.</translation>
     </message>
 </context>
 <context>
@@ -5703,7 +5703,7 @@
     <message>
         <location filename="../ui/held_secret.py" line="+28"/>
         <source>Sign In as Admin…</source>
-        <translation type="unfinished">관리자로 로그인…</translation>
+        <translation>관리자로 로그인…</translation>
     </message>
 </context>
 <context>
@@ -5711,137 +5711,137 @@
     <message>
         <location filename="../ui/main_window.py" line="-1202"/>
         <source>Upload samples</source>
-        <translation type="unfinished"></translation>
+        <translation>샘플 올리기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Add good (OK) and defective (NG) photos of this board model.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드 모델의 양품(OK)과 불량(NG) 사진을 추가합니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>The app learns the Golden board and an AI model from your OK boards.</source>
-        <translation type="unfinished"></translation>
+        <translation>앱이 OK 보드에서 골든 보드와 AI 모델을 학습합니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Tune recipe</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 조정</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Draw ROIs and adjust thresholds on the Golden board.</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드에 ROI를 그리고 임계값을 조정합니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Validate</source>
-        <translation type="unfinished"></translation>
+        <translation>검증</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Test the AI model on the locked validation set.</source>
-        <translation type="unfinished"></translation>
+        <translation>잠긴 검증 세트로 AI 모델을 테스트합니다.</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>CSV files and overlay images on Logs &amp; Export; the PDF reports on AI Model Test (Export Report, Validation Report…).</source>
-        <translation type="unfinished"></translation>
+        <translation>CSV 파일과 오버레이 이미지는 로그 및 내보내기에서, PDF 보고서는 AI 모델 테스트에서(보고서 내보내기, 검증 보고서…).</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>NG rate up</source>
-        <translation type="unfinished"></translation>
+        <translation>NG 비율 상승</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>WARN rate up</source>
-        <translation type="unfinished"></translation>
+        <translation>WARN 비율 상승</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>OK boards&apos; AI score up</source>
-        <translation type="unfinished"></translation>
+        <translation>OK 보드의 AI 점수 상승</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>alignment to the Golden board down</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드 정렬 저하</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>false calls up</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출 증가</translation>
     </message>
     <message>
         <location line="+60"/>
         <source>Show the Guide ›</source>
-        <translation type="unfinished">안내 보기 ›</translation>
+        <translation>안내 보기 ›</translation>
     </message>
     <message>
         <location line="+56"/>
         <source>Open to every role.</source>
-        <translation type="unfinished"></translation>
+        <translation>모든 역할이 사용할 수 있습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Needs the {roles} role.</source>
-        <translation type="unfinished"></translation>
+        <translation>{roles} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+33"/>
         <source>For {roles}</source>
-        <translation type="unfinished"></translation>
+        <translation>{roles}용</translation>
     </message>
     <message>
         <location line="+30"/>
         <source>{board_model} is still being set up</source>
-        <translation type="unfinished">{board_model}은(는) 아직 설정 중입니다</translation>
+        <translation>{board_model}은(는) 아직 설정 중입니다</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Ask an Admin to set up the first one.</source>
-        <translation type="unfinished">관리자에게 첫 보드 모델 설정을 요청하십시오.</translation>
+        <translation>관리자에게 첫 보드 모델 설정을 요청하십시오.</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>AI model {version} trained, not active. Activate it on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}이(가) 학습되었으나 활성 상태가 아닙니다. 학습에서 활성화하십시오.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Missed defects {missed} of {ng} · False calls {false_calls} of {ok}</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 결함 {ng}개 중 {missed}개 · 과검출 {ok}개 중 {false_calls}개</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Not validated yet. Run the locked validation set.</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 검증되지 않았습니다. 잠긴 검증 세트를 실행하십시오.</translation>
     </message>
     <message>
         <location line="-243"/>
         <source>Inspect</source>
-        <translation type="unfinished"></translation>
+        <translation>검사</translation>
     </message>
     <message>
         <location line="-21"/>
         <source>Train AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 학습</translation>
     </message>
     <message>
         <location line="+22"/>
         <source>Run boards; open Compare to see why any board was called NG.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드를 검사하고, NG로 판정된 이유는 비교에서 확인하십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Export</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내기</translation>
     </message>
     <message>
         <location line="+167"/>
         <source>Open {page} ›</source>
-        <translation type="unfinished"></translation>
+        <translation>{page} 열기 ›</translation>
     </message>
     <message>
         <location line="-15"/>
@@ -5851,7 +5851,7 @@
     <message>
         <location line="+60"/>
         <source>{ok} OK · {ng} NG uploaded</source>
-        <translation type="unfinished"></translation>
+        <translation>OK {ok}장 · NG {ng}장 올림</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -5861,52 +5861,52 @@
     <message>
         <location line="+4"/>
         <source>Active AI model {version}</source>
-        <translation type="unfinished"></translation>
+        <translation>활성 AI 모델 {version}</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>No AI model yet. Train one from your OK boards.</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 AI 모델이 없습니다. OK 보드로 학습시키십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Recipe revision {revision}</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 리비전 {revision}</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Recipe uses defaults. Draw ROIs on the Golden board.</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피가 기본값을 사용합니다. 골든 보드에 ROI를 그리십시오.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>{count} boards inspected · {ng} NG</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 {count}장 검사 · NG {ng}장</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>False calls {false_calls} of {reviewed} reviewed</source>
-        <translation type="unfinished"></translation>
+        <translation>검토한 {reviewed}개 중 과검출 {false_calls}개</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Drift: {measures}. See the alarm log on Inspection.</source>
-        <translation type="unfinished"></translation>
+        <translation>드리프트: {measures}. 검사의 알람 로그를 보십시오.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>No boards inspected yet. Load images on Inspection.</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 검사한 보드가 없습니다. 검사에서 이미지를 불러오십시오.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Ready</source>
-        <translation type="unfinished"></translation>
+        <translation>준비됨</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Nothing to export yet. Inspect a board first.</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 내보낼 것이 없습니다. 먼저 보드를 검사하십시오.</translation>
     </message>
 </context>
 <context>
@@ -5999,17 +5999,17 @@
     <message>
         <location line="+52"/>
         <source>{type} · {count} box(es)</source>
-        <translation type="unfinished"></translation>
+        <translation>{type} · 박스 {count}개</translation>
     </message>
     <message>
         <location line="+75"/>
         <source>copied with {count} box(es)</source>
-        <translation type="unfinished"></translation>
+        <translation>박스 {count}개와 함께 복사됨</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Copied, but not every box of its annotation file was stored: {why}.</source>
-        <translation type="unfinished"></translation>
+        <translation>복사했지만 주석 파일의 박스가 모두 저장되지는 않았습니다: {why}.</translation>
     </message>
     <message>
         <location line="+17"/>
@@ -6084,34 +6084,34 @@
         <location line="+121"/>
         <location line="+305"/>
         <source>Load Images…</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 불러오기…</translation>
     </message>
     <message>
         <location line="-425"/>
         <source>Load Folder…</source>
-        <translation type="unfinished"></translation>
+        <translation>폴더 불러오기…</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Next view</source>
-        <translation type="unfinished"></translation>
+        <translation>다음 뷰</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>View:</source>
-        <translation type="unfinished"></translation>
+        <translation>뷰:</translation>
     </message>
     <message>
         <location line="+6"/>
         <location line="+99"/>
         <source>No images loaded</source>
-        <translation type="unfinished"></translation>
+        <translation>불러온 이미지 없음</translation>
     </message>
     <message>
         <location line="-58"/>
         <source>No</source>
         <comment>defect number</comment>
-        <translation type="unfinished"></translation>
+        <translation>번호</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -6121,337 +6121,337 @@
     <message>
         <location line="+1"/>
         <source>Score</source>
-        <translation type="unfinished"></translation>
+        <translation>점수</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Side</source>
-        <translation type="unfinished"></translation>
+        <translation>면</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>X</source>
-        <translation type="unfinished"></translation>
+        <translation>X</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Y</source>
-        <translation type="unfinished"></translation>
+        <translation>Y</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Compare with Golden board ›</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드와 비교 ›</translation>
     </message>
     <message>
         <location line="+9"/>
         <location line="+32"/>
         <location line="+305"/>
         <source>▶  Start</source>
-        <translation type="unfinished"></translation>
+        <translation>▶  시작</translation>
     </message>
     <message>
         <location line="-336"/>
         <location line="+29"/>
         <source>■  Stop</source>
-        <translation type="unfinished"></translation>
+        <translation>■  정지</translation>
     </message>
     <message>
         <location line="-28"/>
         <source>Next Board</source>
-        <translation type="unfinished"></translation>
+        <translation>다음 보드</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Save Image…</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 저장…</translation>
     </message>
     <message>
         <location line="+31"/>
         <source>Load Images… or Load Folder… to queue boards. In Stage 2 the camera fills this view.</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 불러오기… 또는 폴더 불러오기…로 보드를 대기열에 넣으십시오. 2단계에서는 카메라 영상이 여기에 나옵니다.</translation>
     </message>
     <message>
         <location line="+276"/>
         <source>✓ Shift check: every verdict right · boards may be inspected until {until}</source>
-        <translation type="unfinished">✓ 교대 점검: 모든 판정이 올바름 · {until}까지 보드를 검사할 수 있습니다</translation>
+        <translation>✓ 교대 점검: 모든 판정이 맞음 · {until}까지 보드를 검사할 수 있음</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>✗ Shift check: a master sample judged wrongly. Call an Engineer, then press Shift Check (F7)</source>
-        <translation type="unfinished"></translation>
+        <translation>✗ 교대 점검: 마스터 샘플을 잘못 판정했습니다. 엔지니어를 부른 뒤 교대 점검(F7)을 누르십시오</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>Next Board ›</source>
-        <translation type="unfinished"></translation>
+        <translation>다음 보드 ›</translation>
     </message>
     <message>
         <location line="-284"/>
         <source>Select PCB images</source>
-        <translation type="unfinished"></translation>
+        <translation>PCB 이미지 선택</translation>
     </message>
     <message>
         <location line="-172"/>
         <source>Save Image… needs the {roles} role.</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 저장…에는 {roles} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+41"/>
         <source>Shift Check</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검</translation>
     </message>
     <message>
         <location line="+45"/>
         <source>Judge the board model&apos;s boards with this AI model and its Golden board, as Activate Selected does</source>
-        <translation type="unfinished"></translation>
+        <translation>선택 항목 활성화와 같이, 이 AI 모델과 그 골든 보드로 보드 모델의 보드를 판정합니다</translation>
     </message>
     <message>
         <location line="+29"/>
         <source>Inspect a board first: Compare opens the board shown here.</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 보드를 검사하십시오: 비교는 여기에 표시된 보드를 엽니다.</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Stop works while a run is on: press Start (F5) to run the queue.</source>
-        <translation type="unfinished"></translation>
+        <translation>정지는 실행 중에만 동작합니다: 시작(F5)을 눌러 대기열을 실행하십시오.</translation>
     </message>
     <message>
         <location line="+40"/>
         <source>Images ({extensions})</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 ({extensions})</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Select folder with PCB images</source>
-        <translation type="unfinished"></translation>
+        <translation>PCB 이미지가 든 폴더 선택</translation>
     </message>
     <message>
         <location line="+33"/>
         <source>{count} image(s) queued</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 {count}장 대기 중</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Loaded {count} image(s)</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 {count}장을 불러옴</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>{count} demo board(s) queued · {pace} s per board</source>
-        <translation type="unfinished"></translation>
+        <translation>데모 보드 {count}장 대기 중 · 보드당 {pace}초</translation>
     </message>
     <message>
         <location line="+29"/>
         <source>Stopping after this board…</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드까지 하고 멈춥니다…</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Stopped</source>
-        <translation type="unfinished"></translation>
+        <translation>정지됨</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>View: {view}</source>
-        <translation type="unfinished"></translation>
+        <translation>뷰: {view}</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>End of queue</source>
-        <translation type="unfinished"></translation>
+        <translation>대기열 끝</translation>
     </message>
     <message>
         <location line="+100"/>
         <source>Shift check: judging the master samples of {board_model}…</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검: {board_model}의 마스터 샘플을 판정하는 중…</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>{mark} {file}{kind}: expected {expected}, judged {verdict}</source>
-        <translation type="unfinished"></translation>
+        <translation>{mark} {file}{kind}: 예상 {expected}, 판정 {verdict}</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Shift check of {board_model}: {right} of {count} master samples judged right</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 교대 점검: 마스터 샘플 {count}개 중 {right}개를 올바르게 판정함</translation>
     </message>
     <message>
         <location line="-38"/>
         <location line="+58"/>
         <source>Stopped: a shift check is needed first</source>
-        <translation type="unfinished"></translation>
+        <translation>정지됨: 먼저 교대 점검이 필요합니다</translation>
     </message>
     <message>
         <location line="-380"/>
         <source>Watch Input Folder</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더 감시</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Watch Input Folder waits for the run to stop or the board in hand to finish.</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더 감시는 실행이 멈추거나 진행 중인 보드가 끝나기를 기다립니다.</translation>
     </message>
     <message>
         <location line="+105"/>
         <source>Each board image that arrives in the input folder is inspected while the line runs.</source>
-        <translation type="unfinished"></translation>
+        <translation>라인이 실행되는 동안 입력 폴더에 도착하는 보드 이미지를 하나씩 검사합니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <location line="+60"/>
         <source>Line running</source>
-        <translation type="unfinished"></translation>
+        <translation>라인 실행 중</translation>
     </message>
     <message>
         <location line="-58"/>
         <source>Line paused</source>
-        <translation type="unfinished"></translation>
+        <translation>라인 일시 정지</translation>
     </message>
     <message>
         <location line="+50"/>
         <source>Watching {folder}: press Start (F5) to run the line</source>
-        <translation type="unfinished"></translation>
+        <translation>{folder} 감시 중: 시작(F5)을 눌러 라인을 실행하십시오</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Line paused: Start (F5) resumes</source>
-        <translation type="unfinished"></translation>
+        <translation>라인 일시 정지: 시작(F5)으로 다시 실행</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{count} image(s) waiting in the input folder</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더에 이미지 {count}장 대기 중</translation>
     </message>
     <message>
         <location line="+218"/>
         <source>Shift check off</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검 꺼짐</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Shift check needed: press Shift Check (F7) before the first board</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검 필요: 첫 보드 전에 교대 점검(F7)을 누르십시오</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Shift check expired: press Shift Check (F7)</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검 만료: 교대 점검(F7)을 누르십시오</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Shift check needed again: the AI model, recipe, Golden board or scale changed</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검이 다시 필요합니다: AI 모델, 레시피, 골든 보드 또는 배율이 바뀌었습니다</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Press Next Board to carry on with the queue.</source>
-        <translation type="unfinished"></translation>
+        <translation>다음 보드를 눌러 대기열을 계속하십시오.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>The line is paused and the image is back in the input folder: Start (F5) runs the line.</source>
-        <translation type="unfinished"></translation>
+        <translation>라인이 일시 정지되었고 이미지는 입력 폴더로 돌아갔습니다: 시작(F5)으로 라인을 실행합니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>No board is left in the queue. Load Images… or Load Folder… to queue more boards.</source>
-        <translation type="unfinished"></translation>
+        <translation>대기열에 남은 보드가 없습니다. 이미지 불러오기… 또는 폴더 불러오기…로 보드를 더 넣으십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>{file}  ·  not inspected</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}  ·  검사되지 않음</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>{file} was inspected under board model {board_model} and judged {verdict}; the header now shows {header}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}은(는) 보드 모델 {board_model}(으)로 검사되어 {verdict} 판정을 받았습니다. 헤더는 지금 {header}을(를) 표시합니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Its record is on Logs &amp; Export under {board_model}.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록은 로그 및 내보내기의 {board_model} 아래에 있습니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>The run stopped; press Start to carry on with the queue under {header}.</source>
-        <translation type="unfinished"></translation>
+        <translation>실행이 멈췄습니다. 시작을 눌러 {header}(으)로 대기열을 계속하십시오.</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Inspecting…</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 중…</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Inspecting {file}…</source>
-        <translation type="unfinished"></translation>
+        <translation>{file} 검사 중…</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Inspecting {file} from the input folder…</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더의 {file} 검사 중…</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Inspecting {file} ({n} of {total})…</source>
-        <translation type="unfinished"></translation>
+        <translation>{file} 검사 중 ({n}/{total})…</translation>
     </message>
     <message>
         <location line="+22"/>
         <source>{file}  ·  AI score {score:.2f}× threshold  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}  ·  AI 점수 임계값의 {score:.2f}배  ·  결함 {defects}개  ·  {ms:.0f} ms</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>Paused at the NG board {file}: Compare with Golden board › shows why, and Start goes on with the run.</source>
-        <translation type="unfinished"></translation>
+        <translation>NG 보드 {file}에서 일시 정지: 골든 보드와 비교 ›에서 이유를 보고, 시작으로 실행을 계속합니다.</translation>
     </message>
     <message>
         <location line="+44"/>
         <source>Save annotated image</source>
-        <translation type="unfinished"></translation>
+        <translation>표시가 있는 이미지 저장</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>PNG (*.png)</source>
-        <translation type="unfinished"></translation>
+        <translation>PNG (*.png)</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Saved {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>{file} 저장됨</translation>
     </message>
     <message>
         <location line="+76"/>
         <source>Review saved: {review} for record {record}.</source>
-        <translation type="unfinished"></translation>
+        <translation>검토 저장됨: 기록 {record}에 {review}.</translation>
     </message>
     <message>
         <location line="+35"/>
         <source>Run stopped: the session of {starter} ended after {minutes} minutes without input, and {user} is signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 정지: {starter}의 세션이 입력 없이 {minutes}분이 지나 끝났고, {user}이(가) 로그인했습니다. 지금까지의 보드는 {starter} 이름으로 기록되었습니다. 시작을 눌러 {user}(으)로 대기열을 계속하십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Run stopped: {user} signed in. The boards of the run so far are recorded under {starter}; press Start to carry on with the queue as {user}.</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 정지: {user}이(가) 로그인했습니다. 지금까지의 보드는 {starter} 이름으로 기록되었습니다. 시작을 눌러 {user}(으)로 대기열을 계속하십시오.</translation>
     </message>
     <message>
         <location line="+32"/>
         <source>AI model {version} of {board_model} is trained but not active: only the Golden board comparison judges its boards.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 AI 모델 {version}은(는) 학습되었으나 활성 상태가 아닙니다: 골든 보드 비교만 보드를 판정합니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Activate {version}</source>
-        <translation type="unfinished"></translation>
+        <translation>{version} 활성화</translation>
     </message>
     <message>
         <location line="+20"/>
         <source>AI model {version} is active: it judges the next boards of {board_model}.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}이(가) 활성 상태입니다: {board_model}의 다음 보드부터 판정합니다.</translation>
     </message>
 </context>
 <context>
@@ -6568,117 +6568,117 @@
     <message>
         <location filename="../ui/pages/recipe_learn.py" line="+58"/>
         <source>Learned From Labelled Boards</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨링된 보드에서 학습한 값</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>This recipe</source>
-        <translation type="unfinished"></translation>
+        <translation>이 레시피</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Learned</source>
-        <translation type="unfinished"></translation>
+        <translation>학습값</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Pixel difference</source>
-        <translation type="unfinished"></translation>
+        <translation>픽셀 차이</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Minimum defect area (px)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 면적 (px)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Fine alignment</source>
-        <translation type="unfinished"></translation>
+        <translation>정밀 정렬</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Missed defects</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 결함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>False calls (512 px squares)</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출 (512 px 정사각형)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>OK boards called NG</source>
-        <translation type="unfinished"></translation>
+        <translation>NG로 판정된 OK 보드</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Counted on the held-out boards, which no value was chosen on. Use Learned Values puts them in the fields; Save Recipe stores them as a revision.</source>
-        <translation type="unfinished"></translation>
+        <translation>값을 고르는 데 쓰지 않고 따로 둔 보드에서 센 결과입니다. 학습값 사용은 값을 입력란에 넣고, 레시피 저장은 리비전으로 저장합니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Close</source>
-        <translation type="unfinished">닫기</translation>
+        <translation>닫기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Use Learned Values</source>
-        <translation type="unfinished"></translation>
+        <translation>학습값 사용</translation>
     </message>
     <message>
         <location line="+20"/>
         <source>Chosen on {boards} board(s): {ok} OK and {ng} NG with {boxes} defect box(es).</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 {boards}장에서 선택: OK {ok}장, 결함 박스 {boxes}개가 있는 NG {ng}장.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Counted on {boards} other board(s) of the locked validation set: {ok} OK and {ng} NG.</source>
-        <translation type="unfinished"></translation>
+        <translation>잠긴 검증 세트의 다른 보드 {boards}장에서 셈: OK {ok}장, NG {ng}장.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Counted on {boards} other board(s), a third held out with seed {seed}: {ok} OK and {ng} NG.</source>
-        <translation type="unfinished"></translation>
+        <translation>시드 {seed}(으)로 따로 둔 3분의 1인 다른 보드 {boards}장에서 셈: OK {ok}장, NG {ng}장.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>on</source>
-        <translation type="unfinished"></translation>
+        <translation>켜짐</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>off</source>
-        <translation type="unfinished"></translation>
+        <translation>꺼짐</translation>
     </message>
     <message>
         <location line="+19"/>
         <source>{count} NG image(s) with no defect box</source>
-        <translation type="unfinished"></translation>
+        <translation>결함 박스가 없는 NG 이미지 {count}장</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{count} image(s) of another view</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 뷰의 이미지 {count}장</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{count} image(s) labelled UNSURE</source>
-        <translation type="unfinished"></translation>
+        <translation>UNSURE로 라벨링된 이미지 {count}장</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>{count} image(s) that could not be read, first {why}</source>
-        <translation type="unfinished"></translation>
+        <translation>읽을 수 없는 이미지 {count}장, 첫 번째 {why}</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Left out: {parts}.</source>
-        <translation type="unfinished"></translation>
+        <translation>제외됨: {parts}.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Learned from {chosen} labelled board(s); on {held} held out: missed defects {missed}, false calls {false}.</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨링된 보드 {chosen}장에서 학습. 따로 둔 {held}장에서: 놓친 결함 {missed}, 과검출 {false}.</translation>
     </message>
 </context>
 <context>
@@ -6686,72 +6686,72 @@
     <message>
         <location filename="../ui/pages/logs.py" line="+150"/>
         <source>Include archived</source>
-        <translation type="unfinished"></translation>
+        <translation>보관된 기록 포함</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>From</source>
-        <translation type="unfinished"></translation>
+        <translation>시작일</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>To</source>
-        <translation type="unfinished"></translation>
+        <translation>종료일</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+15"/>
         <source>Board model</source>
-        <translation type="unfinished">보드 모델</translation>
+        <translation>보드 모델</translation>
     </message>
     <message>
         <location line="-14"/>
         <location line="+19"/>
         <source>Operator</source>
-        <translation type="unfinished"></translation>
+        <translation>작업자</translation>
     </message>
     <message>
         <location line="-12"/>
         <source>Filter</source>
-        <translation type="unfinished"></translation>
+        <translation>필터</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Time</source>
-        <translation type="unfinished"></translation>
+        <translation>시간</translation>
     </message>
     <message>
         <location line="-12"/>
         <location line="+15"/>
         <source>Result</source>
-        <translation type="unfinished"></translation>
+        <translation>결과</translation>
     </message>
     <message>
         <location line="-58"/>
         <source>Exports and Delete Records… need the {roles} role.</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내기와 기록 삭제…에는 {roles} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Archive and Add to Training as OK need the {roles} role.</source>
-        <translation type="unfinished"></translation>
+        <translation>보관과 OK로 학습에 추가에는 {roles} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+31"/>
         <source>Not reviewed</source>
-        <translation type="unfinished"></translation>
+        <translation>검토 안 됨</translation>
     </message>
     <message>
         <location line="+9"/>
         <location line="+15"/>
         <source>Review</source>
-        <translation type="unfinished"></translation>
+        <translation>검토</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+67"/>
         <source>Defects</source>
-        <translation type="unfinished"></translation>
+        <translation>결함</translation>
     </message>
     <message>
         <location line="-65"/>
@@ -6761,292 +6761,292 @@
     <message>
         <location line="+1"/>
         <source>Recipe rev</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 리비전</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Image</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Exporting…</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내는 중…</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Deleting…</source>
-        <translation type="unfinished"></translation>
+        <translation>삭제하는 중…</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Loading records…</source>
-        <translation type="unfinished"></translation>
+        <translation>기록을 불러오는 중…</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Select a row to see its overlay</source>
-        <translation type="unfinished"></translation>
+        <translation>행을 선택하면 오버레이가 표시됩니다</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Defect types</source>
-        <translation type="unfinished"></translation>
+        <translation>결함 유형</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>Add to Training as OK</source>
-        <translation type="unfinished"></translation>
+        <translation>OK로 학습에 추가</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Open in Compare ›</source>
-        <translation type="unfinished"></translation>
+        <translation>비교에서 열기 ›</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Select a record in the table first.</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 표에서 기록을 선택하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <location line="+310"/>
         <source>Export CSV</source>
-        <translation type="unfinished"></translation>
+        <translation>CSV 내보내기</translation>
     </message>
     <message>
         <location line="-309"/>
         <source>Export Image Overlays</source>
-        <translation type="unfinished"></translation>
+        <translation>오버레이 이미지 내보내기</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Delete Records…</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 삭제…</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>Defect type</source>
-        <translation type="unfinished">결함 유형</translation>
+        <translation>결함 유형</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Cumulative</source>
-        <translation type="unfinished"></translation>
+        <translation>누적</translation>
     </message>
     <message>
         <location line="+473"/>
         <source>Record {record}&apos;s board is now an OK sample of {board} ({view}) on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {record}의 보드가 학습에서 {board} ({view})의 OK 샘플이 되었습니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Record {record}&apos;s board is already a sample of {board}, labelled {label}, on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {record}의 보드는 이미 학습에서 {label}(으)로 라벨링된 {board}의 샘플입니다.</translation>
     </message>
     <message>
         <location line="-476"/>
         <source>False calls</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Counting defects…</source>
-        <translation type="unfinished"></translation>
+        <translation>결함을 세는 중…</translation>
     </message>
     <message>
         <location line="+97"/>
         <source>{count:,} record(s) · OK {ok:,} of {count:,} ({rate:.1f} %) · NG {ng:,} · WARN {warn:,}</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {count:,}건 · OK {count:,}건 중 {ok:,}건 ({rate:.1f} %) · NG {ng:,} · WARN {warn:,}</translation>
     </message>
     <message>
         <location line="+3"/>
         <source> · archived {archived:,}</source>
-        <translation type="unfinished"></translation>
+        <translation> · 보관 {archived:,}</translation>
     </message>
     <message>
         <location line="+4"/>
         <source> · reviewed {reviewed:,}, false calls {false_calls:,}</source>
-        <translation type="unfinished"></translation>
+        <translation> · 검토 {reviewed:,}, 과검출 {false_calls:,}</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Every record is archived or older than {days} days.</source>
-        <translation type="unfinished"></translation>
+        <translation>모든 기록이 보관되었거나 {days}일보다 오래되었습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Show All Records</source>
-        <translation type="unfinished"></translation>
+        <translation>모든 기록 보기</translation>
     </message>
     <message>
         <location line="+59"/>
         <source>Review saved: {review} for record {record}.</source>
-        <translation type="unfinished"></translation>
+        <translation>검토 저장됨: 기록 {record}에 {review}.</translation>
     </message>
     <message>
         <location line="+46"/>
         <source>No type</source>
-        <translation type="unfinished"></translation>
+        <translation>유형 없음</translation>
     </message>
     <message>
         <location line="-1"/>
         <source>{percent:.1f} %</source>
-        <translation type="unfinished"></translation>
+        <translation>{percent:.1f} %</translation>
     </message>
     <message>
         <location line="-278"/>
         <location line="+45"/>
         <source>Records</source>
-        <translation type="unfinished"></translation>
+        <translation>기록</translation>
     </message>
     <message>
         <location line="-7"/>
         <source>The listed records&apos; defects by type, most first. Records: the records holding the type; Reviewed and False calls: those of them reviewed on the line, and reviewed as a false call.</source>
-        <translation type="unfinished"></translation>
+        <translation>목록에 있는 기록의 결함을 유형별로, 많은 순으로 보여 줍니다. 기록: 그 유형이 있는 기록 수. 검토됨과 과검출: 그중 라인에서 검토된 수와 과검출로 검토된 수.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Reviewed</source>
-        <translation type="unfinished"></translation>
+        <translation>검토됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Share</source>
-        <translation type="unfinished"></translation>
+        <translation>비율</translation>
     </message>
     <message>
         <location line="+229"/>
         <source>{type}: {defects:,} defect(s), {share:.1f} % of those listed, on {boards:,} record(s); {reviewed:,} of them reviewed, {false_calls:,} as a false call</source>
-        <translation type="unfinished"></translation>
+        <translation>{type}: 결함 {defects:,}개, 목록의 {share:.1f} %, 기록 {boards:,}건. 그중 {reviewed:,}건 검토, {false_calls:,}건 과검출</translation>
     </message>
     <message>
         <location line="+27"/>
         <source>None of the {count:,} listed record(s) holds a defect.</source>
-        <translation type="unfinished"></translation>
+        <translation>목록의 기록 {count:,}건 중 결함이 있는 것이 없습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No defects</source>
-        <translation type="unfinished"></translation>
+        <translation>결함 없음</translation>
     </message>
     <message>
         <location line="+118"/>
         <source>Export CSV stopped: no file was written.</source>
-        <translation type="unfinished"></translation>
+        <translation>CSV 내보내기가 멈췄습니다: 파일을 쓰지 않았습니다.</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Stopped: copied {count} overlay image(s) to {folder}; the others were not copied.</source>
-        <translation type="unfinished"></translation>
+        <translation>정지됨: 오버레이 이미지 {count}장을 {folder}에 복사했고, 나머지는 복사하지 않았습니다.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Archive older than {days} days</source>
-        <translation type="unfinished"></translation>
+        <translation>{days}일보다 오래된 기록 보관</translation>
     </message>
     <message>
         <location line="+22"/>
         <source>Delete {count} record(s) and their evidence files? This cannot be undone; the audit trail keeps who deleted them, when and why.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {count}건과 그 증거 파일을 삭제할까요? 되돌릴 수 없습니다. 누가, 언제, 왜 삭제했는지는 감사 기록에 남습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <location line="+3"/>
         <source>Delete Records</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 삭제</translation>
     </message>
     <message>
         <location line="-1"/>
         <source>Why are these {count} record(s) deleted?</source>
-        <translation type="unfinished"></translation>
+        <translation>이 기록 {count}건을 삭제하는 이유는 무엇입니까?</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Deleted {records} record(s) and {files} evidence file(s)</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {records}건과 증거 파일 {files}개를 삭제함</translation>
     </message>
     <message>
         <location line="-314"/>
         <location line="+142"/>
         <source>No records</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 없음</translation>
     </message>
     <message>
         <location line="-128"/>
         <source>No records match</source>
-        <translation type="unfinished"></translation>
+        <translation>조건에 맞는 기록 없음</translation>
     </message>
     <message>
         <location line="-8"/>
         <location line="+136"/>
         <source>Widen the dates or the filters.</source>
-        <translation type="unfinished"></translation>
+        <translation>날짜나 필터의 범위를 넓히십시오.</translation>
     </message>
     <message>
         <location line="-330"/>
         <source>AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델</translation>
     </message>
     <message>
         <location line="+194"/>
         <source>Reset Filters</source>
-        <translation type="unfinished"></translation>
+        <translation>필터 초기화</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Run boards on Inspection.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사에서 보드를 검사하십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No inspections yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 검사 기록 없음</translation>
     </message>
     <message>
         <location line="+142"/>
         <source>Confirm export</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내기 확인</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Export CSV for {count} record(s)? Two files are written: the records, and a second file ending in _checks.csv with one row per check.</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {count}건을 CSV로 내보낼까요? 파일 두 개를 씁니다: 기록 파일, 그리고 검사 항목마다 한 행씩 들어가는 _checks.csv로 끝나는 파일.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>{file} exists. Replace it?</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}이(가) 이미 있습니다. 바꿀까요?</translation>
     </message>
     <message>
         <location line="+85"/>
         <source>Exported {count} records and {checks} check rows to {folder}: {file}, {checks_file}</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {count}건과 검사 항목 {checks}행을 {folder}에 내보냄: {file}, {checks_file}</translation>
     </message>
     <message>
         <location line="-91"/>
         <source>CSV (*.csv)</source>
-        <translation type="unfinished"></translation>
+        <translation>CSV (*.csv)</translation>
     </message>
     <message>
         <location line="+97"/>
         <source>Export overlay images for {count} record(s)?</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {count}건의 오버레이 이미지를 내보낼까요?</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Export overlays to</source>
-        <translation type="unfinished"></translation>
+        <translation>오버레이를 내보낼 폴더</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Copied {count} overlay image(s) to {folder}</source>
-        <translation type="unfinished"></translation>
+        <translation>오버레이 이미지 {count}장을 {folder}에 복사함</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>Archived {count} record(s)</source>
-        <translation type="unfinished"></translation>
+        <translation>기록 {count}건을 보관함</translation>
     </message>
     <message>
         <location line="-504"/>
@@ -7061,77 +7061,77 @@
     <message>
         <location filename="../ui/main_window.py" line="+7"/>
         <source>PRODUCTION</source>
-        <translation type="unfinished"></translation>
+        <translation>생산</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>ENGINEERING</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어링</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>DATA</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>SYSTEM</source>
-        <translation type="unfinished"></translation>
+        <translation>시스템</translation>
     </message>
     <message>
         <location line="+198"/>
         <source>{title} · Demo</source>
-        <translation type="unfinished"></translation>
+        <translation>{title} · 데모</translation>
     </message>
     <message>
         <location line="+122"/>
         <source>Signed in as {user} ({role}), who started setting up {board_model}. Not you? Press Switch User.</source>
-        <translation type="unfinished">{board_model} 설정을 시작한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
+        <translation>{board_model} 설정을 시작한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Signed in as {user} ({role}) to go on setting up {board_model}, as the user who started it is no longer an Engineer or Admin here. Not you? Press Switch User.</source>
-        <translation type="unfinished">설정을 시작한 사용자가 더 이상 이곳의 엔지니어나 관리자가 아니므로, {board_model} 설정을 이어 가도록 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
+        <translation>설정을 시작한 사용자가 더 이상 엔지니어나 관리자가 아니어서, {board_model} 설정을 이어 가도록 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Signed in as {user} ({role}), who signed in last on this station. Not you? Press Switch User.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 스테이션에 마지막으로 로그인한 {user}({role})(으)로 로그인했습니다. 본인이 아니면 사용자 전환을 누르십시오.</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Demo</source>
-        <translation type="unfinished"></translation>
+        <translation>데모</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Board model:</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델:</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Board model</source>
-        <translation type="unfinished">보드 모델</translation>
+        <translation>보드 모델</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>+ New</source>
-        <translation type="unfinished"></translation>
+        <translation>+ 새로 만들기</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Exit presenter theme</source>
-        <translation type="unfinished"></translation>
+        <translation>발표 테마 끝내기</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>About</source>
-        <translation type="unfinished"></translation>
+        <translation>정보</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Switch User</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 전환</translation>
     </message>
     <message>
         <location line="+17"/>
@@ -7141,128 +7141,128 @@
     <message>
         <location line="+26"/>
         <source>Board model {name} is already selected.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {name}이(가) 이미 선택되어 있습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Board model {name} is in the encrypted dataset store of {customer}.</source>
-        <translation type="unfinished">보드 모델 {name}이(가) {customer}의 암호화된 데이터셋 저장소에 있습니다.</translation>
+        <translation>보드 모델 {name}은(는) {customer}의 암호화된 데이터셋 저장소에 있습니다.</translation>
     </message>
     <message>
         <location line="+32"/>
         <source>An Admin signs in with Sign In as Admin… on Home and saves the recovery key first.</source>
-        <translation type="unfinished">먼저 관리자가 홈에서 관리자로 로그인…을 눌러 로그인하고 복구 키를 저장하십시오.</translation>
+        <translation>관리자가 홈의 관리자로 로그인…으로 로그인해 먼저 복구 키를 저장합니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Save the recovery key to a file or print it, then press I Have Saved the Key.</source>
-        <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
+        <translation>복구 키를 파일로 저장하거나 인쇄한 뒤 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
         <location line="+75"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}의 세션이 입력 없이 {minutes}분이 지나 끝났습니다. {operator}이(가) 로그인했습니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>{user}  ·  {role}</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}  ·  {role}</translation>
     </message>
     <message>
         <location line="-49"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 사용자 전환에서 관리자 비밀번호를 정하십시오: 비밀번호가 없는 계정은 누구나 차지할 수 있습니다.</translation>
     </message>
     <message>
         <location line="+195"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
-        <translation type="unfinished"></translation>
+        <translation>발표 테마 켜짐, 전체 화면. 관리자가 발표 테마 끝내기로 끕니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Presenter theme on. An Admin turns it off with Exit presenter theme.</source>
-        <translation type="unfinished"></translation>
+        <translation>발표 테마 켜짐. 관리자가 발표 테마 끝내기로 끕니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Presenter theme off.</source>
-        <translation type="unfinished"></translation>
+        <translation>발표 테마 꺼짐.</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>{page} needs the {roles} role</source>
-        <translation type="unfinished"></translation>
+        <translation>{page}에는 {roles} 역할이 필요합니다</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>{page} is hidden in the presenter theme</source>
-        <translation type="unfinished"></translation>
+        <translation>{page}은(는) 발표 테마에서 숨겨집니다</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>On {page}:</source>
-        <translation type="unfinished"></translation>
+        <translation>{page}에서:</translation>
     </message>
     <message>
         <location line="+5"/>
         <location line="+5"/>
         <source>{key}   {action}</source>
-        <translation type="unfinished"></translation>
+        <translation>{key}   {action}</translation>
     </message>
     <message>
         <location line="-3"/>
         <source>Open a page:</source>
-        <translation type="unfinished"></translation>
+        <translation>페이지 열기:</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>F1   This list of keys</source>
-        <translation type="unfinished"></translation>
+        <translation>F1   이 단축키 목록</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Keys</source>
-        <translation type="unfinished"></translation>
+        <translation>단축키</translation>
     </message>
     <message>
         <location line="+53"/>
         <source>Drive: free space unknown</source>
-        <translation type="unfinished"></translation>
+        <translation>드라이브: 남은 공간을 알 수 없음</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Drive: {free} GB free · {used} % used</source>
-        <translation type="unfinished"></translation>
+        <translation>드라이브: {free} GB 남음 · {used} % 사용</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>close the app</source>
-        <translation type="unfinished"></translation>
+        <translation>앱을 닫을까요</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Work is still running: training, an AI model test, an inspection, an export or an image import. Stop it and {then}? Training stops without saving an AI model, so the active one stays; an AI model test finishes its folder first; an export or import keeps the files copied so far.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습, AI 모델 테스트, 검사, 내보내기 또는 이미지 가져오기가 아직 실행 중입니다. 멈추고 {then}? 학습은 AI 모델을 저장하지 않고 멈추므로 활성 모델은 그대로이고, AI 모델 테스트는 폴더 작업을 먼저 마치며, 내보내기나 가져오기는 그때까지 복사한 파일을 남깁니다.</translation>
     </message>
     <message>
         <location line="+25"/>
         <source>switch the workspace</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간을 바꿀까요</translation>
     </message>
     <message>
         <location line="+35"/>
         <source>Demo reset in {seconds:.1f} s.</source>
-        <translation type="unfinished"></translation>
+        <translation>데모를 {seconds:.1f}초 만에 초기화했습니다.</translation>
     </message>
     <message>
         <location line="-56"/>
         <source>Stop the running work?</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 중인 작업을 멈출까요?</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Stopping the running work…</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 중인 작업을 멈추는 중…</translation>
     </message>
 </context>
 <context>
@@ -7270,52 +7270,52 @@
     <message>
         <location filename="../ui/pages/missing_list.py" line="+35"/>
         <source>OK images</source>
-        <translation type="unfinished"></translation>
+        <translation>OK 이미지</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>NG images</source>
-        <translation type="unfinished"></translation>
+        <translation>NG 이미지</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>NG images with every defect boxed</source>
-        <translation type="unfinished"></translation>
+        <translation>모든 결함에 박스가 있는 NG 이미지</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>NG labels checked by a second user</source>
-        <translation type="unfinished"></translation>
+        <translation>두 번째 사용자가 검토한 NG 라벨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>OK labels checked by a second user (10 %)</source>
-        <translation type="unfinished"></translation>
+        <translation>두 번째 사용자가 검토한 OK 라벨 (10 %)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Images labelled OK or NG for a calibration set</source>
-        <translation type="unfinished"></translation>
+        <translation>보정 세트용으로 OK 또는 NG로 라벨링된 이미지</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Agreement check that reached its targets</source>
-        <translation type="unfinished"></translation>
+        <translation>목표에 도달한 일치도 검사</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Locked validation set</source>
-        <translation type="unfinished"></translation>
+        <translation>잠긴 검증 세트</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Trained AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>학습된 AI 모델</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Active AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>활성 AI 모델</translation>
     </message>
     <message>
         <location line="+3"/>
@@ -7330,12 +7330,12 @@
     <message>
         <location line="+1"/>
         <source>Draw Boxes ›</source>
-        <translation type="unfinished"></translation>
+        <translation>박스 그리기 ›</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Show Unchecked ›</source>
-        <translation type="unfinished"></translation>
+        <translation>미검토 보기 ›</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -7345,7 +7345,7 @@
     <message>
         <location line="+1"/>
         <source>Open Labeller Agreement ›</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨러 일치도 열기 ›</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -7360,67 +7360,67 @@
     <message>
         <location line="+1"/>
         <source>Start Training</source>
-        <translation type="unfinished"></translation>
+        <translation>학습 시작</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Activate AI Model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 활성화</translation>
     </message>
     <message>
         <location line="+31"/>
         <source>What is missing</source>
-        <translation type="unfinished"></translation>
+        <translation>부족한 것</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Checks</source>
-        <translation type="unfinished"></translation>
+        <translation>검토</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Validated</source>
-        <translation type="unfinished"></translation>
+        <translation>Validated</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Trial: one person, no checks</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial: 한 사람, 검토 없음</translation>
     </message>
     <message>
         <location line="+56"/>
         <source>{board_model}, {view} view: {left} of {lines} still missing</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}, {view} 뷰: {lines}개 중 {left}개가 아직 부족</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>{board_model}, {view} view: an AI model is active; {left} of {lines} still missing for a next version</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}, {view} 뷰: AI 모델이 활성 상태. 다음 버전에는 {lines}개 중 {left}개가 아직 부족</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>{have} of {need}</source>
-        <translation type="unfinished"></translation>
+        <translation>{have}/{need}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{name}: {count}</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}: {count}</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>First: {line}</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저: {line}</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Nothing a Trial version needs is missing: {board_model} has an active AI model. Pick Validated to see what a Validated version needs.</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial 버전에 필요한 것은 모두 있습니다: {board_model}에 활성 AI 모델이 있습니다. Validated 버전에 필요한 것을 보려면 Validated를 고르십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Nothing is missing: {board_model} has an active AI model.</source>
-        <translation type="unfinished"></translation>
+        <translation>부족한 것이 없습니다: {board_model}에 활성 AI 모델이 있습니다.</translation>
     </message>
 </context>
 <context>
@@ -7429,55 +7429,55 @@
         <location filename="../ui/pages/model_test.py" line="+103"/>
         <location line="+786"/>
         <source>Select Test Folder…</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 폴더 선택…</translation>
     </message>
     <message>
         <location line="-785"/>
         <location line="+504"/>
         <location line="+223"/>
         <source>Run Test</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 실행</translation>
     </message>
     <message>
         <location line="-725"/>
         <location line="+792"/>
         <location line="+3"/>
         <source>Export CSV</source>
-        <translation type="unfinished"></translation>
+        <translation>CSV 내보내기</translation>
     </message>
     <message>
         <location line="-793"/>
         <source>Export Report</source>
-        <translation type="unfinished"></translation>
+        <translation>보고서 내보내기</translation>
     </message>
     <message>
         <location line="+4"/>
         <location line="+433"/>
         <source>No folder selected</source>
-        <translation type="unfinished"></translation>
+        <translation>선택한 폴더 없음</translation>
     </message>
     <message>
         <location line="-404"/>
         <location line="+281"/>
         <source>Accuracy</source>
-        <translation type="unfinished"></translation>
+        <translation>정확도</translation>
     </message>
     <message>
         <location line="-282"/>
         <location line="+281"/>
         <source>Precision</source>
-        <translation type="unfinished"></translation>
+        <translation>정밀도</translation>
     </message>
     <message>
         <location line="-282"/>
         <location line="+281"/>
         <source>Recall</source>
-        <translation type="unfinished"></translation>
+        <translation>재현율</translation>
     </message>
     <message>
         <location line="-262"/>
         <source>Image</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -7487,53 +7487,53 @@
     <message>
         <location line="+1"/>
         <source>Verdict</source>
-        <translation type="unfinished"></translation>
+        <translation>판정</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI score</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수</translation>
     </message>
     <message>
         <location line="+619"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Rows are not previewed; select one for Run Test Again, which tests the run&apos;s folder with what is in use now.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 결과는 {run_model}, 레시피 리비전 {run_recipe}, {run_golden}, {run_scale}(으)로 판정되었고, {board_model}은(는) 지금 {model}, 레시피 리비전 {recipe}, {golden}, {scale}을(를) 사용합니다. 행 미리보기는 없습니다. 행을 선택하고 테스트 다시 실행을 누르면 그 실행의 폴더를 지금 사용 중인 것으로 테스트합니다.</translation>
     </message>
     <message>
         <location line="-793"/>
         <source>Matches label</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨과 일치</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Differs from label</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨과 다름</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No label</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨 없음</translation>
     </message>
     <message>
         <location line="+93"/>
         <source>Exports and Validation Report… need the {roles} role.</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내기와 검증 보고서…에는 {roles} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+25"/>
         <location line="+815"/>
         <source>Export Image Overlays</source>
-        <translation type="unfinished"></translation>
+        <translation>오버레이 이미지 내보내기</translation>
     </message>
     <message>
         <location line="-805"/>
         <source>Source</source>
-        <translation type="unfinished"></translation>
+        <translation>출처</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Agreed Targets…</source>
-        <translation type="unfinished"></translation>
+        <translation>합의된 목표…</translation>
     </message>
     <message>
         <location line="+10"/>
@@ -7541,7 +7541,7 @@
         <location line="+217"/>
         <location line="+614"/>
         <source>Missed defects</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 결함</translation>
     </message>
     <message>
         <location line="-894"/>
@@ -7549,453 +7549,453 @@
         <location line="+217"/>
         <location line="+613"/>
         <source>False calls</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출</translation>
     </message>
     <message>
         <location line="-870"/>
         <source>Matches label?</source>
         <comment>whether the verdict matches the image&apos;s label</comment>
-        <translation type="unfinished"></translation>
+        <translation>라벨과 일치?</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Exporting…</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내는 중…</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Select a row to preview</source>
-        <translation type="unfinished"></translation>
+        <translation>행을 선택하면 미리보기가 표시됩니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Inspecting…</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 중…</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Run</source>
-        <translation type="unfinished"></translation>
+        <translation>실행</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>History</source>
-        <translation type="unfinished"></translation>
+        <translation>이력</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>Time</source>
-        <translation type="unfinished"></translation>
+        <translation>시간</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Dataset or folder</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터셋 또는 폴더</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>설정</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Open</source>
-        <translation type="unfinished"></translation>
+        <translation>열기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Validation Report…</source>
-        <translation type="unfinished"></translation>
+        <translation>검증 보고서…</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>recipe revision {revision}</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 리비전 {revision}</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>No runs stored yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 저장된 실행 없음</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Run Test stores each run here.</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 실행이 실행마다 여기에 저장합니다.</translation>
     </message>
     <message>
         <location line="+26"/>
         <source>Validation report</source>
-        <translation type="unfinished"></translation>
+        <translation>검증 보고서</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Validation report saved: {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>검증 보고서 저장됨: {file}</translation>
     </message>
     <message>
         <location line="+33"/>
         <source>Report not written to {file}: the run is no longer shown</source>
-        <translation type="unfinished"></translation>
+        <translation>보고서를 {file}에 쓰지 않았습니다: 그 실행이 더 이상 표시되어 있지 않습니다</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Writing the report to {file}…</source>
-        <translation type="unfinished"></translation>
+        <translation>보고서를 {file}에 쓰는 중…</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>A report is being written to {file}; wait until it is saved.</source>
-        <translation type="unfinished"></translation>
+        <translation>보고서를 {file}에 쓰고 있습니다. 저장될 때까지 기다리십시오.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Board model {board_model} · AI model {version} · validation run {run} · {date}</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board_model} · AI 모델 {version} · 검증 실행 {run} · {date}</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Dataset version {name} of {customer}, revision {revision}, view {view}, frozen {frozen}; one camera set-up.</source>
-        <translation type="unfinished"></translation>
+        <translation>{customer}의 데이터셋 버전 {name}, 리비전 {revision}, 뷰 {view}, 동결 {frozen}. 카메라 설정 한 가지.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Labeller agreement check: OK or NG agree on {ok_ng} of {images} images (target {ok_target} %), defect type on {types} of {ng} NG images (target {type_target} %).</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨러 일치도 검사: OK/NG는 이미지 {images}장 중 {ok_ng}장 일치(목표 {ok_target} %), 결함 유형은 NG 이미지 {ng}장 중 {types}장 일치(목표 {type_target} %).</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>Missed Critical defects</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 Critical 결함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>False call rate</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출률</translation>
     </message>
     <message>
         <location line="+11"/>
         <location line="+65"/>
         <source>{s:.2f} s</source>
-        <translation type="unfinished"></translation>
+        <translation>{s:.2f}초</translation>
     </message>
     <message>
         <location line="-63"/>
         <source>not measured</source>
-        <translation type="unfinished"></translation>
+        <translation>측정 안 됨</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Met</source>
-        <translation type="unfinished"></translation>
+        <translation>충족</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Not met</source>
-        <translation type="unfinished"></translation>
+        <translation>미충족</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Agreed</source>
-        <translation type="unfinished"></translation>
+        <translation>합의됨</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Proposed</source>
-        <translation type="unfinished"></translation>
+        <translation>제안됨</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Manifest SHA-256 {sha}; split with seed {seed}, locked {at}; never trained on.</source>
-        <translation type="unfinished"></translation>
+        <translation>매니페스트 SHA-256 {sha}. 시드 {seed}(으)로 분할, {at}에 잠금. 학습에 쓰인 적 없음.</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>Missed defect</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 결함</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>False call</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>5. AI model card / AI 모델 카드 (draft)</source>
-        <translation type="unfinished"></translation>
+        <translation>5. AI model card / AI 모델 카드 (초안)</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Counts on this validation set only: the bounds say how far the true rates may lie.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 검증 세트에서 센 수치일 뿐입니다: 상한은 실제 비율이 어디까지 될 수 있는지를 나타냅니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Until sign-in ships at release 1.0, the names in the audit trail are picked, not signed in.</source>
-        <translation type="unfinished"></translation>
+        <translation>1.0 릴리스에서 로그인이 제공되기 전까지, 감사 기록의 이름은 로그인이 아니라 선택한 것입니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Valid for the board model, view, camera set-up and AI model named above only.</source>
-        <translation type="unfinished"></translation>
+        <translation>위에 적힌 보드 모델, 뷰, 카메라 설정, AI 모델에만 유효합니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Customer</source>
-        <translation type="unfinished">고객</translation>
+        <translation>고객</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>AI lead</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 책임자</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Role</source>
-        <translation type="unfinished"></translation>
+        <translation>역할</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Name</source>
-        <translation type="unfinished"></translation>
+        <translation>이름</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Date</source>
-        <translation type="unfinished"></translation>
+        <translation>날짜</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Signature</source>
-        <translation type="unfinished"></translation>
+        <translation>서명</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>{rate} %</source>
-        <translation type="unfinished"></translation>
+        <translation>{rate} %</translation>
     </message>
     <message>
         <location line="+61"/>
         <source>Targets saved for {board_model}: the next run is held to them.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 목표를 저장했습니다: 다음 실행부터 이 목표로 평가합니다.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>{name}: its locked validation set, {count} images</source>
-        <translation type="unfinished"></translation>
+        <translation>{name}: 잠긴 검증 세트, 이미지 {count}장</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Labelled folder (ok/ and ng/ sub-folders)</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨링된 폴더 (ok/ 및 ng/ 하위 폴더)</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Validation folder (with ok/ and ng/ sub-folders)</source>
-        <translation type="unfinished"></translation>
+        <translation>검증 폴더 (ok/ 및 ng/ 하위 폴더 포함)</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>No AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 없음</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>AI model not active</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델이 활성 상태가 아님</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>AI model {version} is not active: the results use the Golden board comparison only. Activate it on Training to test it.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}이(가) 활성 상태가 아닙니다: 결과는 골든 보드 비교만 사용합니다. 테스트하려면 학습에서 활성화하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>No AI model yet: the results use the Golden board comparison only.</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 AI 모델이 없습니다: 결과는 골든 보드 비교만 사용합니다.</translation>
     </message>
     <message>
         <location line="+30"/>
         <source>Run Test Again</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 다시 실행</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>The AI model test of {board_model} is stored; its results are not shown here, since the board model changed while it ran.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 AI 모델 테스트가 저장되었습니다. 실행 중에 보드 모델이 바뀌어 결과를 여기에 표시하지 않습니다.</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>{labelled} labelled of {images} images  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN counts as NG</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 {images}장 중 {labelled}장 라벨 있음  ·  TP {tp}  FN {fn}  FP {fp}  TN {tn}  ·  WARN은 NG로 셈</translation>
     </message>
     <message>
         <location line="+118"/>
         <source>Run Test Again ›</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 다시 실행 ›</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>These results were judged by {run_model}, recipe revision {run_recipe}, {run_golden} and {run_scale}; {board_model} now uses {model}, recipe revision {recipe}, {golden} and {scale}. Each row&apos;s preview shows it as the run judged it; Run Test Again tests the run&apos;s source with what is in use now.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 결과는 {run_model}, 레시피 리비전 {run_recipe}, {run_golden}, {run_scale}(으)로 판정되었고, {board_model}은(는) 지금 {model}, 레시피 리비전 {recipe}, {golden}, {scale}을(를) 사용합니다. 각 행의 미리보기는 그 실행이 판정한 대로 보여 줍니다. 테스트 다시 실행은 그 실행의 출처를 지금 사용 중인 것으로 테스트합니다.</translation>
     </message>
     <message>
         <location line="+107"/>
         <source>AI model {version} of {board_model} is not active</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 AI 모델 {version}이(가) 활성 상태가 아님</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Activate it on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습에서 활성화하십시오.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>No AI model for {board_model} yet</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 AI 모델이 아직 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Train one on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습에서 학습시키십시오.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Select a folder with ok/ and ng/ sub-folders, then press Run Test.</source>
-        <translation type="unfinished"></translation>
+        <translation>ok/ 및 ng/ 하위 폴더가 있는 폴더를 선택한 뒤 테스트 실행을 누르십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No validation run for {board_model} yet</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 검증 실행이 아직 없음</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Export the results of {images} images as CSV, one row per image?</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 {images}장의 결과를 이미지당 한 행씩 CSV로 내보낼까요?</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>CSV (*.csv)</source>
-        <translation type="unfinished"></translation>
+        <translation>CSV (*.csv)</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Exported {count} rows to {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>{count}행을 {file}에 내보냄</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Export the annotated images of {images} images? Each is the overlay the run stored, at most {px} px on its longer side, named by its row, image and verdict.</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 {images}장의 표시가 있는 이미지를 내보낼까요? 각 이미지는 실행이 저장한 오버레이로, 긴 변이 최대 {px} px이며 행, 이미지, 판정으로 이름이 붙습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Export overlays to</source>
-        <translation type="unfinished"></translation>
+        <translation>오버레이를 내보낼 폴더</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Copied {count} annotated image(s) to {folder}</source>
-        <translation type="unfinished"></translation>
+        <translation>표시가 있는 이미지 {count}장을 {folder}에 복사함</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Stopped: copied {count} annotated image(s) to {folder}; the others were not copied.</source>
-        <translation type="unfinished"></translation>
+        <translation>정지됨: 표시가 있는 이미지 {count}장을 {folder}에 복사했고, 나머지는 복사하지 않았습니다.</translation>
     </message>
     <message>
         <location line="+15"/>
         <location line="+12"/>
         <source>Export report</source>
-        <translation type="unfinished"></translation>
+        <translation>보고서 내보내기</translation>
     </message>
     <message>
         <location line="-691"/>
         <location line="+681"/>
         <source>PDF (*.pdf)</source>
-        <translation type="unfinished"></translation>
+        <translation>PDF (*.pdf)</translation>
     </message>
     <message>
         <location line="-567"/>
         <source>Agreed with {who} before testing: recorded by {user} on {date}, before this run started.</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 전에 {who}와(과) 합의함: 이 실행이 시작되기 전인 {date}에 {user}이(가) 기록.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>No targets were agreed for {board_model} before this run started, so it is held to the product&apos;s proposed targets.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 실행이 시작되기 전에 {board_model}에 합의된 목표가 없어, 제품의 제안 목표로 평가합니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Engine time per image, 95th percentile (reading, saving, display not counted)</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지당 엔진 시간, 95번째 백분위수 (읽기, 저장, 표시는 제외)</translation>
     </message>
     <message>
         <location line="+89"/>
         <source>at most {missed} missed Critical defects, a false call rate of {rate} or less, {seconds} or less per image</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 Critical 결함 {missed}개 이하, 과검출률 {rate} 이하, 이미지당 {seconds} 이하</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>no missed Critical defect, a false call rate of {rate} or less, {seconds} or less per image</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 Critical 결함 없음, 과검출률 {rate} 이하, 이미지당 {seconds} 이하</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Targets for the next run: {targets}. Agreed with {who}; recorded by {user} on {date}.</source>
-        <translation type="unfinished"></translation>
+        <translation>다음 실행의 목표: {targets}. {who}와(과) 합의, {date}에 {user}이(가) 기록.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Targets for the next run: {targets}. These are the proposed defaults: none were agreed for {board_model}.</source>
-        <translation type="unfinished"></translation>
+        <translation>다음 실행의 목표: {targets}. 제안된 기본값입니다: {board_model}에 합의된 목표가 없습니다.</translation>
     </message>
     <message>
         <location line="+453"/>
         <source>Export the validation report of {images} images? It shows each of its {misses} missed defects and {false_calls} false calls with its overlay, and the AI model card.</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 {images}장의 검증 보고서를 내보낼까요? 놓친 결함 {misses}개와 과검출 {false_calls}개를 각각 오버레이와 함께 보여 주고, AI 모델 카드를 포함합니다.</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Report saved: {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>보고서 저장됨: {file}</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>AI Model Validation Report</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 검증 보고서</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Board model: &lt;b&gt;{board_model}&lt;/b&gt; · AI model: {version} · Date: {date}&lt;br&gt;Validation folder: {folder}&lt;br&gt;Validation run UUID: {run_uuid} · AI model UUID: {model_uuid}</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델: &lt;b&gt;{board_model}&lt;/b&gt; · AI 모델: {version} · 날짜: {date}&lt;br&gt;검증 폴더: {folder}&lt;br&gt;검증 실행 UUID: {run_uuid} · AI 모델 UUID: {model_uuid}</translation>
     </message>
     <message>
         <location line="+5"/>
         <location line="+4"/>
         <source>none</source>
-        <translation type="unfinished"></translation>
+        <translation>없음</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The recipe turned the AI check off for this run: no AI model judged the images, and the verdicts come from the Golden board comparison alone.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 실행에서는 레시피가 AI 검사를 꺼 두었습니다: AI 모델이 이미지를 판정하지 않았고, 판정은 골든 보드 비교만으로 나왔습니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = positive class; WARN counted as NG)</source>
-        <translation type="unfinished"></translation>
+        <translation>TP {tp} · FN {fn} · FP {fp} · TN {tn} (NG = 양성 클래스, WARN은 NG로 셈)</translation>
     </message>
     <message>
         <location line="-563"/>
         <location line="+607"/>
         <source>{image}: labelled {label}, judged {verdict}, AI score {score}</source>
-        <translation type="unfinished"></translation>
+        <translation>{image}: 라벨 {label}, 판정 {verdict}, AI 점수 {score}</translation>
     </message>
 </context>
 <context>
@@ -8003,67 +8003,67 @@
     <message>
         <location filename="../ui/board_model_dialog.py" line="+49"/>
         <source>New board model</source>
-        <translation type="unfinished"></translation>
+        <translation>새 보드 모델</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Board model name (e.g. TBOX-A1 Rev2)</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 이름 (예: TBOX-A1 Rev2)</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Customer</source>
-        <translation type="unfinished">고객</translation>
+        <translation>고객</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>None: an in-house or demo board model</source>
-        <translation type="unfinished"></translation>
+        <translation>없음: 사내 또는 데모 보드 모델</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Create</source>
-        <translation type="unfinished">만들기</translation>
+        <translation>만들기</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Done</source>
-        <translation type="unfinished"></translation>
+        <translation>완료</translation>
     </message>
     <message>
         <location line="+28"/>
         <source>Its images stay unencrypted in the workspace, as for in-house and demo boards. {refusal} An Admin makes a customer&apos;s board model, in the customer&apos;s encrypted dataset store.</source>
-        <translation type="unfinished"></translation>
+        <translation>사내 및 데모 보드처럼 이미지는 작업 공간에 암호화되지 않은 채로 있습니다. {refusal} 고객의 보드 모델은 관리자가 고객의 암호화된 데이터셋 저장소에 만듭니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>No customer: its images stay unencrypted in the workspace, as for in-house and demo boards. Name the customer for a customer&apos;s boards, which go in the customer&apos;s encrypted dataset store.</source>
-        <translation type="unfinished"></translation>
+        <translation>고객 없음: 사내 및 데모 보드처럼 이미지는 작업 공간에 암호화되지 않은 채로 있습니다. 고객의 보드라면 고객 이름을 적으십시오. 고객의 암호화된 데이터셋 저장소에 들어갑니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>It goes in the encrypted dataset store of {customer}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{customer}의 암호화된 데이터셋 저장소에 들어갑니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>{customer} has no dataset store yet: Create makes one, puts the board model in it and shows its recovery key once, to save or print and keep apart from the station.</source>
-        <translation type="unfinished"></translation>
+        <translation>{customer}에는 아직 데이터셋 저장소가 없습니다: 만들기를 누르면 저장소를 만들어 보드 모델을 넣고, 복구 키를 한 번 보여 줍니다. 저장하거나 인쇄해 스테이션과 따로 보관하십시오.</translation>
     </message>
     <message>
         <location line="+49"/>
         <source>Board model {board} is made, in the new encrypted dataset store of {customer}. Its recovery key opens the store on another PC: this station keeps the key, but a new PC or a reinstalled Windows needs this copy.</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 모델 {board}이(가) {customer}의 새 암호화된 데이터셋 저장소에 만들어졌습니다. 복구 키는 다른 PC에서 저장소를 엽니다: 이 스테이션은 키를 보관하지만, 새 PC나 다시 설치한 Windows에는 이 사본이 필요합니다.</translation>
     </message>
     <message>
         <location line="+21"/>
         <source>The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in to save it. The station does nothing else until then.</source>
-        <translation type="unfinished">{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 키는 보관되며, 그때까지 스테이션은 다른 작업을 하지 않습니다.</translation>
+        <translation>{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 보관합니다. 그때까지 스테이션은 다른 일을 하지 않습니다.</translation>
     </message>
 </context>
 <context>
@@ -8071,17 +8071,17 @@
     <message>
         <location filename="../ui/main_window.py" line="-1159"/>
         <source>Home</source>
-        <translation type="unfinished"></translation>
+        <translation>홈</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Stage 1 workflow: upload → train → validate → inspect</source>
-        <translation type="unfinished"></translation>
+        <translation>1단계 작업 흐름: 올리기 → 학습 → 검증 → 검사</translation>
     </message>
     <message>
         <location filename="../ui/pages/base.py" line="+59"/>
         <source>{name} (Trial)</source>
-        <translation type="unfinished"></translation>
+        <translation>{name} (Trial)</translation>
     </message>
     <message>
         <location line="+27"/>
@@ -8101,203 +8101,203 @@
     <message>
         <location line="+193"/>
         <source>No board model yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 보드 모델 없음</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Ask an Engineer to create one.</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어에게 만들어 달라고 하십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>+ New board model</source>
-        <translation type="unfinished"></translation>
+        <translation>+ 새 보드 모델</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Create one to begin.</source>
-        <translation type="unfinished"></translation>
+        <translation>시작하려면 하나 만드십시오.</translation>
     </message>
     <message>
         <location line="+39"/>
         <source>Override {value}</source>
-        <translation type="unfinished"></translation>
+        <translation>대신 {value} 사용</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Set my own value</source>
-        <translation type="unfinished"></translation>
+        <translation>직접 값 설정</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>No AI model version is active: there is no calibrated value.</source>
-        <translation type="unfinished"></translation>
+        <translation>활성 AI 모델 버전이 없습니다: 보정값이 없습니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>No AI model is trained yet: there is no calibrated value.</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 학습된 AI 모델이 없습니다: 보정값이 없습니다.</translation>
     </message>
     <message>
         <location line="+41"/>
         <source>Open {page} ›</source>
-        <translation type="unfinished"></translation>
+        <translation>{page} 열기 ›</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Ask an Engineer to do this on {page}.</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어에게 {page}에서 해 달라고 하십시오.</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>The Golden board for {board_model} cannot be opened</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 골든 보드를 열 수 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{code} {what} Put the file back, or choose another OK sample with Set Reference on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>{code} {what} 파일을 제자리에 돌려놓거나, 학습의 기준 설정으로 다른 OK 샘플을 고르십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>{code} {what} Ask an Engineer to put the file back, or to choose another OK sample with Set Reference on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>{code} {what} 엔지니어에게 파일을 제자리에 돌려놓거나 학습의 기준 설정으로 다른 OK 샘플을 골라 달라고 하십시오.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>{code} {what} {action}</source>
-        <translation type="unfinished"></translation>
+        <translation>{code} {what} {action}</translation>
     </message>
     <message>
         <location line="+28"/>
         <source>Start the Checks</source>
-        <translation type="unfinished"></translation>
+        <translation>점검 시작</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Not inspected</source>
-        <translation type="unfinished"></translation>
+        <translation>검사되지 않음</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>{file} was not inspected</source>
-        <translation type="unfinished"></translation>
+        <translation>{file}이(가) 검사되지 않음</translation>
     </message>
     <message>
         <location line="+123"/>
         <source>{action}  {key}</source>
-        <translation type="unfinished">{action}  {key}</translation>
+        <translation>{action}  {key}</translation>
     </message>
     <message>
         <location filename="../ui/pages/logs.py" line="-628"/>
         <source>Logs &amp; Export</source>
-        <translation type="unfinished"></translation>
+        <translation>로그 및 내보내기</translation>
     </message>
     <message>
         <location filename="../ui/pages/compare.py" line="-923"/>
         <source>Compare</source>
-        <translation type="unfinished"></translation>
+        <translation>비교</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Golden board vs. test board, with the metrics behind the verdict</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드와 테스트 보드, 판정의 근거가 된 수치</translation>
     </message>
     <message>
         <location filename="../ui/pages/inspection.py" line="-786"/>
         <source>Inspection</source>
-        <translation type="unfinished"></translation>
+        <translation>검사</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Stage 1: uploaded images  ·  Stage 2: live camera feed</source>
-        <translation type="unfinished"></translation>
+        <translation>1단계: 올린 이미지  ·  2단계: 실시간 카메라 영상</translation>
     </message>
     <message>
         <location filename="../ui/pages/model_test.py" line="-960"/>
         <source>AI Model Test</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 테스트</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Labels come from the sub-folder names: ok/ and ng/</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨은 하위 폴더 이름에서 옵니다: ok/ 및 ng/</translation>
     </message>
     <message>
         <location filename="../ui/pages/profile3d.py" line="+49"/>
         <source>3D Profile</source>
-        <translation type="unfinished"></translation>
+        <translation>3D 프로파일</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+2"/>
         <source>Stage 2</source>
-        <translation type="unfinished"></translation>
+        <translation>2단계</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Available with the 3D camera in Stage 2</source>
-        <translation type="unfinished"></translation>
+        <translation>2단계의 3D 카메라와 함께 제공됩니다</translation>
     </message>
     <message>
         <location filename="../ui/pages/settings.py" line="+53"/>
         <source>Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>설정</translation>
     </message>
     <message>
         <location filename="../ui/pages/training.py" line="+171"/>
         <source>Training</source>
-        <translation type="unfinished"></translation>
+        <translation>학습</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Upload good (OK) and defective (NG) boards; the AI model trains itself on them</source>
-        <translation type="unfinished"></translation>
+        <translation>양품(OK)과 불량(NG) 보드를 올리면 AI 모델이 스스로 학습합니다</translation>
     </message>
     <message>
         <location filename="../ui/pages/recipe_editor.py" line="-495"/>
         <source>Recipe Editor</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 편집기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Draw ROIs on the Golden board · zoom with the wheel · double-click to fit</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드에 ROI 그리기 · 휠로 확대/축소 · 두 번 클릭해 화면에 맞춤</translation>
     </message>
     <message>
         <location filename="../core/cycle.py" line="+28"/>
         <source>No AI model for {board_model} yet: only the Golden board comparison runs</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 AI 모델이 아직 없습니다: 골든 보드 비교만 실행됩니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI model {version} of {board_model} is not active: only the Golden board comparison runs. An Engineer activates it with Activate {version}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 AI 모델 {version}이(가) 활성 상태가 아닙니다: 골든 보드 비교만 실행됩니다. 엔지니어가 {version} 활성화로 활성화합니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Run stopped: the board model changed from {old} to {new}. Boards inspected before the change are saved under {old}; press Start to carry on with the queue under {new}.</source>
-        <translation type="unfinished"></translation>
+        <translation>실행 정지: 보드 모델이 {old}에서 {new}(으)로 바뀌었습니다. 바뀌기 전에 검사한 보드는 {old}에 저장되었습니다. 시작을 눌러 {new}(으)로 대기열을 계속하십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The AI model, recipe, scale or Golden board changed during this run: {file} was judged with AI model {version}, recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 실행 중에 AI 모델, 레시피, 배율 또는 골든 보드가 바뀌었습니다: {file}은(는) AI 모델 {version}, 레시피 리비전 {revision}, 골든 보드 {golden}, {scale}(으)로 판정되었습니다. 각 기록에는 판정한 레시피 리비전과 골든 보드, 당시 활성 AI 모델 버전이 적힙니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>The recipe, scale or Golden board changed during this run: {file} was judged with the AI check off, recipe revision {revision}, Golden board {golden} and {scale}; each record names the recipe revision and Golden board that judged it and the AI model version active then.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 실행 중에 레시피, 배율 또는 골든 보드가 바뀌었습니다: {file}은(는) AI 검사를 끈 채 레시피 리비전 {revision}, 골든 보드 {golden}, {scale}(으)로 판정되었습니다. 각 기록에는 판정한 레시피 리비전과 골든 보드, 당시 활성 AI 모델 버전이 적힙니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>no scale</source>
-        <translation type="unfinished"></translation>
+        <translation>배율 없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>a scale of {scale:.2f} px/mm</source>
-        <translation type="unfinished"></translation>
+        <translation>배율 {scale:.2f} px/mm</translation>
     </message>
 </context>
 <context>
@@ -8305,27 +8305,27 @@
     <message>
         <location filename="../ui/pages/profile3d.py" line="+5"/>
         <source>Open Recipe Editor ›</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 편집기 열기 ›</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Back to Home</source>
-        <translation type="unfinished"></translation>
+        <translation>홈으로 돌아가기</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Coming in Stage 2</source>
-        <translation type="unfinished"></translation>
+        <translation>2단계에서 제공 예정</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>This page needs the 3D camera of Stage 2. It will show the height map of a board, the four AOI checks that need height data (Shield Can Gap, Connector Pin Height, 3D Coplanarity, Solder Volume), and Accept / Reject for each height defect.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 페이지에는 2단계의 3D 카메라가 필요합니다. 보드의 높이 맵, 높이 데이터가 필요한 AOI 검사 네 가지(Shield Can Gap, Connector Pin Height, 3D Coplanarity, Solder Volume), 높이 결함마다 수락/거부를 보여 줄 예정입니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Height and volume thresholds (min and max) can be entered per ROI in the Recipe Editor until then; they are stored now and checked from Stage 2.</source>
-        <translation type="unfinished"></translation>
+        <translation>그때까지 높이와 부피 임계값(최소, 최대)은 레시피 편집기에서 ROI별로 입력할 수 있습니다. 지금은 저장만 하고 2단계부터 검사합니다.</translation>
     </message>
 </context>
 <context>
@@ -8333,27 +8333,27 @@
     <message>
         <location filename="../core/stats.py" line="+19"/>
         <source>{n} of {of}</source>
-        <translation type="unfinished"></translation>
+        <translation>{of}개 중 {n}개</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{n} of {of}, 95 % upper bound {limit} %</source>
-        <translation type="unfinished"></translation>
+        <translation>{of}개 중 {n}개, 95 % 상한 {limit} %</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{n} of {of}, 95 % lower bound {limit} %</source>
-        <translation type="unfinished"></translation>
+        <translation>{of}개 중 {n}개, 95 % 하한 {limit} %</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>95 % upper bound {limit} %</source>
-        <translation type="unfinished"></translation>
+        <translation>95 % 상한 {limit} %</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>95 % lower bound {limit} %</source>
-        <translation type="unfinished"></translation>
+        <translation>95 % 하한 {limit} %</translation>
     </message>
 </context>
 <context>
@@ -8361,79 +8361,79 @@
     <message>
         <location filename="../ui/pages/recipe_editor.py" line="-20"/>
         <source>Presence</source>
-        <translation type="unfinished"></translation>
+        <translation>유무</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Polarity</source>
-        <translation type="unfinished"></translation>
+        <translation>극성</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Solder Bridge</source>
-        <translation type="unfinished"></translation>
+        <translation>솔더 브리지</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Height</source>
-        <translation type="unfinished"></translation>
+        <translation>높이</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Anomaly</source>
-        <translation type="unfinished"></translation>
+        <translation>이상</translation>
     </message>
     <message>
         <location line="+39"/>
         <location line="+2"/>
         <source>Draw ROI</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI 그리기</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Type:</source>
-        <translation type="unfinished"></translation>
+        <translation>유형:</translation>
     </message>
     <message>
         <location line="+38"/>
         <source>Trying the recipe…</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피를 시험하는 중…</translation>
     </message>
     <message>
         <location line="+140"/>
         <source>The 10 mandatory AOI checks (defect classification table, section 4):</source>
-        <translation type="unfinished"></translation>
+        <translation>필수 AOI 검사 10가지 (결함 분류표 4절):</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>AOI checks</source>
-        <translation type="unfinished"></translation>
+        <translation>AOI 검사</translation>
     </message>
     <message>
         <location line="+30"/>
         <source>Trying each setting on the labelled boards…</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨링된 보드에서 설정마다 시험하는 중…</translation>
     </message>
     <message>
         <location line="+38"/>
         <source>AI score</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수</translation>
     </message>
     <message>
         <location line="-209"/>
         <source>Selected ROI</source>
-        <translation type="unfinished"></translation>
+        <translation>선택한 ROI</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Enabled</source>
-        <translation type="unfinished"></translation>
+        <translation>사용</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+198"/>
         <source>Name</source>
-        <translation type="unfinished"></translation>
+        <translation>이름</translation>
     </message>
     <message>
         <location line="+0"/>
@@ -8443,399 +8443,399 @@
     <message>
         <location line="-2"/>
         <source>X</source>
-        <translation type="unfinished"></translation>
+        <translation>X</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Y</source>
-        <translation type="unfinished"></translation>
+        <translation>Y</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>W</source>
-        <translation type="unfinished"></translation>
+        <translation>W</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>H</source>
-        <translation type="unfinished"></translation>
+        <translation>H</translation>
     </message>
     <message>
         <location line="-195"/>
         <source>ROI type</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI 유형</translation>
     </message>
     <message>
         <location line="-70"/>
         <source>Leave Draw ROI</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI 그리기 끝내기</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Delete ROI</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI 삭제</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Undo</source>
-        <translation type="unfinished">실행 취소</translation>
+        <translation>실행 취소</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Redo</source>
-        <translation type="unfinished"></translation>
+        <translation>다시 실행</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Calibrate Scale…</source>
-        <translation type="unfinished"></translation>
+        <translation>배율 보정…</translation>
     </message>
     <message>
         <location line="+54"/>
         <source>AI score (× AI score threshold)</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수 (× AI 점수 임계값)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Height thresholds min / max (Stage 2)</source>
-        <translation type="unfinished"></translation>
+        <translation>높이 임계값 최소 / 최대 (2단계)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Volume thresholds min / max (Stage 2)</source>
-        <translation type="unfinished"></translation>
+        <translation>부피 임계값 최소 / 최대 (2단계)</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Apply</source>
-        <translation type="unfinished"></translation>
+        <translation>적용</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Delete</source>
-        <translation type="unfinished"></translation>
+        <translation>삭제</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Select an ROI in the table, or draw one with Draw ROI.</source>
-        <translation type="unfinished"></translation>
+        <translation>표에서 ROI를 선택하거나 ROI 그리기로 그리십시오.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>ROIs</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Learn From Labelled Boards…</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨링된 보드에서 학습…</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Chooses the Pixel difference, Minimum defect area and fine alignment with the fewest false calls that miss at most 1 % of the boxed defects on this board model&apos;s labelled boards.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 보드 모델의 라벨링된 보드에서, 박스가 있는 결함을 최대 1 %만 놓치면서 과검출이 가장 적은 픽셀 차이, 최소 결함 면적, 정밀 정렬을 고릅니다.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Use the self-trained AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>자체 학습한 AI 모델 사용</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Use the Golden board comparison</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드 비교 사용</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Fine alignment</source>
-        <translation type="unfinished"></translation>
+        <translation>정밀 정렬</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Matches each board to the Golden board to a fraction of a pixel before comparing: fewer false calls along copper edges, about {ms} ms more per board.</source>
-        <translation type="unfinished"></translation>
+        <translation>비교하기 전에 각 보드를 골든 보드에 픽셀보다 작은 단위로 맞춥니다: 구리 가장자리의 과검출이 줄고, 보드당 약 {ms} ms가 더 걸립니다.</translation>
     </message>
     <message>
         <location line="+30"/>
         <source>On a bare board, each difference outside an ROI is named Open Circuit, Short Circuit, Mousebite, Spur, Spurious Copper or Pin-hole / Missing Hole. Pick the shade copper has on the Golden board. Names never change a verdict.</source>
-        <translation type="unfinished"></translation>
+        <translation>베어 보드에서는 ROI 밖의 차이마다 Open Circuit, Short Circuit, Mousebite, Spur, Spurious Copper 또는 Pin-hole / Missing Hole로 이름을 붙입니다. 골든 보드에서 구리가 보이는 밝기를 고르십시오. 이름은 판정을 바꾸지 않습니다.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Reset to Defaults</source>
-        <translation type="unfinished"></translation>
+        <translation>기본값으로 초기화</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Sets every threshold on this tab to the value a new board model starts with. The ROIs stay, and nothing is saved until you press Save Recipe; earlier revisions stay in History.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 탭의 모든 임계값을 새 보드 모델의 시작 값으로 설정합니다. ROI는 그대로이며, 레시피 저장을 누르기 전에는 아무것도 저장되지 않습니다. 이전 리비전은 이력에 남습니다.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>AI score threshold</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수 임계값</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>WARN band (fraction of the threshold)</source>
-        <translation type="unfinished"></translation>
+        <translation>WARN 구간 (임계값 대비 비율)</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Pixel difference (0-255)</source>
-        <translation type="unfinished"></translation>
+        <translation>픽셀 차이 (0-255)</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Similarity minimum (SSIM)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 유사도 (SSIM)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Maximum changed area %</source>
-        <translation type="unfinished"></translation>
+        <translation>최대 변화 면적 %</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Allowed difference regions</source>
-        <translation type="unfinished"></translation>
+        <translation>허용 차이 영역 수</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Copper defect names</source>
-        <translation type="unfinished"></translation>
+        <translation>구리 결함 이름</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>Thresholds</source>
-        <translation type="unfinished"></translation>
+        <translation>임계값</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>• whole board: the AI model and the Golden board comparison find it without an ROI, as a difference from the Golden board, and name it Anomaly.</source>
-        <translation type="unfinished"></translation>
+        <translation>• 보드 전체: AI 모델과 골든 보드 비교가 ROI 없이 골든 보드와의 차이로 찾아내며, 이상(Anomaly)으로 이름 붙입니다.</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Revision</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>User</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Saved</source>
-        <translation type="unfinished"></translation>
+        <translation>저장 일시</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Changes (before → after)</source>
-        <translation type="unfinished"></translation>
+        <translation>변경 (이전 → 이후)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Reason</source>
-        <translation type="unfinished"></translation>
+        <translation>사유</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Open</source>
-        <translation type="unfinished"></translation>
+        <translation>열기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Restore as New Revision</source>
-        <translation type="unfinished"></translation>
+        <translation>새 리비전으로 복원</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Revisions</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Check</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 항목</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Source</source>
-        <translation type="unfinished"></translation>
+        <translation>출처</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Value</source>
-        <translation type="unfinished"></translation>
+        <translation>값</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Threshold</source>
-        <translation type="unfinished"></translation>
+        <translation>임계값</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Rule</source>
-        <translation type="unfinished"></translation>
+        <translation>규칙</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Result</source>
-        <translation type="unfinished"></translation>
+        <translation>결과</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>Try Recipe…</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 시험…</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Save Recipe</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 저장</translation>
     </message>
     <message>
         <location line="+19"/>
         <source>px</source>
-        <translation type="unfinished"></translation>
+        <translation>px</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>mm</source>
-        <translation type="unfinished"></translation>
+        <translation>mm</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{name} ({unit})</source>
-        <translation type="unfinished"></translation>
+        <translation>{name} ({unit})</translation>
     </message>
     <message>
         <location line="+96"/>
         <source>Train an AI model or set a reference image on Training.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습에서 AI 모델을 학습시키거나 기준 이미지를 설정하십시오.</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No Golden board for {board_model} yet</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 골든 보드가 아직 없음</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>No ROIs yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 ROI 없음</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Press Draw ROI and drag on the Golden board.</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI 그리기를 누르고 골든 보드 위를 드래그하십시오.</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>✓  ROI {names}</source>
-        <translation type="unfinished"></translation>
+        <translation>✓  ROI {names}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>•  whole board</source>
-        <translation type="unfinished"></translation>
+        <translation>•  보드 전체</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>○  not covered</source>
-        <translation type="unfinished"></translation>
+        <translation>○  검사 범위 밖</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>◌  needs Stage 2 (3D / side camera)</source>
-        <translation type="unfinished"></translation>
+        <translation>◌  2단계 필요 (3D / 측면 카메라)</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>{defect:&lt;24}  {mark}</source>
-        <translation type="unfinished"></translation>
+        <translation>{defect:&lt;24}  {mark}</translation>
     </message>
     <message>
         <location line="+162"/>
         <source>Scale {scale:.2f} px/mm</source>
-        <translation type="unfinished"></translation>
+        <translation>배율 {scale:.2f} px/mm</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>{code} {title}: {action}</source>
-        <translation type="unfinished"></translation>
+        <translation>{code} {title}: {action}</translation>
     </message>
     <message>
         <location line="+59"/>
         <source>Scale of {board_model} set: {scale:.2f} px/mm.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 배율 설정됨: {scale:.2f} px/mm.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Sizes are shown in mm.</source>
-        <translation type="unfinished"></translation>
+        <translation>크기는 mm로 표시됩니다.</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Image to try the recipe on</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피를 시험할 이미지</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Images ({extensions})</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 ({extensions})</translation>
     </message>
     <message>
         <location line="+22"/>
         <source>Try result: {verdict}  ·  {defects} defect(s)  ·  {ms:.0f} ms</source>
-        <translation type="unfinished"></translation>
+        <translation>시험 결과: {verdict}  ·  결함 {defects}개  ·  {ms:.0f} ms</translation>
     </message>
     <message>
         <location line="+38"/>
         <source>Learned values set. Press Save Recipe to keep them as a new revision.</source>
-        <translation type="unfinished"></translation>
+        <translation>학습값을 넣었습니다. 새 리비전으로 보관하려면 레시피 저장을 누르십시오.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Pick a board model first.</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 보드 모델을 고르십시오.</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Default values set. Press Save Recipe to keep them as a new revision.</source>
-        <translation type="unfinished"></translation>
+        <translation>기본값을 넣었습니다. 새 리비전으로 보관하려면 레시피 저장을 누르십시오.</translation>
     </message>
     <message>
         <location line="+63"/>
         <source>Saved revision {revision} by {user}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}이(가) 리비전 {revision}을(를) 저장했습니다.</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+24"/>
         <location line="+50"/>
         <source>Recipe</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피</translation>
     </message>
     <message>
         <location line="-63"/>
         <source>Revision {latest}, saved after revision {revision}, is shown now.</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 {revision} 뒤에 저장된 리비전 {latest}을(를) 지금 표시합니다.</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Revision {old}, restored as revision {next}, is shown once saved, in place of your unsaved changes. Restore it and discard them?</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 {old}을(를) 리비전 {next}(으)로 복원하면, 저장한 뒤 저장하지 않은 변경 대신 표시됩니다. 복원하고 변경을 버릴까요?</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>first revision</source>
-        <translation type="unfinished"></translation>
+        <translation>첫 리비전</translation>
     </message>
     <message>
         <location line="+36"/>
         <source>Revision {latest} of {board_model} was saved after revision {revision}, which you are editing. Load revision {latest} and discard your unsaved changes? With No, they stay on screen, but Save Recipe refuses them until revision {latest} is loaded.</source>
-        <translation type="unfinished"></translation>
+        <translation>편집 중인 리비전 {revision} 뒤에 {board_model}의 리비전 {latest}이(가) 저장되었습니다. 리비전 {latest}을(를) 불러오고 저장하지 않은 변경을 버릴까요? 아니요를 고르면 변경은 화면에 남지만, 리비전 {latest}을(를) 불러올 때까지 레시피 저장이 거부합니다.</translation>
     </message>
 </context>
 <context>
@@ -8843,67 +8843,67 @@
     <message>
         <location filename="../ui/recovery_code_dialog.py" line="+32"/>
         <source>Recovery code for {user}</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}의 복구 코드</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, {user} signs in and chooses a new password after losing theirs. It works once, then a new one shows.</source>
-        <translation type="unfinished"></translation>
+        <translation>이번 한 번만 표시됩니다. USB 드라이브에 저장하거나 인쇄해 스테이션과 따로 보관하십시오: {user}이(가) 비밀번호를 잃어버렸을 때 이 코드로 로그인해 새 비밀번호를 정합니다. 한 번 쓰면 새 코드가 표시됩니다.</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Save to File…</source>
-        <translation type="unfinished"></translation>
+        <translation>파일로 저장…</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Print…</source>
-        <translation type="unfinished"></translation>
+        <translation>인쇄…</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Done</source>
-        <translation type="unfinished"></translation>
+        <translation>완료</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Close Without the Code</source>
-        <translation type="unfinished"></translation>
+        <translation>코드 없이 닫기</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Keep this sheet locked away, apart from the station. At Switch User, {user} presses Use Recovery Code…, types it and chooses a new password. It works once.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 종이는 스테이션과 떨어진 곳에 잠가 보관하십시오. 사용자 전환에서 {user}이(가) 복구 코드 사용…을 누르고 코드를 입력한 뒤 새 비밀번호를 정합니다. 한 번만 쓸 수 있습니다.</translation>
     </message>
     <message>
         <location line="+27"/>
         <source>Save Recovery Code</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 코드 저장</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Text (*.txt)</source>
-        <translation type="unfinished"></translation>
+        <translation>텍스트 (*.txt)</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>✓ Saved to {file}</source>
-        <translation type="unfinished">✓ {file}에 저장됨</translation>
+        <translation>✓ {file}에 저장됨</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>✓ Sent to {printer}</source>
-        <translation type="unfinished">✓ {printer}(으)로 보냄</translation>
+        <translation>✓ {printer}(으)로 보냄</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>Only {admin} may see this recovery code. Close Without the Code lets the station carry on: the code is then lost, and {admin} gets a new one after Reset Password on Settings.</source>
-        <translation type="unfinished"></translation>
+        <translation>{admin}만 이 복구 코드를 볼 수 있습니다. 코드 없이 닫기를 누르면 스테이션은 계속 동작하지만 코드는 사라지며, {admin}은(는) 설정의 비밀번호 재설정 뒤에 새 코드를 받습니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>The session of {admin} ended, so their recovery code is hidden, kept until {admin} signs in again to save it. The station does nothing else until then.</source>
-        <translation type="unfinished"></translation>
+        <translation>{admin}의 세션이 끝나 복구 코드를 숨겼습니다. {admin}이(가) 다시 로그인해 저장할 때까지 보관합니다. 그때까지 스테이션은 다른 일을 하지 않습니다.</translation>
     </message>
 </context>
 <context>
@@ -8911,67 +8911,67 @@
     <message>
         <location filename="../ui/pages/recovery_key.py" line="+55"/>
         <source>Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, an Admin opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
-        <translation type="unfinished"></translation>
+        <translation>이번 한 번만 표시됩니다. USB 드라이브에 저장하거나 인쇄해 스테이션과 따로 보관하십시오: 관리자가 이 키로 다른 PC에서 저장소를 열며, 이 키와 파일 사본을 가진 사람은 누구나 파일을 읽을 수 있습니다.</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Save to File…</source>
-        <translation type="unfinished"></translation>
+        <translation>파일로 저장…</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Print…</source>
-        <translation type="unfinished"></translation>
+        <translation>인쇄…</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>I have saved or printed the key and will keep it apart from the station</source>
-        <translation type="unfinished"></translation>
+        <translation>키를 저장하거나 인쇄했으며 스테이션과 따로 보관하겠습니다</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Recovery key for {customer}</source>
-        <translation type="unfinished"></translation>
+        <translation>{customer}의 복구 키</translation>
     </message>
     <message>
         <location line="+53"/>
         <source>Store {uuid} · key id {key_id}</source>
-        <translation type="unfinished">저장소 {uuid} · 키 ID {key_id}</translation>
+        <translation>저장소 {uuid} · 키 ID {key_id}</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Keep this sheet locked away, apart from the station. With it, an Admin types the key into Settings › Dataset stores › Advanced › Restore Key… on another PC or Windows account. Anyone who holds it and a copy of the store&apos;s files can read them. Destroy it when the store is shredded.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 종이는 스테이션과 떨어진 곳에 잠가 보관하십시오. 관리자가 다른 PC나 Windows 계정에서 설정 › 데이터셋 저장소 › 고급 › 키 복원…에 이 키를 입력합니다. 이 키와 저장소 파일 사본을 가진 사람은 누구나 파일을 읽을 수 있습니다. 저장소를 파기하면 이 종이도 폐기하십시오.</translation>
     </message>
     <message>
         <location line="+46"/>
         <source>✓ Saved to {file}</source>
-        <translation type="unfinished">✓ {file}에 저장됨</translation>
+        <translation>✓ {file}에 저장됨</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>✓ Sent to {printer}</source>
-        <translation type="unfinished">✓ {printer}(으)로 보냄</translation>
+        <translation>✓ {printer}(으)로 보냄</translation>
     </message>
     <message>
         <location line="-83"/>
         <source>Save the key to a file or print it first</source>
-        <translation type="unfinished"></translation>
+        <translation>먼저 키를 파일로 저장하거나 인쇄하십시오</translation>
     </message>
     <message>
         <location line="+58"/>
         <source>Save Recovery Key</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 키 저장</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Text (*.txt)</source>
-        <translation type="unfinished"></translation>
+        <translation>텍스트 (*.txt)</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Saved the recovery key to {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 키를 {file}에 저장했습니다</translation>
     </message>
 </context>
 <context>
@@ -8979,12 +8979,12 @@
     <message>
         <location line="+42"/>
         <source>Done</source>
-        <translation type="unfinished"></translation>
+        <translation>완료</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in to save it. The station does nothing else until then.</source>
-        <translation type="unfinished">{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 키는 보관되며, 그때까지 스테이션은 다른 작업을 하지 않습니다.</translation>
+        <translation>{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 보관합니다. 그때까지 스테이션은 다른 일을 하지 않습니다.</translation>
     </message>
 </context>
 <context>
@@ -8992,69 +8992,69 @@
     <message>
         <location filename="../ui/pages/review.py" line="+24"/>
         <source>Normal variation: the board is good</source>
-        <translation type="unfinished"></translation>
+        <translation>정상 편차: 양품입니다</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Dust or debris on the board, not a defect</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 위의 먼지나 이물, 결함 아님</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Glare or lighting in the image</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지의 반사나 조명</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Board out of position in the image</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지에서 보드 위치가 어긋남</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Marking or label, not a defect</source>
-        <translation type="unfinished"></translation>
+        <translation>마킹이나 라벨, 결함 아님</translation>
     </message>
     <message>
         <location line="+12"/>
         <location line="+18"/>
         <source>Real defect</source>
-        <translation type="unfinished"></translation>
+        <translation>실제 결함</translation>
     </message>
     <message>
         <location line="-16"/>
         <location line="+74"/>
         <source>False call</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출</translation>
     </message>
     <message>
         <location line="-56"/>
         <source>False call…</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출…</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Only an NG or WARN board is reviewed: inspect one, or select its record on Logs &amp; Export.</source>
-        <translation type="unfinished"></translation>
+        <translation>NG 또는 WARN 보드만 검토합니다: 보드를 검사하거나 로그 및 내보내기에서 기록을 선택하십시오.</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>Review this call: is the defect real? Real defect F10 · False call F11</source>
-        <translation type="unfinished"></translation>
+        <translation>이 판정을 검토하십시오: 실제 결함입니까? 실제 결함 F10 · 과검출 F11</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Reviewed: {review} ({reason}) by {user}</source>
-        <translation type="unfinished"></translation>
+        <translation>검토됨: {review} ({reason}), {user}</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Reviewed: {review} by {user}</source>
-        <translation type="unfinished"></translation>
+        <translation>검토됨: {review}, {user}</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>Why is this call false? Pick a reason or type one.</source>
-        <translation type="unfinished"></translation>
+        <translation>이 판정이 왜 과검출입니까? 사유를 고르거나 입력하십시오.</translation>
     </message>
 </context>
 <context>
@@ -9062,22 +9062,22 @@
     <message>
         <location filename="../ui/pages/recipe_save.py" line="+191"/>
         <source>Revision {revision}, read-only: saved by {user}, {saved}</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 {revision}, 읽기 전용: {user}이(가) {saved}에 저장</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>{setting}: {value}</source>
-        <translation type="unfinished"></translation>
+        <translation>{setting}: {value}</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>What the recipe as edited changes from revision {revision}:</source>
-        <translation type="unfinished"></translation>
+        <translation>편집한 레시피가 리비전 {revision}에서 바꾸는 것:</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>The recipe as edited is the same as revision {revision}.</source>
-        <translation type="unfinished"></translation>
+        <translation>편집한 레시피는 리비전 {revision}와(과) 같습니다.</translation>
     </message>
 </context>
 <context>
@@ -9085,17 +9085,17 @@
     <message>
         <location filename="../ui/pages/base.py" line="-526"/>
         <source>Operator</source>
-        <translation type="unfinished"></translation>
+        <translation>작업자</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Engineer</source>
-        <translation type="unfinished"></translation>
+        <translation>엔지니어</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Admin</source>
-        <translation type="unfinished"></translation>
+        <translation>관리자</translation>
     </message>
 </context>
 <context>
@@ -9103,18 +9103,18 @@
     <message>
         <location filename="../ui/pages/guide_said.py" line="+20"/>
         <source>{title}: {line} ({code})</source>
-        <translation type="unfinished">{title}: {line} ({code})</translation>
+        <translation>{title}: {line} ({code})</translation>
     </message>
     <message>
         <location line="+16"/>
         <location line="+48"/>
         <source>Show Details</source>
-        <translation type="unfinished">자세히 보기</translation>
+        <translation>자세히 보기</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Hide Details</source>
-        <translation type="unfinished">자세히 숨기기</translation>
+        <translation>자세히 숨기기</translation>
     </message>
 </context>
 <context>
@@ -9122,224 +9122,224 @@
     <message>
         <location filename="../ui/pages/recipe_save.py" line="-179"/>
         <source>Off (assembled boards)</source>
-        <translation type="unfinished"></translation>
+        <translation>끔 (조립 보드)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Light copper</source>
-        <translation type="unfinished"></translation>
+        <translation>밝은 구리</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Dark copper</source>
-        <translation type="unfinished"></translation>
+        <translation>어두운 구리</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>AI check</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 검사</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI score threshold</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수 임계값</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>WARN band</source>
-        <translation type="unfinished"></translation>
+        <translation>WARN 구간</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Golden board comparison</source>
-        <translation type="unfinished"></translation>
+        <translation>골든 보드 비교</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Pixel difference</source>
-        <translation type="unfinished"></translation>
+        <translation>픽셀 차이</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Minimum defect area (px)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 면적 (px)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Minimum defect size (mm)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 결함 크기 (mm)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Similarity minimum (SSIM)</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 유사도 (SSIM)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Maximum changed area %</source>
-        <translation type="unfinished"></translation>
+        <translation>최대 변화 면적 %</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Allowed difference regions</source>
-        <translation type="unfinished"></translation>
+        <translation>허용 차이 영역 수</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Copper defect names</source>
-        <translation type="unfinished"></translation>
+        <translation>구리 결함 이름</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Fine alignment</source>
-        <translation type="unfinished"></translation>
+        <translation>정밀 정렬</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>type</source>
-        <translation type="unfinished"></translation>
+        <translation>유형</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>X (px)</source>
-        <translation type="unfinished"></translation>
+        <translation>X (px)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Y (px)</source>
-        <translation type="unfinished"></translation>
+        <translation>Y (px)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>W (px)</source>
-        <translation type="unfinished"></translation>
+        <translation>W (px)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>H (px)</source>
-        <translation type="unfinished"></translation>
+        <translation>H (px)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>box in mm</source>
-        <translation type="unfinished"></translation>
+        <translation>박스 (mm)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI score</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 점수</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>height min</source>
-        <translation type="unfinished"></translation>
+        <translation>높이 최소</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>height max</source>
-        <translation type="unfinished"></translation>
+        <translation>높이 최대</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>volume min</source>
-        <translation type="unfinished"></translation>
+        <translation>부피 최소</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>volume max</source>
-        <translation type="unfinished"></translation>
+        <translation>부피 최대</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>side</source>
-        <translation type="unfinished"></translation>
+        <translation>면</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>enabled</source>
-        <translation type="unfinished"></translation>
+        <translation>사용</translation>
     </message>
     <message>
         <location line="+12"/>
         <source>Save Recipe</source>
-        <translation type="unfinished"></translation>
+        <translation>레시피 저장</translation>
     </message>
     <message>
         <location line="+19"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Save Revision</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 저장</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>Save the recipe of {board_model} as revision {next}? Revision {revision} stays as it was saved.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 레시피를 리비전 {next}(으)로 저장할까요? 리비전 {revision}은(는) 저장된 그대로 남습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Restore revision {old} of {board_model} as revision {next}? Revision {revision} stays as it was saved.</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 리비전 {old}을(를) 리비전 {next}(으)로 복원할까요? 리비전 {revision}은(는) 저장된 그대로 남습니다.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Nothing changed since revision {revision}.</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 {revision} 이후 바뀐 것이 없습니다.</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Not covered: {checks}. A reason is needed to save without them, and is kept with the revision.</source>
-        <translation type="unfinished"></translation>
+        <translation>검사 범위 밖: {checks}. 이 항목 없이 저장하려면 사유가 필요하며, 사유는 리비전과 함께 보관됩니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Reason (required)</source>
-        <translation type="unfinished"></translation>
+        <translation>사유 (필수)</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Reason</source>
-        <translation type="unfinished"></translation>
+        <translation>사유</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Save Revision {next}</source>
-        <translation type="unfinished"></translation>
+        <translation>리비전 {next} 저장</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>ROI {roi} added</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI {roi} 추가됨</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>ROI {roi} removed</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI {roi} 삭제됨</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>ROI {roi}, {setting}</source>
-        <translation type="unfinished"></translation>
+        <translation>ROI {roi}, {setting}</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{setting}: {before} → {after}</source>
-        <translation type="unfinished"></translation>
+        <translation>{setting}: {before} → {after}</translation>
     </message>
     <message>
         <location line="+10"/>
         <location line="+4"/>
         <source>on</source>
-        <translation type="unfinished"></translation>
+        <translation>켜짐</translation>
     </message>
     <message>
         <location line="-4"/>
         <location line="+4"/>
         <source>off</source>
-        <translation type="unfinished"></translation>
+        <translation>꺼짐</translation>
     </message>
 </context>
 <context>
@@ -9347,300 +9347,305 @@
     <message>
         <location filename="../ui/pages/settings.py" line="-16"/>
         <source>Stage 1</source>
-        <translation type="unfinished"></translation>
+        <translation>1단계</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Stage 2</source>
-        <translation type="unfinished"></translation>
+        <translation>2단계</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Stage 3</source>
-        <translation type="unfinished"></translation>
+        <translation>3단계</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Stage 4</source>
-        <translation type="unfinished"></translation>
+        <translation>4단계</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Not connected</source>
-        <translation type="unfinished"></translation>
+        <translation>연결 안 됨</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Image files (folder camera)</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 파일 (폴더 카메라)</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Ready</source>
-        <translation type="unfinished"></translation>
+        <translation>준비됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>GigE / USB3 Vision camera</source>
-        <translation type="unfinished"></translation>
+        <translation>GigE / USB3 Vision 카메라</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Lighting controller (serial / Ethernet)</source>
-        <translation type="unfinished"></translation>
+        <translation>조명 컨트롤러 (시리얼 / 이더넷)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Robot controller (Ethernet / RS-485)</source>
-        <translation type="unfinished"></translation>
+        <translation>로봇 컨트롤러 (이더넷 / RS-485)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>MES / ERP (REST / OPC UA)</source>
-        <translation type="unfinished"></translation>
+        <translation>MES / ERP (REST / OPC UA)</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Version {version}</source>
-        <translation type="unfinished"></translation>
+        <translation>버전 {version}</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>System</source>
-        <translation type="unfinished"></translation>
+        <translation>시스템</translation>
     </message>
     <message>
         <location line="+8"/>
         <location line="+131"/>
         <source>Browse…</source>
-        <translation type="unfinished"></translation>
+        <translation>찾아보기…</translation>
     </message>
     <message>
         <location line="-130"/>
         <source>Input folder</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Output folder</source>
-        <translation type="unfinished"></translation>
+        <translation>출력 폴더</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>JPEG and preview</source>
-        <translation type="unfinished"></translation>
+        <translation>JPEG와 미리보기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Full PNG, as NG</source>
-        <translation type="unfinished"></translation>
+        <translation>NG처럼 전체 PNG</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Workspace (images, AI models, database)</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 (이미지, AI 모델, 데이터베이스)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Input folder (empty: none)</source>
-        <translation type="unfinished"></translation>
+        <translation>입력 폴더 (비우면 없음)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Output folder (empty: none)</source>
-        <translation type="unfinished"></translation>
+        <translation>출력 폴더 (비우면 없음)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>AI device</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 장치</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Default input size</source>
-        <translation type="unfinished"></translation>
+        <translation>기본 입력 크기</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Default epochs</source>
-        <translation type="unfinished"></translation>
+        <translation>기본 에포크</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Log retention (days)</source>
-        <translation type="unfinished"></translation>
+        <translation>로그 보관 기간 (일)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Keep OK results&apos; maps (days)</source>
-        <translation type="unfinished"></translation>
+        <translation>OK 결과의 맵 보관 (일)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>OK boards keep</source>
-        <translation type="unfinished"></translation>
+        <translation>OK 보드 보관 형식</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Largest image (megapixels)</source>
-        <translation type="unfinished"></translation>
+        <translation>최대 이미지 (메가픽셀)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Largest image file (MB)</source>
-        <translation type="unfinished"></translation>
+        <translation>최대 이미지 파일 (MB)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Shift check counts for (hours, 0 off)</source>
-        <translation type="unfinished"></translation>
+        <translation>교대 점검 유효 시간 (시간, 0은 끔)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Language</source>
-        <translation type="unfinished"></translation>
+        <translation>언어</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Save Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>설정 저장</translation>
     </message>
     <message>
         <location line="+8"/>
-        <location line="+139"/>
+        <location line="+142"/>
         <source>Confirm Retention Policy</source>
-        <translation type="unfinished"></translation>
+        <translation>보관 정책 확인</translation>
     </message>
     <message>
-        <location line="-138"/>
+        <location line="-141"/>
         <source>Support Bundle…</source>
-        <translation type="unfinished"></translation>
+        <translation>지원 번들…</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Support bundle with board images</source>
-        <translation type="unfinished"></translation>
+        <translation>보드 이미지를 포함한 지원 번들</translation>
     </message>
     <message>
         <location line="+9"/>
         <location line="+2"/>
         <source>Presenter theme</source>
-        <translation type="unfinished"></translation>
+        <translation>발표 테마</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Full screen and light, text 18 pt or more, verdict 48 pt; where the app has under 900 px of height or 1400 px of width, as on a 1366 × 768 projector, text 16 pt and verdict 44 pt. 3D Profile and the hardware table are hidden; Settings is hidden too, except for an Admin, who keeps it for Reset Demo. An Admin leaves the theme with Exit presenter theme in the header.</source>
-        <translation type="unfinished"></translation>
+        <translation>전체 화면, 밝은 테마, 글자 18 pt 이상, 판정 48 pt. 1366 × 768 프로젝터처럼 앱의 높이가 900 px 미만이거나 너비가 1400 px 미만이면 글자 16 pt, 판정 44 pt. 3D 프로파일과 하드웨어 표는 숨겨지고, 설정도 데모 초기화를 위해 남겨 두는 관리자 외에는 숨겨집니다. 관리자는 헤더의 발표 테마 끝내기로 테마를 끕니다.</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Users &amp; roles</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 및 역할</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Name</source>
-        <translation type="unfinished"></translation>
+        <translation>이름</translation>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+138"/>
+        <location line="+141"/>
         <source>Role</source>
-        <translation type="unfinished"></translation>
+        <translation>역할</translation>
     </message>
     <message>
-        <location line="-135"/>
+        <location line="-138"/>
         <source>Add / Change User</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 추가 / 변경</translation>
     </message>
     <message>
         <location line="+1"/>
-        <location line="+149"/>
+        <location line="+152"/>
         <source>Unlock User</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 잠금 해제</translation>
     </message>
     <message>
-        <location line="-145"/>
+        <location line="-148"/>
         <source>Disable / Enable</source>
-        <translation type="unfinished"></translation>
+        <translation>사용 중지 / 사용</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Reset Password</source>
-        <translation type="unfinished"></translation>
+        <translation>비밀번호 재설정</translation>
     </message>
     <message>
-        <location line="+169"/>
+        <location line="+73"/>
+        <source>Saved. Restart the app to change the language.</source>
+        <translation>저장했습니다. 언어를 바꾸려면 앱을 다시 시작하십시오.</translation>
+    </message>
+    <message>
+        <location line="+99"/>
         <source>Disable / Enable User</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 사용 중지 / 사용</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Reset Password or PIN</source>
-        <translation type="unfinished"></translation>
+        <translation>비밀번호 또는 PIN 재설정</translation>
     </message>
     <message>
-        <location line="-177"/>
+        <location line="-180"/>
         <source>Hardware interfaces</source>
-        <translation type="unfinished"></translation>
+        <translation>하드웨어 인터페이스</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Interface</source>
-        <translation type="unfinished"></translation>
+        <translation>인터페이스</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Stage</source>
-        <translation type="unfinished"></translation>
+        <translation>단계</translation>
     </message>
     <message>
-        <location line="+150"/>
+        <location line="+153"/>
         <source>{user} ({status})</source>
-        <translation type="unfinished"></translation>
+        <translation>{user} ({status})</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Disable {user}, or enable them again if they are disabled?</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}을(를) 사용 중지할까요? 이미 사용 중지되어 있으면 다시 사용하게 할까요?</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Drop {user}&apos;s password or PIN? They choose a new one at their next sign-in.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}의 비밀번호 또는 PIN을 지울까요? 다음 로그인 때 새로 정합니다.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>{user} chooses a new password or PIN at their next sign-in.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}은(는) 다음 로그인 때 새 비밀번호 또는 PIN을 정합니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Locked until unlocked</source>
-        <translation type="unfinished"></translation>
+        <translation>해제할 때까지 잠김</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Locked, {minutes} min</source>
-        <translation type="unfinished"></translation>
+        <translation>잠김, {minutes}분</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>No password yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 비밀번호 없음</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Disabled</source>
-        <translation type="unfinished"></translation>
+        <translation>사용 중지됨</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Active</source>
-        <translation type="unfinished"></translation>
+        <translation>사용 중</translation>
     </message>
     <message>
-        <location line="-206"/>
+        <location line="-209"/>
         <location line="+14"/>
         <source>Status</source>
         <translation>상태</translation>
@@ -9648,74 +9653,74 @@
     <message>
         <location line="+32"/>
         <source>Workspace folder</source>
-        <translation type="unfinished"></translation>
+        <translation>작업 공간 폴더</translation>
     </message>
     <message>
-        <location line="+33"/>
+        <location line="+34"/>
         <source>Saved. Restart the app to switch the workspace.</source>
-        <translation type="unfinished"></translation>
+        <translation>저장했습니다. 작업 공간을 바꾸려면 앱을 다시 시작하십시오.</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Saved.</source>
-        <translation type="unfinished"></translation>
+        <translation>저장했습니다.</translation>
     </message>
     <message>
-        <location line="+1"/>
+        <location line="+3"/>
         <source>Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>설정</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>No retention sweep yet.</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 보관 정리를 하지 않았습니다.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Last retention sweep: {time}, {n} items.</source>
-        <translation type="unfinished"></translation>
+        <translation>마지막 보관 정리: {time}, {n}개 항목.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Policy confirmed {time}: logs go after {days} days, backups but the last {kept}, test-run overlays and OK files no record names.</source>
-        <translation type="unfinished"></translation>
+        <translation>정책 확인됨 {time}: 로그는 {days}일 뒤, 백업은 최근 {kept}개만 남기고, 테스트 실행 오버레이와 어느 기록에도 없는 OK 파일을 삭제합니다.</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>From now on the hourly sweep deletes log files after {logs} days, migration backups but the newest {kept}, validation runs&apos; overlays after {days} days and OK boards&apos; files no record names. Confirm?</source>
-        <translation type="unfinished"></translation>
+        <translation>지금부터 매시간 정리가 {logs}일 지난 로그 파일, 최신 {kept}개를 뺀 마이그레이션 백업, {days}일 지난 검증 실행 오버레이, 어느 기록에도 없는 OK 보드 파일을 삭제합니다. 확인할까요?</translation>
     </message>
     <message>
         <location line="-11"/>
         <source>Policy not confirmed: only OK maps are deleted; logs are gzipped and archived.</source>
-        <translation type="unfinished"></translation>
+        <translation>정책 미확인: OK 맵만 삭제하며, 로그는 압축해 보관합니다.</translation>
     </message>
     <message>
         <location line="+28"/>
         <source>Support Bundle</source>
-        <translation type="unfinished"></translation>
+        <translation>지원 번들</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Zip (*.zip)</source>
-        <translation type="unfinished"></translation>
+        <translation>Zip (*.zip)</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Support bundle written: {file}</source>
-        <translation type="unfinished"></translation>
+        <translation>지원 번들을 썼습니다: {file}</translation>
     </message>
     <message>
         <location line="+12"/>
         <location line="+20"/>
         <location line="+12"/>
         <source>User</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자</translation>
     </message>
     <message>
         <location line="-32"/>
         <source>User name</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 이름</translation>
     </message>
 </context>
 <context>
@@ -9723,107 +9728,107 @@
     <message>
         <location filename="../ui/sign_in_dialog.py" line="+28"/>
         <source>Switch user</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자 전환</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>User</source>
-        <translation type="unfinished"></translation>
+        <translation>사용자</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>{user} ({role})</source>
-        <translation type="unfinished"></translation>
+        <translation>{user} ({role})</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Recovery code</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 코드</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Use Recovery Code…</source>
-        <translation type="unfinished"></translation>
+        <translation>복구 코드 사용…</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Sign In</source>
-        <translation type="unfinished"></translation>
+        <translation>로그인</translation>
     </message>
     <message>
         <location line="+42"/>
         <source>New PIN</source>
-        <translation type="unfinished"></translation>
+        <translation>새 PIN</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>PIN</source>
-        <translation type="unfinished"></translation>
+        <translation>PIN</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Type the new PIN again</source>
-        <translation type="unfinished"></translation>
+        <translation>새 PIN을 다시 입력</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>{user} has no PIN yet: choose 4 to 6 digits.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}에게 아직 PIN이 없습니다: 숫자 4~6자리를 정하십시오.</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Type the PIN of {user}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}의 PIN을 입력하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>New password</source>
-        <translation type="unfinished"></translation>
+        <translation>새 비밀번호</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Password</source>
-        <translation type="unfinished"></translation>
+        <translation>비밀번호</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Type the new password again</source>
-        <translation type="unfinished"></translation>
+        <translation>새 비밀번호를 다시 입력</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Type the recovery code of {user}, then choose a new password and type it again.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}의 복구 코드를 입력한 다음, 새 비밀번호를 정해 두 번 입력하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>{user} has no password yet: choose one of {low} to {high} characters, such as a few words.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}에게 아직 비밀번호가 없습니다: 단어 몇 개처럼 {low}~{high}자로 정하십시오.</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Type the password of {user}.</source>
-        <translation type="unfinished"></translation>
+        <translation>{user}의 비밀번호를 입력하십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
         <source>{count} of at least {low} characters.</source>
-        <translation type="unfinished"></translation>
+        <translation>최소 {low}자 중 {count}자.</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>The two PINs differ.</source>
-        <translation type="unfinished"></translation>
+        <translation>두 PIN이 다릅니다.</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>The two passwords differ.</source>
-        <translation type="unfinished"></translation>
+        <translation>두 비밀번호가 다릅니다.</translation>
     </message>
 </context>
 <context>
@@ -9841,7 +9846,7 @@
     <message>
         <location line="+9"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -9866,7 +9871,7 @@
     <message>
         <location line="+5"/>
         <source>{ok} OK and {ng_all} NG files. The validation set takes {least} OK and {ng} NG, and the training set the rest: {train} OK, fewer than the {least_train} training needs. Freeze a version with {needed} OK images or more to train from it.</source>
-        <translation type="unfinished"></translation>
+        <translation>OK {ok}개, NG {ng_all}개 파일. 검증 세트가 OK {least}개와 NG {ng}개를 가져가고 나머지가 학습 세트가 됩니다: OK {train}개로, 학습에 필요한 {least_train}개보다 적습니다. 이 버전으로 학습하려면 OK 이미지 {needed}장 이상으로 버전을 동결하십시오.</translation>
     </message>
     <message>
         <location line="+6"/>
@@ -9899,7 +9904,7 @@
     <message>
         <location filename="../ui/errors.py" line="+51"/>
         <source>Choose another workspace folder</source>
-        <translation type="unfinished"></translation>
+        <translation>다른 작업 공간 폴더 선택</translation>
     </message>
 </context>
 <context>
@@ -9923,7 +9928,7 @@
     <message>
         <location line="+0"/>
         <source>Created</source>
-        <translation type="unfinished"></translation>
+        <translation>생성 일시</translation>
     </message>
     <message>
         <location line="+0"/>
@@ -9953,12 +9958,12 @@
     <message>
         <location line="-14"/>
         <source>No dataset store yet. A customer&apos;s first board model makes one: + New in the header, with the customer named. New Store… makes one here; a board model moved into it is encrypted under its key.</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 데이터셋 저장소가 없습니다. 고객의 첫 보드 모델이 저장소를 만듭니다: 헤더의 + 새로 만들기에서 고객 이름을 적으십시오. 새 저장소…는 여기서 저장소를 만들며, 그 안으로 옮긴 보드 모델은 그 키로 암호화됩니다.</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Advanced: key ids, Restore Key… and Shred Store…</source>
-        <translation type="unfinished"></translation>
+        <translation>고급: 키 ID, 키 복원…, 저장소 파기…</translation>
     </message>
     <message>
         <location line="+3"/>
@@ -9991,7 +9996,7 @@
         <location line="+19"/>
         <location line="+14"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="-46"/>
@@ -10011,7 +10016,7 @@
     <message>
         <location line="+7"/>
         <source>Board model</source>
-        <translation type="unfinished">보드 모델</translation>
+        <translation>보드 모델</translation>
     </message>
     <message>
         <location line="+5"/>
@@ -10115,42 +10120,42 @@
     <message>
         <location filename="../ui/pages/model_test_targets.py" line="+34"/>
         <source>Agreed Targets</source>
-        <translation type="unfinished"></translation>
+        <translation>합의된 목표</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>Missed Critical defects, at most</source>
-        <translation type="unfinished"></translation>
+        <translation>놓친 Critical 결함, 최대</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>False call rate, at most (%)</source>
-        <translation type="unfinished"></translation>
+        <translation>과검출률, 최대 (%)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Engine time per image, 95th percentile, at most (s)</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지당 엔진 시간, 95번째 백분위수, 최대 (초)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Agreed with (customer, name and role)</source>
-        <translation type="unfinished"></translation>
+        <translation>합의 상대 (고객, 이름과 직책)</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Save Targets</source>
-        <translation type="unfinished"></translation>
+        <translation>목표 저장</translation>
     </message>
     <message>
         <location line="+14"/>
         <source>Targets for {board_model}, as agreed with the customer in writing before testing. The next run is held to them; a run made before keeps the targets it started with.</source>
-        <translation type="unfinished"></translation>
+        <translation>테스트 전에 고객과 서면으로 합의한 {board_model}의 목표입니다. 다음 실행부터 이 목표로 평가하며, 이전 실행은 시작할 때의 목표를 유지합니다.</translation>
     </message>
 </context>
 <context>
@@ -10158,7 +10163,7 @@
     <message>
         <location filename="../core/anomaly.py" line="-300"/>
         <source>Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}</source>
-        <translation type="unfinished"></translation>
+        <translation>{device}에서 OK 이미지 {train}장으로 학습 (따로 둔 {held_out}장, 보정용 NG {ng}장)</translation>
     </message>
     <message>
         <location line="+3"/>
@@ -10168,27 +10173,27 @@
     <message>
         <location line="+1"/>
         <source>Calibrated image threshold {threshold:.4f} ({rule}); pixel threshold {pixel:.4f}</source>
-        <translation type="unfinished"></translation>
+        <translation>보정된 이미지 임계값 {threshold:.4f} ({rule}), 픽셀 임계값 {pixel:.4f}</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>OK-only: max(mean+3σ, 1.05×max OK)</source>
-        <translation type="unfinished"></translation>
+        <translation>OK만: max(평균+3σ, 1.05×최대 OK)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>separable: midpoint of max OK and min NG</source>
-        <translation type="unfinished"></translation>
+        <translation>분리 가능: 최대 OK와 최소 NG의 중간값</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>overlap: OK-based cut, {missed}/{ng} labelled NG below it</source>
-        <translation type="unfinished"></translation>
+        <translation>겹침: OK 기준 임계값, 라벨 NG {ng}개 중 {missed}개가 그 아래</translation>
     </message>
     <message>
         <location filename="../core/services.py" line="-4085"/>
         <source>Aligning {count} images to the reference board</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 {count}장을 기준 보드에 정렬하는 중</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -10208,12 +10213,12 @@
     <message>
         <location line="+1"/>
         <source>Measuring how good boards differ: image {n} of {count}</source>
-        <translation type="unfinished"></translation>
+        <translation>양품끼리의 차이 측정 중: 이미지 {n}/{count}</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Similarity threshold set from the {count} OK images AI model {version} was trained on: the lowest scored {low:.2f}, under the default of {default:.2f}.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}의 학습에 쓴 OK 이미지 {count}장에서 유사도 임계값을 정했습니다: 최저 점수가 {low:.2f}(으)로, 기본값 {default:.2f}보다 낮습니다.</translation>
     </message>
     <message>
         <location line="+6"/>
@@ -10273,7 +10278,7 @@
         <location line="-569"/>
         <location line="+95"/>
         <source>ID</source>
-        <translation type="unfinished"></translation>
+        <translation>ID</translation>
     </message>
     <message>
         <location line="-94"/>
@@ -10328,23 +10333,23 @@
     <message>
         <location line="+4"/>
         <source>Set Reference</source>
-        <translation type="unfinished"></translation>
+        <translation>기준 설정</translation>
     </message>
     <message>
         <location line="+3"/>
         <location line="+458"/>
         <source>Remove</source>
-        <translation type="unfinished"></translation>
+        <translation>제거</translation>
     </message>
     <message>
         <location line="-447"/>
         <source>Select a sample to preview</source>
-        <translation type="unfinished"></translation>
+        <translation>샘플을 선택하면 미리보기가 표시됩니다</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Self-training</source>
-        <translation type="unfinished"></translation>
+        <translation>자체 학습</translation>
     </message>
     <message>
         <location line="+6"/>
@@ -10354,27 +10359,27 @@
     <message>
         <location line="+12"/>
         <source>Epochs</source>
-        <translation type="unfinished"></translation>
+        <translation>에포크</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Network input size</source>
-        <translation type="unfinished"></translation>
+        <translation>네트워크 입력 크기</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Device</source>
-        <translation type="unfinished"></translation>
+        <translation>장치</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Start Training</source>
-        <translation type="unfinished"></translation>
+        <translation>학습 시작</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Cancel</source>
-        <translation type="unfinished">취소</translation>
+        <translation>취소</translation>
     </message>
     <message>
         <location line="+695"/>
@@ -10384,17 +10389,17 @@
     <message>
         <location line="+8"/>
         <source>Saved AI model {version} ({seconds} s) with its Golden board and AI model card.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}을(를) 골든 보드, AI 모델 카드와 함께 저장했습니다 ({seconds}초).</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>AI model {version} trained from a Trial version: Validated AI model {active} still judges the boards of {board_model}, because a Trial AI model never replaces a Validated one. Start the Checks to freeze a Validated version and train from it.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}은(는) Trial 버전으로 학습되었습니다: Trial AI 모델은 Validated 모델을 대체하지 않으므로 Validated AI 모델 {active}이(가) 계속 {board_model}의 보드를 판정합니다. 점검 시작으로 Validated 버전을 동결해 그것으로 학습하십시오.</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>AI model {version} trained: select it and press Activate Selected to judge boards with it</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version} 학습 완료: 선택한 뒤 선택 항목 활성화를 눌러 이 모델로 보드를 판정하십시오</translation>
     </message>
     <message>
         <location line="+16"/>
@@ -10404,7 +10409,7 @@
     <message>
         <location line="-726"/>
         <source>AI model versions</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 버전</translation>
     </message>
     <message>
         <location line="-237"/>
@@ -10434,7 +10439,7 @@
     <message>
         <location line="+88"/>
         <source>Remove and Export Manifest… need the {roles} role.</source>
-        <translation type="unfinished"></translation>
+        <translation>제거와 매니페스트 내보내기…에는 {roles} 역할이 필요합니다.</translation>
     </message>
     <message>
         <location line="+43"/>
@@ -10464,49 +10469,49 @@
     <message>
         <location line="+66"/>
         <source>Version</source>
-        <translation type="unfinished"></translation>
+        <translation>버전</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Created</source>
-        <translation type="unfinished"></translation>
+        <translation>생성 일시</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Threshold</source>
-        <translation type="unfinished"></translation>
+        <translation>임계값</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>OK/NG</source>
-        <translation type="unfinished"></translation>
+        <translation>OK/NG</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Active</source>
-        <translation type="unfinished"></translation>
+        <translation>활성</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>Activate Selected</source>
-        <translation type="unfinished"></translation>
+        <translation>선택 항목 활성화</translation>
     </message>
     <message>
         <location line="+1"/>
         <location line="+864"/>
         <location line="+42"/>
         <source>Roll Back</source>
-        <translation type="unfinished"></translation>
+        <translation>롤백</translation>
     </message>
     <message>
         <location line="-902"/>
         <source>AI Model Card</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 카드</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Export AI Model…</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 내보내기…</translation>
     </message>
     <message>
         <location line="+28"/>
@@ -10521,22 +10526,22 @@
     <message>
         <location line="+1"/>
         <source>What is missing</source>
-        <translation type="unfinished"></translation>
+        <translation>부족한 것</translation>
     </message>
     <message>
         <location line="+84"/>
         <source>Select PCB images</source>
-        <translation type="unfinished"></translation>
+        <translation>PCB 이미지 선택</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Images ({extensions})</source>
-        <translation type="unfinished"></translation>
+        <translation>이미지 ({extensions})</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Folder containing ok/ and ng/ sub-folders</source>
-        <translation type="unfinished"></translation>
+        <translation>ok/ 및 ng/ 하위 폴더가 든 폴더</translation>
     </message>
     <message>
         <location line="+10"/>
@@ -10571,12 +10576,12 @@
     <message>
         <location line="+91"/>
         <source>Reference image set: inspections compare against it now, until training learns a Golden board</source>
-        <translation type="unfinished"></translation>
+        <translation>기준 이미지 설정됨: 학습으로 골든 보드를 만들 때까지 검사는 이 이미지와 비교합니다</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Remove {count} sample(s) from the dataset?</source>
-        <translation type="unfinished"></translation>
+        <translation>데이터셋에서 샘플 {count}개를 제거할까요?</translation>
     </message>
     <message>
         <location line="+77"/>
@@ -10696,17 +10701,17 @@
     <message>
         <location line="+87"/>
         <source>AI model {version} trained and active: the first AI model of {board_model} judges its boards from now on. Each later version installs inactive until you activate it.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version} 학습 완료, 활성: {board_model}의 첫 AI 모델이 지금부터 보드를 판정합니다. 이후 버전은 활성화할 때까지 비활성으로 설치됩니다.</translation>
     </message>
     <message>
         <location line="+11"/>
         <source>AI model {version} trained, but not made active, so {board_model} is still judged by the Golden board comparison alone: {code}. Activate it with Activate Selected once the cause is fixed.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}이(가) 학습되었으나 활성화되지 않아, {board_model}은(는) 여전히 골든 보드 비교만으로 판정됩니다: {code}. 원인을 해결한 뒤 선택 항목 활성화로 활성화하십시오.</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Train was cancelled. What it had done is kept, and the next Train goes on from there.</source>
-        <translation type="unfinished">학습이 취소되었습니다. 그때까지 한 작업은 유지되며, 다음 학습은 거기서부터 이어집니다.</translation>
+        <translation>학습이 취소되었습니다. 그때까지 한 작업은 보관되며, 다음 학습은 거기서 이어집니다.</translation>
     </message>
     <message>
         <location line="+82"/>
@@ -10726,88 +10731,88 @@
     <message>
         <location line="+8"/>
         <source>Trial version: an AI model trained from it is marked Trial and can judge boards only while no Validated AI model has gone live. {line}</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial 버전: 이것으로 학습한 AI 모델에는 Trial 표시가 붙고, Validated AI 모델이 적용되기 전까지만 보드를 판정할 수 있습니다. {line}</translation>
     </message>
     <message>
         <location line="+51"/>
         <source>Export AI model</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 내보내기</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>AI model file (*.pt)</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 파일 (*.pt)</translation>
     </message>
     <message>
         <location line="+58"/>
         <source>A Trial AI model never replaces a Validated one: Start the Checks for a Validated version.</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial AI 모델은 Validated 모델을 대체하지 않습니다: Validated 버전을 만들려면 점검 시작을 누르십시오.</translation>
     </message>
     <message>
         <location line="+20"/>
         <location line="+11"/>
         <source>Blind labelling is open: Stop it, then press the button again</source>
-        <translation type="unfinished"></translation>
+        <translation>블라인드 라벨링이 열려 있습니다: 중지한 뒤 버튼을 다시 누르십시오</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>An import, draw or freeze of this page runs: press it again once it ends</source>
-        <translation type="unfinished"></translation>
+        <translation>이 페이지의 가져오기, 추출 또는 동결이 실행 중입니다: 끝나면 다시 누르십시오</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>A training run is under way: press Start Training again once it ends</source>
-        <translation type="unfinished"></translation>
+        <translation>학습이 진행 중입니다: 끝나면 학습 시작을 다시 누르십시오</translation>
     </message>
     <message>
         <location line="+23"/>
         <source>Two people label a calibration set blind (New Set, Label Blind…), then Run Agreement Check</source>
-        <translation type="unfinished"></translation>
+        <translation>두 사람이 보정 세트를 블라인드로 라벨링한 뒤(새 세트, 블라인드 라벨링…) 일치도 검사 실행을 누릅니다</translation>
     </message>
     <message>
         <location line="+33"/>
         <source>The labels are checked: two people label a set blind and Run Agreement Check here.</source>
-        <translation type="unfinished"></translation>
+        <translation>라벨 검토가 끝났습니다: 두 사람이 세트를 블라인드로 라벨링하고 여기서 일치도 검사 실행을 누릅니다.</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>A second user checks each label Show Unchecked lists; Draw OK Labels to Check draws OK labels.</source>
-        <translation type="unfinished"></translation>
+        <translation>미검토 보기에 나오는 라벨을 두 번째 사용자가 하나씩 검토합니다. 검토할 OK 라벨 추출은 OK 라벨을 뽑습니다.</translation>
     </message>
     <message>
         <location line="-553"/>
         <source>No samples for {board_model} yet</source>
-        <translation type="unfinished"></translation>
+        <translation>{board_model}의 샘플이 아직 없음</translation>
     </message>
     <message>
         <location line="+375"/>
         <source>Rolled back to AI model {version}</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}(으)로 롤백함</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>AI model {version} has no AI model card: train again to make a version that has one.</source>
-        <translation type="unfinished"></translation>
+        <translation>AI 모델 {version}에 AI 모델 카드가 없습니다: 카드가 있는 버전을 만들려면 다시 학습하십시오.</translation>
     </message>
     <message>
         <location line="+45"/>
         <source>none</source>
-        <translation type="unfinished"></translation>
+        <translation>없음</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>{ok} OK · {ng} NG · reference: {reference}</source>
-        <translation type="unfinished"></translation>
+        <translation>OK {ok} · NG {ng} · 기준: {reference}</translation>
     </message>
     <message>
         <location line="+19"/>
         <source>Roll Back to {version}</source>
-        <translation type="unfinished"></translation>
+        <translation>{version}(으)로 롤백</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>No AI model yet</source>
-        <translation type="unfinished"></translation>
+        <translation>아직 AI 모델 없음</translation>
     </message>
     <message>
         <location line="+0"/>
@@ -10820,12 +10825,12 @@
     <message>
         <location filename="../ui/pages/training_versions.py" line="-647"/>
         <source>Validated</source>
-        <translation type="unfinished"></translation>
+        <translation>Validated</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Trial</source>
-        <translation type="unfinished"></translation>
+        <translation>Trial</translation>
     </message>
     <message>
         <location line="+328"/>
@@ -10850,7 +10855,7 @@
     <message>
         <location line="+7"/>
         <source>Version</source>
-        <translation type="unfinished"></translation>
+        <translation>버전</translation>
     </message>
     <message>
         <location line="+0"/>
@@ -10875,7 +10880,7 @@
     <message>
         <location line="+0"/>
         <source>Checks</source>
-        <translation type="unfinished"></translation>
+        <translation>검토</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -10990,7 +10995,7 @@
     <message>
         <location line="+3"/>
         <source>Confirm export</source>
-        <translation type="unfinished"></translation>
+        <translation>내보내기 확인</translation>
     </message>
     <message>
         <location line="+4"/>
@@ -11000,7 +11005,7 @@
     <message>
         <location line="+0"/>
         <source>CSV (*.csv)</source>
-        <translation type="unfinished"></translation>
+        <translation>CSV (*.csv)</translation>
     </message>
     <message>
         <location line="+21"/>
@@ -11013,17 +11018,17 @@
     <message>
         <location filename="../ui/pages/base.py" line="+9"/>
         <source>Top</source>
-        <translation type="unfinished"></translation>
+        <translation>Top</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Side</source>
-        <translation type="unfinished"></translation>
+        <translation>Side</translation>
     </message>
     <message>
         <location line="+0"/>
         <source>Bottom</source>
-        <translation type="unfinished"></translation>
+        <translation>Bottom</translation>
     </message>
 </context>
 <context>

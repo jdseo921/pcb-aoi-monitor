@@ -125,7 +125,7 @@ class Settings:
     ok_evidence: str = "jpeg"  # D1: an OK board's overlay as JPEG (quality 90) with a preview; "full": PNG, as NG
     max_image_megapixels: int = 50  # REQ-INSP-001: an image over either limit is refused before it is decoded
     max_image_megabytes: int = 200  # (the register's proposed values; an Admin sets them on Settings, Q56)
-    language: str = "en"  # en | ko (localization planned for 2H 2027)
+    language: str = "en"  # en | ko: the UI language from the next start (aoi/ui/language.py)
     last_page: str = "Home"  # the page to reopen after a restart (REQ-LOG-005)
     demo_pace_s: int = 3  # seconds per board of the demo's scripted run, 1 to 10 (REQ-SET-009)
     input_folder: str = ""  # REQ-INSP-020: the folder the line watches for board images, a full path; empty: none

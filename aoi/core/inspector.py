@@ -357,8 +357,17 @@ class Inspector:
                 margin = min(max(8, round(max(frame.shape) / size * AI_SEAM)), max(8, max(frame.shape) // 20))
                 unseen = outside_frame(frame, margin) > 0
                 res.anomaly_map[unseen] = 0
-                # an enabled ROI that reaches into what was not seen is not judged whole: said, never passed in silence
-                hidden = [x.name for x in r.rois if x.enabled and unseen[x.y : x.y + x.h, x.x : x.x + x.w].any()]
+                # an enabled ROI with more of it unseen than a board may have out of frame is not judged whole: said,
+                # never passed in silence; a sliver at the frame's edge, as any board placed by hand leaves, is not
+                most = 1.0 - COVERAGE_WARN / 100.0
+                hidden = [
+                    x.name
+                    for x in r.rois
+                    if x.enabled
+                    and x.w > 0
+                    and x.h > 0
+                    and (frame[x.y : x.y + x.h, x.x : x.x + x.w] == 0).mean() > most
+                ]
                 if hidden and res.compare is not None:
                     res.compare.metrics["rois_out_of_frame"] = hidden
             rule = m.meta.get("threshold_rule", "")

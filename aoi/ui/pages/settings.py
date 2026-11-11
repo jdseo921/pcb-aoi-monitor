@@ -211,8 +211,8 @@ class SettingsPage(Page):
         """Write the page's own settings over settings.json as it is now, so a hand edit of another key stays (#170),
         through `AppContext.save_settings`: an Admin's write, role-checked and audited (#197). Each value is checked
         first (AOI-SET-008: an empty or relative workspace), and nothing is written on a refusal. The running app
-        follows the device, defaults and retention at once (#201) and the workspace from the restart (REQ-SET-001); the
-        language is stored only until the 2H 2027 localisation."""
+        follows the device, defaults and retention at once (#201) and the workspace and the language from the restart
+        (REQ-SET-001, REQ-SET-006: `aoi/ui/language.py` loads the language before the first window)."""
         values = {
             "workspace": self.ws.text(),
             "device": self.device.currentText(),
@@ -230,6 +230,7 @@ class SettingsPage(Page):
         limits["shift_check_hours"] = self.shift_hours
         # only a limit changed here is written, so a hand edit of settings.json made while the app runs stays (#170)
         values |= {name: box.value() for name, box in limits.items() if box.value() != getattr(s, name)}
+        language_before = self.ctx.settings.language
         try:
             self.ctx.save_settings(values)
         except (AoiError, OSError) as e:  # AOI-USR-001 below the Admin role, AOI-SET-008, AOI-SET-010, a disk error
@@ -237,6 +238,8 @@ class SettingsPage(Page):
             return
         moved = self.ctx.settings.workspace != values["workspace"]
         saved = self.tr("Saved. Restart the app to switch the workspace.") if moved else self.tr("Saved.")
+        if values["language"] != language_before:  # every screen reads its texts as it is built (REQ-SET-006)
+            saved = self.tr("Saved. Restart the app to change the language.")
         QMessageBox.information(self, self.tr("Settings"), saved)
 
     def show_sweep(self) -> None:
