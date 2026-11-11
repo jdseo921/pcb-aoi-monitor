@@ -242,6 +242,17 @@ class RecipeEditorPage(Page):
         )
         copper_note.setObjectName("muted")
         copper_note.setWordWrap(True)
+        # Reset to Defaults (Jay, 2026-11-11): every threshold back to the value a new board model starts with, in the
+        # fields only; Save Recipe keeps them as a revision like any other, so nothing is lost and all is audited
+        self.act_defaults = self.action(self.tr("Reset to Defaults"), "Ctrl+Shift+D", self.reset_defaults)
+        defaults_note = QLabel(
+            self.tr(
+                "Sets every threshold on this tab to the value a new board model starts with. The ROIs stay, and"
+                " nothing is saved until you press Save Recipe; earlier revisions stay in History."
+            )
+        )
+        defaults_note.setObjectName("muted")
+        defaults_note.setWordWrap(True)
         for w, label in (
             (action_button(self.act_learn, show_key=False), None),
             (learn_note, None),
@@ -260,6 +271,8 @@ class RecipeEditorPage(Page):
             (self.maxreg, self.tr("Allowed difference regions")),
             (self.copper, self.tr("Copper defect names")),
             (copper_note, None),
+            (action_button(self.act_defaults, show_key=False), None),
+            (defaults_note, None),
         ):
             tf.addRow(label, w) if label else tf.addRow(w)
         tabs.addTab(scrolled(thr_tab), self.tr("Thresholds"))  # scrolls where the window is too short for its rows
@@ -786,6 +799,30 @@ class RecipeEditorPage(Page):
         setting = (chosen["fine_alignment"], chosen["diff_threshold"], chosen["min_defect_area"])
         self._learned = setting, self.learn_sheet.reason(found)
         self.shell.status(self.tr("Learned values set. Press Save Recipe to keep them as a new revision."))
+
+    def reset_defaults(self) -> None:
+        """Reset to Defaults: every threshold field shows the value a new board model's recipe has (`Recipe()`), the
+        AI score threshold the AI model's own; the ROIs, the scale and everything stored stay. Save Recipe keeps the
+        values as a new revision, with its reason, like any other change."""
+        if not self.board_model or self.recipe is None:
+            self.shell.status(self.tr("Pick a board model first."))
+            return
+        d = Recipe(board_model=self.board_model)
+        self.use_ai.setChecked(d.use_ai)
+        self.use_cmp.setChecked(d.use_compare)
+        self.fine.setChecked(d.fine_alignment is True)
+        self.ai_thr.set_override(d.anomaly_threshold)
+        self.warn.setValue(d.warn_ratio)
+        self.diff.setValue(d.diff_threshold)
+        self.min_size.show_recipe(
+            replace(self._collect(), min_defect_area=d.min_defect_area, min_defect_mm=None), self.px_per_mm
+        )
+        self.ssim.setValue(d.ssim_min)
+        self.chg.setValue(d.changed_pct_max)
+        self.maxreg.setValue(d.max_diff_regions)
+        self.copper.setCurrentIndex(max(0, self.copper.findData(d.copper)))
+        self._learned = None
+        self.shell.status(self.tr("Default values set. Press Save Recipe to keep them as a new revision."))
 
     def ask_save(self, restoring: tuple[int, Recipe] | None = None) -> None:
         """Save Recipe (Ctrl+S, REQ-RCP-004): the sheet naming the revision it makes, with what it changes and the

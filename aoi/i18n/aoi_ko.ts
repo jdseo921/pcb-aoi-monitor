@@ -413,6 +413,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Lighting change %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Board in frame %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>AI score</source>
         <translation type="unfinished"></translation>
     </message>
@@ -933,7 +943,7 @@
 <context>
     <name>Errors</name>
     <message>
-        <location filename="../core/services.py" line="+207"/>
+        <location filename="../core/services.py" line="+216"/>
         <source>a length of {length} px over {distance} mm gives no scale: both must be numbers above 0, and the scale from {least} to {most} px per mm</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1027,13 +1037,13 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+235"/>
-        <location line="+2670"/>
+        <location line="+274"/>
+        <location line="+2677"/>
         <source>(none)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2642"/>
+        <location line="-2649"/>
         <source>Saving a recipe</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1043,12 +1053,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+53"/>
+        <location line="+54"/>
         <source>too few of its NG images with defect boxes could be read</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+125"/>
+        <location line="+129"/>
         <source>it cannot be read ({code} {title})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1058,7 +1068,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+124"/>
+        <location line="+126"/>
         <source>{file}: {defects} defect(s)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1285,14 +1295,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-5057"/>
-        <location line="+3699"/>
+        <location line="-5103"/>
+        <location line="+3745"/>
         <location line="+39"/>
         <source>the workspace holds no such dataset version</source>
         <translation>작업 공간에 그런 데이터셋 버전이 없습니다</translation>
     </message>
     <message>
-        <location line="-3797"/>
+        <location line="-3850"/>
         <source>Drift on {board} ({view}): {count} of the last {of} boards called NG; {before} % of the {baseline} before</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1317,7 +1327,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+26"/>
+        <location line="+33"/>
         <source>its AI model file {file} cannot be loaded ({reason})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1417,7 +1427,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1737"/>
+        <location line="+1776"/>
         <source>Setting the comparison&apos;s thresholds from labelled boards</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1427,7 +1437,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1135"/>
+        <location line="+1142"/>
         <source>Shift check of {board_model}: {wrong} of {count} master samples judged wrongly</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1612,8 +1622,8 @@
         <translation>이미지가 어느 고객의 데이터셋 저장소에도 없습니다. 관리자가 옮겨 넣습니다</translation>
     </message>
     <message>
-        <location line="-4305"/>
-        <location line="+4307"/>
+        <location line="-4351"/>
+        <location line="+4353"/>
         <source>its dataset store was shredded on {date}</source>
         <translation>이 데이터셋 저장소는 {date}에 파기되었습니다</translation>
     </message>
@@ -1644,7 +1654,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4486"/>
+        <location line="-4532"/>
         <source>no earlier version of this board model was active</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1669,12 +1679,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1631"/>
+        <location line="+1670"/>
         <source>its UUID {found} is not {uuid}, as in the AI model registry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+1620"/>
+        <location line="+1627"/>
         <source>Labelling an image</source>
         <translation>이미지 라벨링</translation>
     </message>
@@ -1786,14 +1796,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-4939"/>
+        <location line="-4985"/>
         <source>unhandled</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+164"/>
-        <location filename="../ui/main_window.py" line="+1335"/>
+        <location filename="../ui/main_window.py" line="+1353"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1808,7 +1818,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+495"/>
+        <location line="+508"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1818,7 +1828,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/imaging.py" line="+373"/>
+        <location filename="../core/imaging.py" line="+374"/>
         <source>it has {count} tiles, more than the {most} this app decodes</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1873,7 +1883,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+54"/>
+        <location line="+65"/>
         <source>{megabytes} MB ({count} bytes)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1893,7 +1903,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/inspector.py" line="+37"/>
+        <location filename="../core/inspector.py" line="+38"/>
         <source>no Golden board is set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1913,7 +1923,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+285"/>
+        <location line="+287"/>
         <source>board image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1923,7 +1933,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+153"/>
+        <location line="+192"/>
         <source>the recipe turns the Golden board comparison off</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4556,7 +4566,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/anomaly.py" line="+41"/>
+        <location filename="../core/anomaly.py" line="+42"/>
         <source>the file is damaged ({damaged})</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4576,12 +4586,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+282"/>
+        <location line="+283"/>
         <source>its weights do not fit this app&apos;s AI model</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-281"/>
+        <location line="-282"/>
         <source>its input size {size} is not a multiple of {stride} pixels</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4611,7 +4621,7 @@
         <translation>AI 모델의 가중치와 설정이 들어 있지 않습니다</translation>
     </message>
     <message>
-        <location line="+299"/>
+        <location line="+300"/>
         <source>its err_std holds a spread of 0 or less</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4762,7 +4772,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location filename="../core/services.py" line="+3940"/>
+        <location filename="../core/services.py" line="+3986"/>
         <source>a file of it could not be read: {reason}</source>
         <translation>그 파일 하나를 읽을 수 없습니다: {reason}</translation>
     </message>
@@ -4880,6 +4890,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location line="+11"/>
+        <source>The photo shows {value} of the Golden board&apos;s frame, where {threshold} is needed and every ROI whole: the rest of the board was not inspected. Place the board fully in view, then inspect it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location line="+25"/>
         <source>Every check that decides the verdict is inside its threshold.</source>
         <translation type="unfinished"></translation>
@@ -4925,7 +4940,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+3"/>
+        <location line="-11"/>
+        <source>The photo&apos;s lighting differs from the Golden board&apos;s by {value}, more than the {threshold} that can be corrected safely, so the other checks may be off: check the lamp and the camera&apos;s settings, then inspect the board again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>The AI score is {value}, close to its threshold of {threshold}.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5532,7 +5552,7 @@
         <translation type="unfinished">Trial: 한 사람이 이미지를 라벨링했고 다른 사람은 확인하지 않았습니다.</translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+6"/>
         <source>Boards are inspected only after every master sample is judged right.</source>
         <translation type="unfinished">모든 마스터 샘플이 올바르게 판정된 뒤에만 보드를 검사합니다.</translation>
     </message>
@@ -5627,7 +5647,17 @@
         <translation type="unfinished">지금 유효한 교대 점검이 없습니다. 검사 페이지가 첫 보드 전에 교대 점검(F7)을 요청합니다.</translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+4"/>
+        <source>{file}{kind}, labelled {expected}, judged {verdict}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>Judged wrongly: {samples}. Check that the image is labelled as the board is; an Engineer then looks at it on Compare and sets the recipe, and Shift Check (F7) on Inspection judges them again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+18"/>
         <location line="+15"/>
         <source>Type the board revision: 1 to 16 letters and digits, such as R1.</source>
         <translation type="unfinished">보드 리비전을 입력하십시오. R1처럼 1~16자의 영문자와 숫자입니다.</translation>
@@ -5679,7 +5709,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1187"/>
+        <location filename="../ui/main_window.py" line="-1202"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7049,7 +7079,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+183"/>
+        <location line="+198"/>
         <source>{title} · Demo</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8039,7 +8069,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1144"/>
+        <location filename="../ui/main_window.py" line="-1159"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8215,7 +8245,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/training.py" line="+155"/>
+        <location filename="../ui/pages/training.py" line="+171"/>
         <source>Training</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8225,7 +8255,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/pages/recipe_editor.py" line="-482"/>
+        <location filename="../ui/pages/recipe_editor.py" line="-495"/>
         <source>Recipe Editor</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8370,7 +8400,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+127"/>
+        <location line="+140"/>
         <source>The 10 mandatory AOI checks (defect classification table, section 4):</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8390,7 +8420,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-196"/>
+        <location line="-209"/>
         <source>Selected ROI</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8401,7 +8431,7 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+185"/>
+        <location line="+198"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8431,7 +8461,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-182"/>
+        <location line="-195"/>
         <source>ROI type</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8531,7 +8561,17 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+9"/>
+        <source>Reset to Defaults</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Sets every threshold on this tab to the value a new board model starts with. The ROIs stay, and nothing is saved until you press Save Recipe; earlier revisions stay in History.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>AI score threshold</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8566,7 +8606,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+4"/>
+        <location line="+6"/>
         <source>Thresholds</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8753,6 +8793,16 @@
     <message>
         <location line="+38"/>
         <source>Learned values set. Press Save Recipe to keep them as a new revision.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Pick a board model first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Default values set. Press Save Recipe to keep them as a new revision.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -10106,7 +10156,7 @@
 <context>
     <name>Training</name>
     <message>
-        <location filename="../core/anomaly.py" line="-299"/>
+        <location filename="../core/anomaly.py" line="-300"/>
         <source>Training on {train} OK images ({held_out} held out, {ng} NG for calibration) on {device}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10136,7 +10186,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../core/services.py" line="-4032"/>
+        <location filename="../core/services.py" line="-4085"/>
         <source>Aligning {count} images to the reference board</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10157,6 +10207,16 @@
     </message>
     <message>
         <location line="+1"/>
+        <source>Measuring how good boards differ: image {n} of {count}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Similarity threshold set from the {count} OK images AI model {version} was trained on: the lowest scored {low:.2f}, under the default of {default:.2f}.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
         <source>Training the AI model: round {epoch} of {epochs}</source>
         <translation>AI 모델 학습 중: {epochs}회 중 {epoch}회차</translation>
     </message>
@@ -10205,12 +10265,12 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+600"/>
+        <location line="+601"/>
         <source>Import Folder…</source>
         <translation>폴더 가져오기…</translation>
     </message>
     <message>
-        <location line="-568"/>
+        <location line="-569"/>
         <location line="+95"/>
         <source>ID</source>
         <translation type="unfinished"></translation>
@@ -10272,12 +10332,12 @@
     </message>
     <message>
         <location line="+3"/>
-        <location line="+457"/>
+        <location line="+458"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-446"/>
+        <location line="-447"/>
         <source>Select a sample to preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10317,7 +10377,7 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+694"/>
+        <location line="+695"/>
         <source>{phase} · {percent} % · {left}</source>
         <translation>{phase} · {percent} % · {left}</translation>
     </message>
@@ -10342,12 +10402,12 @@
         <translation>취소됨: AI 모델을 저장하지 않았으며 활성 AI 모델은 바뀌지 않았습니다.</translation>
     </message>
     <message>
-        <location line="-725"/>
+        <location line="-726"/>
         <source>AI model versions</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-222"/>
+        <location line="-237"/>
         <source>All</source>
         <translation>전체</translation>
     </message>
@@ -10372,7 +10432,7 @@
         <translation>미검토</translation>
     </message>
     <message>
-        <location line="+73"/>
+        <location line="+88"/>
         <source>Remove and Export Manifest… need the {roles} role.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10433,13 +10493,13 @@
     </message>
     <message>
         <location line="+1"/>
-        <location line="+861"/>
+        <location line="+864"/>
         <location line="+42"/>
         <source>Roll Back</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-899"/>
+        <location line="-902"/>
         <source>AI Model Card</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10449,7 +10509,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+28"/>
         <source>Samples</source>
         <translation>샘플</translation>
     </message>
@@ -10669,7 +10729,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+49"/>
+        <location line="+51"/>
         <source>Export AI model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10715,7 +10775,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-551"/>
+        <location line="-553"/>
         <source>No samples for {board_model} yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -10730,7 +10790,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+43"/>
+        <location line="+45"/>
         <source>none</source>
         <translation type="unfinished"></translation>
     </message>
