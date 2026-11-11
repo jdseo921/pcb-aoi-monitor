@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 class RecoveryCodeDialog(HeldSecretDialog):
     def __init__(self, shell: MainWindow, code: str) -> None:
-        super().__init__(shell, shell.ctx, shell.switch_user)
+        super().__init__(shell, shell.ctx)
         self.shell, self.code = shell, code
         self.setWindowTitle(self.tr("Recovery code for {user}").format(user=self.ctx.user))
         self.setMinimumWidth(theme.CARD_W)
@@ -52,11 +52,15 @@ class RecoveryCodeDialog(HeldSecretDialog):
         self.saved_line.setWordWrap(True)
         self.btn_done = size_class(button(self.tr("Done"), "primary", self.accept), "T")
         self.btn_done.setEnabled(False)
+        # another Admin, while the code is hidden from them, lets the station carry on without it (#499)
+        self.btn_drop = size_class(button(self.tr("Close Without the Code"), slot=self.drop), "T")
+        self.btn_drop.hide()
         for w, stretch in (
             (self.btn_save, 0),
             (self.btn_print, 0),
             (self.saved_line, 1),
             (self.btn_done, 0),
+            (self.btn_drop, 0),
             (self.btn_admin, 0),
         ):
             row.addWidget(w, stretch)
@@ -126,19 +130,38 @@ class RecoveryCodeDialog(HeldSecretDialog):
         """Only the Admin the code is for: it signs in as them."""
         return self.ctx.role == "Admin" and self.ctx.user == self.owner
 
+    def other_admin(self) -> bool:
+        """An Admin other than the code's is signed in: they may not see it, but may close the dialog without it."""
+        return self.ctx.role == "Admin" and self.ctx.user != self.owner
+
     def show_secret(self, on: bool) -> None:
         self.code_label.setText(self.code if on else "")
         for w in (self.note, self.code_label, self.btn_save, self.btn_print, self.saved_line, self.btn_done):
             w.setVisible(on)
+        self.btn_drop.setVisible(not on and self.other_admin())
         if on:
             self.btn_save.setFocus()
 
     def away_text(self) -> str:
-        said = self.tr(
-            "The session of {admin} ended, so their recovery code is hidden, kept until {admin} signs in again to save"
-            " it. The station does nothing else until then."
-        )
+        if self.other_admin():
+            said = self.tr(
+                "Only {admin} may see this recovery code. Close Without the Code lets the station carry on: the code is"
+                " then lost, and {admin} gets a new one after Reset Password on Settings."
+            )
+        else:
+            said = self.tr(
+                "The session of {admin} ended, so their recovery code is hidden, kept until {admin} signs in again to"
+                " save it. The station does nothing else until then."
+            )
         return said.format(admin=self.owner)
+
+    def drop(self) -> None:
+        """Close Without the Code, for another Admin while the code is hidden: the code forgotten, the dialog closed, so
+        a station whose Admin never comes back is not held by it (review of #499)."""
+        if self.btn_drop.isVisible() and self.other_admin():
+            self.code = ""
+            self.code_label.clear()
+            QDialog.done(self, QDialog.DialogCode.Rejected)
 
     def reject(self) -> None:
         """Esc or the window's close: refused until the code was saved or printed."""

@@ -29,8 +29,7 @@ CODE = "AAAAA BBBBB CCCCC DDDDD EEEEE"
 
 @pytest.fixture(autouse=True)
 def none_left_open() -> Iterator[None]:
-    """A dialog still holding its secret refuses the close qtbot gives it, so it is hidden here, or it would stay the
-    active modal widget for the next test."""
+    """A dialog holding its secret refuses qtbot's close: hidden here, or it stays the next test's modal widget."""
     yield
     for w in QApplication.topLevelWidgets():
         if isinstance(w, HeldSecretDialog):
@@ -55,8 +54,7 @@ def idle_end(win: MainWindow, ctx: AppContext) -> None:
 
 
 def signs_in(monkeypatch: pytest.MonkeyPatch, win: MainWindow, *users: str) -> list[str | None]:
-    """Switch User answered by `users` in turn, set before a dialog takes the window's switch_user; the names it was
-    opened with are returned as they come."""
+    """Switch User answered by `users` in turn; the names it was opened with are returned as they come."""
     asked: list[str | None] = []
     who = iter(users)
     monkeypatch.setattr(win, "switch_user", lambda name=None: asked.append(name) or win.set_user(next(who)))
@@ -65,14 +63,8 @@ def signs_in(monkeypatch: pytest.MonkeyPatch, win: MainWindow, *users: str) -> l
 
 def hidden(dialog: HeldSecretDialog, *secret: QWidget) -> bool:
     """The secret's widgets off the screen, the reason and Sign In as Admin… on it, focused."""
-    return (
-        dialog.isVisible()
-        and dialog.holding()
-        and not any(w.isVisible() for w in secret)
-        and dialog.away.isVisible()
-        and dialog.btn_admin.isVisible()
-        and QWidget.focusWidget(dialog) is dialog.btn_admin
-    )
+    shown = dialog.isVisible() and dialog.holding() and dialog.away.isVisible() and dialog.btn_admin.isVisible()
+    return shown and not any(w.isVisible() for w in secret) and QWidget.focusWidget(dialog) is dialog.btn_admin
 
 
 def test_req_usr_004_an_idle_end_hides_a_new_board_models_recovery_key(
@@ -120,7 +112,7 @@ def test_req_usr_004_an_idle_end_hides_a_new_stores_recovery_key(
     store = as_admin(ctx, ctx.create_store, BETA)
     win.set_user("admin")
     signs_in(monkeypatch, win, "admin")
-    dialog = RecoveryKeyDialog(win, ctx, store, lambda e: None, win.status, win.switch_user)
+    dialog = RecoveryKeyDialog(win, ctx, store, lambda e: None, win.status)
     modal(qtbot, dialog)
     key = dialog.recovery.key.text()
     idle_end(win, ctx)
@@ -133,25 +125,29 @@ def test_req_usr_004_an_idle_end_hides_a_new_stores_recovery_key(
 def test_req_usr_004_an_idle_end_hides_an_admins_recovery_code_from_all_but_that_admin(
     qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The recovery code is the Admin's own: hidden at the idle end and from an Engineer, shown again to that Admin."""
+    """The recovery code is the Admin's own: hidden at the idle end, from an Engineer and from another Admin, who may
+    close it without the code instead (review of #499); shown again to that Admin."""
     win = shell(qtbot, ctx)
-    asked = signs_in(monkeypatch, win, "engineer", "admin")
+    ctx.add_user("kim", "Admin")
+    asked = signs_in(monkeypatch, win, "engineer", "kim", "admin")
     dialog = RecoveryCodeDialog(win, CODE)
     modal(qtbot, dialog)
     idle_end(win, ctx)
-    secret = (dialog.code_label, dialog.btn_save, dialog.btn_print, dialog.btn_done)
+    secret = (dialog.code_label, dialog.btn_save, dialog.btn_print, dialog.btn_done, dialog.btn_drop)
     assert hidden(dialog, *secret) and dialog.code_label.text() == ""
     assert dialog.away.text() == (
         "The session of admin ended, so their recovery code is hidden, kept until admin signs in again to save it. The"
         " station does nothing else until then."
     )
     dialog.reject()
-    assert dialog.isVisible()
     dialog.btn_admin.click()
-    assert hidden(dialog, *secret)
+    assert dialog.isVisible() and ctx.role == "Engineer" and hidden(dialog, *secret)
     dialog.btn_admin.click()
-    assert asked == ["admin", "admin"] and dialog.code_label.text() == CODE and dialog.btn_save.isVisible()
-    assert not dialog.btn_admin.isVisible()
+    assert ctx.user == "kim" and dialog.code_label.text() == "" and dialog.btn_drop.isVisible()
+    assert dialog.away.text().startswith("Only admin may see this recovery code. Close Without the Code")
+    dialog.btn_admin.click()
+    assert asked == ["admin"] * 3 and dialog.code_label.text() == CODE and dialog.btn_save.isVisible()
+    assert not dialog.btn_admin.isVisible() and not dialog.btn_drop.isVisible()
 
 
 def test_req_usr_004_a_kept_secret_or_another_dialog_is_closed_as_before(qtbot: QtBot, ctx: AppContext) -> None:
@@ -162,3 +158,19 @@ def test_req_usr_004_a_kept_secret_or_another_dialog_is_closed_as_before(qtbot: 
     dialog._kept("✓ Saved to E:\\code.txt")
     idle_end(win, ctx)
     assert not dialog.isVisible() and QApplication.activeModalWidget() is None
+
+
+def test_req_usr_004_another_admin_may_close_a_hidden_recovery_code_without_it(
+    qtbot: QtBot, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An Admin who never comes back does not hold the station: another Admin's Close Without the Code forgets the code,
+    and Reset Password gives its Admin a new one (review of #499)."""
+    win = shell(qtbot, ctx)
+    ctx.add_user("kim", "Admin")
+    signs_in(monkeypatch, win, "kim")
+    dialog = RecoveryCodeDialog(win, CODE)
+    modal(qtbot, dialog)
+    idle_end(win, ctx)
+    dialog.btn_admin.click()
+    dialog.btn_drop.click()
+    assert not dialog.isVisible() and dialog.code == "" and QApplication.activeModalWidget() is None

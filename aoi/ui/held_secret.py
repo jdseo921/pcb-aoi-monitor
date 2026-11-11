@@ -1,14 +1,9 @@
-"""A dialog that shows a secret this once and will not close until it is kept: the New board model dialog's key step,
-Settings' New Store… (`RecoveryKeyDialog`) and the first Admin's recovery code (`RecoveryCodeDialog`). The idle end
-(`MainWindow.check_idle`, REQ-USR-004) cannot close one, so before #499 it kept the Admin's session open with no time
-limit and the secret on screen. Now the session ends as at any other time; while someone who may not see the secret is
-signed in, the dialog takes it off the screen, kept in memory, hides its buttons, says why, and offers Sign In as
-Admin…, which opens Switch User with the Admin who saw it picked; the secret shows again to one who may see it, as the
-first-run guide's key step does since UI-1 (senior review 2026-11-06)."""
+"""A dialog that shows a secret this once and will not close until it is kept (#499): the idle end (REQ-USR-004) ends
+the session under it, and while someone who may not see the secret is signed in, the dialog hides it, kept, says why
+and offers Sign In as Admin…, as the first-run guide's key step does since UI-1 (senior review 2026-11-06)."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QDialog, QLabel, QWidget
@@ -23,9 +18,9 @@ class HeldSecretDialog(QDialog):
     """`holding`, `may_see`, `show_secret` and `away_text` are the dialog's own; `user_changed`, which the window calls
     after every sign-in and idle end, hides or shows the secret by them. `away` and `btn_admin` go in its layout."""
 
-    def __init__(self, parent: QWidget, ctx: AppContext, switch_user: Callable[[str | None], object]) -> None:
+    def __init__(self, parent: QWidget, ctx: AppContext) -> None:
         super().__init__(parent)
-        self.ctx, self.switch_user = ctx, switch_user
+        self.ctx = ctx
         self.owner = ctx.user  # the Admin who saw it, picked first at Sign In as Admin…
         self.away = QLabel()  # why the secret is hidden; empty and hidden while it shows
         self.away.setWordWrap(True)
@@ -33,20 +28,16 @@ class HeldSecretDialog(QDialog):
         self.btn_admin = size_class(button(self.tr("Sign In as Admin…"), "primary", self._sign_in), "T")
         self.btn_admin.hide()
 
-    def holding(self) -> bool:
-        """The secret shows and is not kept yet: the dialog will not close."""
+    def holding(self) -> bool:  # the secret is not kept yet: the dialog will not close
         raise NotImplementedError
 
-    def may_see(self) -> bool:
-        """The user signed in may see the secret: an Admin."""
+    def may_see(self) -> bool:  # the user signed in may see the secret: an Admin
         return self.ctx.role == "Admin"
 
-    def show_secret(self, on: bool) -> None:
-        """The secret, its buttons and its tick on the screen (`on`), or off it, the secret kept."""
+    def show_secret(self, on: bool) -> None:  # the secret and its buttons on the screen, or off it, kept
         raise NotImplementedError
 
-    def away_text(self) -> str:
-        """What the dialog says while the secret is hidden."""
+    def away_text(self) -> str:  # what the dialog says while the secret is hidden
         raise NotImplementedError
 
     def user_changed(self) -> None:
@@ -59,12 +50,13 @@ class HeldSecretDialog(QDialog):
         self.away.setText(self.away_text() if hide else "")
         self.away.setVisible(hide)
         self.btn_admin.setVisible(hide)
+        self.btn_admin.setDefault(hide)
         if hide:
-            self.btn_admin.setDefault(True)
             self.btn_admin.setFocus()
-        else:
-            self.btn_admin.setDefault(False)
 
     def _sign_in(self) -> None:
-        """Sign In as Admin…: Switch User over the dialog, the Admin who saw the secret picked first."""
-        self.switch_user(self.owner or None)
+        """Sign In as Admin…: the window's Switch User over the dialog, the Admin who saw the secret picked first."""
+        parent = self.parentWidget()
+        switch_user = getattr(parent.window(), "switch_user", None) if parent is not None else None
+        if switch_user is not None:
+            switch_user(self.owner or None)

@@ -1793,7 +1793,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+164"/>
-        <location filename="../ui/main_window.py" line="+1337"/>
+        <location filename="../ui/main_window.py" line="+1335"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5671,7 +5671,7 @@
 <context>
     <name>HeldSecretDialog</name>
     <message>
-        <location filename="../ui/held_secret.py" line="+33"/>
+        <location filename="../ui/held_secret.py" line="+28"/>
         <source>Sign In as Admin…</source>
         <translation type="unfinished">관리자로 로그인…</translation>
     </message>
@@ -5679,7 +5679,7 @@
 <context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1189"/>
+        <location filename="../ui/main_window.py" line="-1187"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7129,7 +7129,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+77"/>
+        <location line="+75"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7139,12 +7139,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-51"/>
+        <location line="-49"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+197"/>
+        <location line="+195"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8039,7 +8039,7 @@
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1146"/>
+        <location filename="../ui/main_window.py" line="-1144"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8816,7 +8816,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+3"/>
+        <source>Close Without the Code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+17"/>
         <source>Keep this sheet locked away, apart from the station. At Switch User, {user} presses Use Recovery Code…, types it and chooses a new password. It works once.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8841,7 +8846,12 @@
         <translation type="unfinished">✓ {printer}(으)로 보냄</translation>
     </message>
     <message>
-        <location line="+18"/>
+        <location line="+24"/>
+        <source>Only {admin} may see this recovery code. Close Without the Code lets the station carry on: the code is then lost, and {admin} gets a new one after Reset Password on Settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>The session of {admin} ended, so their recovery code is hidden, kept until {admin} signs in again to save it. The station does nothing else until then.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8917,7 +8927,7 @@
 <context>
     <name>RecoveryKeyDialog</name>
     <message>
-        <location line="+43"/>
+        <location line="+42"/>
         <source>Done</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9995,7 +10005,7 @@
         <translation>{all}자 중 {n}자</translation>
     </message>
     <message>
-        <location line="+48"/>
+        <location line="+46"/>
         <source>Restore the key for {customer}</source>
         <translation>{customer}의 키 복원</translation>
     </message>

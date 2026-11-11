@@ -216,9 +216,8 @@ class RecoveryKeyDialog(HeldSecretDialog):
         store: dict[str, Any],
         error: Callable[[AoiError], object],
         status: Callable[[str], object],
-        switch_user: Callable[[str | None], object],
     ) -> None:
-        super().__init__(parent, ctx, switch_user)
+        super().__init__(parent, ctx)
         self.setMinimumWidth(theme.CARD_W)
         self.recovery = RecoveryKey(ctx, error, status)
         self.recovery.show_key(store)
