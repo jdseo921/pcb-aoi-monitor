@@ -1793,7 +1793,7 @@
     <message>
         <location filename="../ui/demo_workspace.py" line="+31"/>
         <location filename="../ui/errors.py" line="+164"/>
-        <location filename="../ui/main_window.py" line="+1330"/>
+        <location filename="../ui/main_window.py" line="+1337"/>
         <source>start-up</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5669,9 +5669,17 @@
     </message>
 </context>
 <context>
+    <name>HeldSecretDialog</name>
+    <message>
+        <location filename="../ui/held_secret.py" line="+33"/>
+        <source>Sign In as Admin…</source>
+        <translation type="unfinished">관리자로 로그인…</translation>
+    </message>
+</context>
+<context>
     <name>HomePage</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1183"/>
+        <location filename="../ui/main_window.py" line="-1189"/>
         <source>Upload samples</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7121,7 +7129,7 @@
         <translation type="unfinished">복구 키를 파일로 저장하거나 인쇄한 다음 키를 저장했습니다를 누르십시오.</translation>
     </message>
     <message>
-        <location line="+74"/>
+        <location line="+77"/>
         <source>The session of {user} ended after {minutes} minutes without input; {operator} is signed in.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7131,12 +7139,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-48"/>
+        <location line="-51"/>
         <source>Choose the Admin&apos;s password first, under Switch User: an account without one can be claimed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+191"/>
+        <location line="+197"/>
         <source>Presenter theme on, full screen. An Admin turns it off with Exit presenter theme.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7963,7 +7971,7 @@
 <context>
     <name>NewBoardModelDialog</name>
     <message>
-        <location filename="../ui/board_model_dialog.py" line="+48"/>
+        <location filename="../ui/board_model_dialog.py" line="+49"/>
         <source>New board model</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7993,12 +8001,12 @@
         <translation type="unfinished">취소</translation>
     </message>
     <message>
-        <location line="+16"/>
+        <location line="+17"/>
         <source>Done</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+27"/>
+        <location line="+28"/>
         <source>Its images stay unencrypted in the workspace, as for in-house and demo boards. {refusal} An Admin makes a customer&apos;s board model, in the customer&apos;s encrypted dataset store.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8022,11 +8030,16 @@
         <source>Board model {board} is made, in the new encrypted dataset store of {customer}. Its recovery key opens the store on another PC: this station keeps the key, but a new PC or a reinstalled Windows needs this copy.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+21"/>
+        <source>The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in to save it. The station does nothing else until then.</source>
+        <translation type="unfinished">{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 키는 보관되며, 그때까지 스테이션은 다른 작업을 하지 않습니다.</translation>
+    </message>
 </context>
 <context>
     <name>Page</name>
     <message>
-        <location filename="../ui/main_window.py" line="-1140"/>
+        <location filename="../ui/main_window.py" line="-1146"/>
         <source>Home</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8778,7 +8791,7 @@
 <context>
     <name>RecoveryCodeDialog</name>
     <message>
-        <location filename="../ui/recovery_code_dialog.py" line="+30"/>
+        <location filename="../ui/recovery_code_dialog.py" line="+32"/>
         <source>Recovery code for {user}</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8788,7 +8801,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+12"/>
         <source>Save to File…</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8803,7 +8816,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="+16"/>
         <source>Keep this sheet locked away, apart from the station. At Switch User, {user} presses Use Recovery Code…, types it and chooses a new password. It works once.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8827,11 +8840,16 @@
         <source>✓ Sent to {printer}</source>
         <translation type="unfinished">✓ {printer}(으)로 보냄</translation>
     </message>
+    <message>
+        <location line="+18"/>
+        <source>The session of {admin} ended, so their recovery code is hidden, kept until {admin} signs in again to save it. The station does nothing else until then.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>RecoveryKey</name>
     <message>
-        <location filename="../ui/pages/recovery_key.py" line="+54"/>
+        <location filename="../ui/pages/recovery_key.py" line="+55"/>
         <source>Shown this once. Save it to a USB drive or print it, and keep it apart from the station: with it, an Admin opens the store on another PC, and anyone who holds it and a copy of the files can read them.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8899,9 +8917,14 @@
 <context>
     <name>RecoveryKeyDialog</name>
     <message>
-        <location line="+40"/>
+        <location line="+43"/>
         <source>Done</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in to save it. The station does nothing else until then.</source>
+        <translation type="unfinished">{admin}의 세션이 끝나 {customer}의 복구 키를 숨겼습니다. 관리자가 로그인해 저장할 때까지 키는 보관되며, 그때까지 스테이션은 다른 작업을 하지 않습니다.</translation>
     </message>
 </context>
 <context>
@@ -9972,7 +9995,7 @@
         <translation>{all}자 중 {n}자</translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+48"/>
         <source>Restore the key for {customer}</source>
         <translation>{customer}의 키 복원</translation>
     </message>

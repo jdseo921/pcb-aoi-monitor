@@ -24,6 +24,7 @@ from PySide6.QtWidgets import QCheckBox, QDialog, QFileDialog, QHBoxLayout, QLab
 from ...errors import AoiError
 from ...times import to_local
 from .. import theme
+from ..held_secret import HeldSecretDialog
 from .base import button, size_class
 
 if TYPE_CHECKING:
@@ -202,10 +203,11 @@ class RecoveryKey(QWidget):
         )
 
 
-class RecoveryKeyDialog(QDialog):
+class RecoveryKeyDialog(HeldSecretDialog):
     """A new store's recovery key over the page, this once (Settings › Dataset stores, New Store…; ADR 0021), as the
     New board model dialog shows it for a customer's first board model: Done waits for the tick, and Esc, the window's
-    close and a sign-in, which exec(), showing it modal, keeps from the window behind it, do nothing until then."""
+    close and a sign-in, which exec(), showing it modal, keeps from the window behind it, do nothing until then. The
+    idle end hides the key until an Admin signs in again (`HeldSecretDialog`, #499)."""
 
     def __init__(
         self,
@@ -214,28 +216,49 @@ class RecoveryKeyDialog(QDialog):
         store: dict[str, Any],
         error: Callable[[AoiError], object],
         status: Callable[[str], object],
+        switch_user: Callable[[str | None], object],
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent, ctx, switch_user)
         self.setMinimumWidth(theme.CARD_W)
         self.recovery = RecoveryKey(ctx, error, status)
         self.recovery.show_key(store)
         self.setWindowTitle(self.recovery.title())
         lay = QVBoxLayout(self)
         lay.addWidget(self.recovery)
+        lay.addWidget(self.away)
         self.btn_done = size_class(button(self.tr("Done"), "primary", self.accept), "T")
         self.recovery.changed.connect(lambda: self.btn_done.setEnabled(self.recovery.kept.isChecked()))
         self.btn_done.setEnabled(False)
         row = QHBoxLayout()
         row.addStretch(1)
         row.addWidget(self.btn_done)
+        row.addWidget(self.btn_admin)
         lay.addStretch(1)
         lay.addLayout(row)
         self.recovery.btn_save.setFocus()
 
+    def holding(self) -> bool:
+        return self.recovery.holding()
+
+    def show_secret(self, on: bool) -> None:
+        self.recovery.hide_text(not on)
+        self.recovery.setVisible(on)
+        self.btn_done.setVisible(on)
+        if on:
+            self.recovery.btn_save.setFocus()
+
+    def away_text(self) -> str:
+        customer = self.recovery.made["customer"] if self.recovery.made else ""
+        said = self.tr(
+            "The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in"
+            " to save it. The station does nothing else until then."
+        )
+        return said.format(admin=self.owner, customer=customer)
+
     def reject(self) -> None:
         """Esc or the window's close: refused while the key waits for its tick."""
         if self.recovery.holding():
-            self.recovery.kept.setFocus()
+            (self.recovery.kept if self.recovery.isVisible() else self.btn_admin).setFocus()
             return
         super().reject()
 

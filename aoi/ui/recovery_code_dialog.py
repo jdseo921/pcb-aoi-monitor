@@ -1,6 +1,7 @@
 """An Admin's recovery code, shown once as a store's key is (REQ-USR-005; ADR 0002, decision 6): Save to File…,
 Print…, and Done, which (with Esc and the window's close) waits until it was saved or printed. The code's label cannot
-be selected, so it never reaches the clipboard, and the code is forgotten as the dialog closes."""
+be selected, so it never reaches the clipboard, and the code is forgotten as the dialog closes. The idle end hides the
+code until the Admin it is for signs in again (`HeldSecretDialog`, #499)."""
 
 from __future__ import annotations
 
@@ -17,16 +18,17 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QLabel, QVBoxLa
 from ..errors import AoiError
 from . import theme
 from .errors import show_error
+from .held_secret import HeldSecretDialog
 from .pages.base import button, size_class
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
 
 
-class RecoveryCodeDialog(QDialog):
+class RecoveryCodeDialog(HeldSecretDialog):
     def __init__(self, shell: MainWindow, code: str) -> None:
-        super().__init__(shell)
-        self.shell, self.ctx, self.code = shell, shell.ctx, code
+        super().__init__(shell, shell.ctx, shell.switch_user)
+        self.shell, self.code = shell, code
         self.setWindowTitle(self.tr("Recovery code for {user}").format(user=self.ctx.user))
         self.setMinimumWidth(theme.CARD_W)
         lay = QVBoxLayout(self)
@@ -38,9 +40,11 @@ class RecoveryCodeDialog(QDialog):
         )
         note.setWordWrap(True)
         lay.addWidget(note)
+        self.note = note
         self.code_label = QLabel(code)  # not selectable, so never on the clipboard
         self.code_label.setObjectName("recoveryKey")
         lay.addWidget(self.code_label)
+        lay.addWidget(self.away)
         row = QHBoxLayout()
         self.btn_save = size_class(button(self.tr("Save to File…"), slot=self.save_file), "T")
         self.btn_print = size_class(button(self.tr("Print…"), slot=self.print_sheet), "T")
@@ -48,7 +52,13 @@ class RecoveryCodeDialog(QDialog):
         self.saved_line.setWordWrap(True)
         self.btn_done = size_class(button(self.tr("Done"), "primary", self.accept), "T")
         self.btn_done.setEnabled(False)
-        for w, stretch in ((self.btn_save, 0), (self.btn_print, 0), (self.saved_line, 1), (self.btn_done, 0)):
+        for w, stretch in (
+            (self.btn_save, 0),
+            (self.btn_print, 0),
+            (self.saved_line, 1),
+            (self.btn_done, 0),
+            (self.btn_admin, 0),
+        ):
             row.addWidget(w, stretch)
         lay.addLayout(row)
         self.btn_save.setFocus()
@@ -58,7 +68,7 @@ class RecoveryCodeDialog(QDialog):
         keep = self.tr(
             "Keep this sheet locked away, apart from the station. At Switch User, {user} presses Use Recovery Code…,"
             " types it and chooses a new password. It works once."
-        ).format(user=self.ctx.user)
+        ).format(user=self.owner)
         return "\n\n".join([self.windowTitle(), self.code, keep]) + "\n"
 
     def _kept(self, said: str) -> None:
@@ -109,10 +119,33 @@ class RecoveryCodeDialog(QDialog):
         doc.print_(printer)
         self._kept(self.tr("✓ Sent to {printer}").format(printer=printer.printerName() or printer.outputFileName()))
 
+    def holding(self) -> bool:
+        return bool(self.code) and not self.btn_done.isEnabled()
+
+    def may_see(self) -> bool:
+        """Only the Admin the code is for: it signs in as them."""
+        return self.ctx.role == "Admin" and self.ctx.user == self.owner
+
+    def show_secret(self, on: bool) -> None:
+        self.code_label.setText(self.code if on else "")
+        for w in (self.note, self.code_label, self.btn_save, self.btn_print, self.saved_line, self.btn_done):
+            w.setVisible(on)
+        if on:
+            self.btn_save.setFocus()
+
+    def away_text(self) -> str:
+        said = self.tr(
+            "The session of {admin} ended, so their recovery code is hidden, kept until {admin} signs in again to save"
+            " it. The station does nothing else until then."
+        )
+        return said.format(admin=self.owner)
+
     def reject(self) -> None:
         """Esc or the window's close: refused until the code was saved or printed."""
         if self.btn_done.isEnabled():
             super().reject()
+        elif not self.btn_save.isVisible():
+            self.btn_admin.setFocus()
 
     def done(self, result: int) -> None:
         if not self.btn_done.isEnabled():

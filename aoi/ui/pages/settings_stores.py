@@ -285,7 +285,9 @@ class StoresPanel(QGroupBox):
         self.table.selectRow([s["uuid"] for s in self.rows].index(store["uuid"]))
         if self.key_dialog is not None:
             self.key_dialog.deleteLater()
-        self.key_dialog = RecoveryKeyDialog(self, self.ctx, store, self.page.error, self.page.shell.status)
+        self.key_dialog = RecoveryKeyDialog(
+            self, self.ctx, store, self.page.error, self.page.shell.status, self.page.shell.switch_user
+        )
         self.key_dialog.exec()
 
     def _restore(self) -> None:

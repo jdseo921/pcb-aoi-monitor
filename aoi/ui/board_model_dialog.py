@@ -3,10 +3,11 @@ business-readiness brief, decision D2; ADR 0021). It takes a board model's name 
 boards it is. A customer's first board model makes that customer's encrypted dataset store and puts the board model in
 it, in this dialog (`AppContext.create_customer_board_model`), then shows the store's recovery key this once
 (`RecoveryKey`) with Save to File… and Print…: Done waits for its tick, and Esc and the window's close do nothing until
-then. A customer with a store gets the board model in it; no customer makes a board model in no store, as + New did
-before, for in-house and demo boards. The name is checked as it is typed, by the rule every call that makes a board
-model applies (`AppContext.board_model_name_refusal`; B4 of the brief, D4 part, F9; ADR 0023): a line under it says
-why a name is refused, and Create and Enter do nothing until it is one a new board model may have."""
+then; the idle end hides the key until an Admin signs in again (`HeldSecretDialog`, #499). A customer with a store gets
+the board model in it; no customer makes a board model in no store, as + New did before, for in-house and demo boards.
+The name is checked as it is typed, by the rule every call that makes a board model applies
+(`AppContext.board_model_name_refusal`; B4 of the brief, D4 part, F9; ADR 0023): a line under it says why a name is
+refused, and Create and Enter do nothing until it is one a new board model may have."""
 
 from __future__ import annotations
 
@@ -17,7 +18,6 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QComboBox,
     QCompleter,
-    QDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 from ..errors import AoiError
 from . import theme
 from .errors import phrase_text, show_error
+from .held_secret import HeldSecretDialog
 from .pages.base import RoleGates, button, size_class
 from .pages.recovery_key import RecoveryKey
 
@@ -38,13 +39,13 @@ if TYPE_CHECKING:
 STORE_CALL = "create_customer_board_model"  # the call a customer's board model takes: an Admin's
 
 
-class NewBoardModelDialog(QDialog):
+class NewBoardModelDialog(HeldSecretDialog):
     """The name and the customer, then, for a customer's first board model, its store's recovery key. `made` names the
     board model made, or found as it was, once Create succeeds, and `store` the customer's store it is in, if any."""
 
     def __init__(self, shell: MainWindow) -> None:
-        super().__init__(shell)
-        self.shell, self.ctx = shell, shell.ctx
+        super().__init__(shell, shell.ctx, shell.switch_user)
+        self.shell = shell
         self.setWindowTitle(self.tr("New board model"))
         self.setMinimumWidth(theme.CARD_W)
         self.made: str | None = None
@@ -112,10 +113,12 @@ class NewBoardModelDialog(QDialog):
         self.recovery = RecoveryKey(self.ctx, self._error, self.shell.status)
         self.recovery.changed.connect(self._sync)
         lay.addWidget(self.recovery)
+        lay.addWidget(self.away)
         self.btn_done = size_class(button(self.tr("Done"), "primary", self.accept), "T")
         row = QHBoxLayout()
         row.addStretch(1)
         row.addWidget(self.btn_done)
+        row.addWidget(self.btn_admin)
         lay.addStretch(1)
         lay.addLayout(row)
         self.steps.addWidget(self.key_step)
@@ -208,11 +211,29 @@ class NewBoardModelDialog(QDialog):
         self.recovery.btn_save.setFocus()
         self._sync()
 
+    def holding(self) -> bool:
+        return self.recovery.holding()
+
+    def show_secret(self, on: bool) -> None:
+        self.recovery.hide_text(not on)
+        for w in (self.recovery, self.btn_done):
+            w.setVisible(on)
+        if on:
+            self.recovery.btn_save.setFocus()
+
+    def away_text(self) -> str:
+        customer = self.recovery.made["customer"] if self.recovery.made else ""
+        said = self.tr(
+            "The session of {admin} ended, so the recovery key of {customer} is hidden, kept until an Admin signs in"
+            " to save it. The station does nothing else until then."
+        )
+        return said.format(admin=self.owner, customer=customer)
+
     def reject(self) -> None:
         """Cancel, Esc or the window's close: refused while the recovery key waits for its tick, which it must not leave
         unread."""
         if self.recovery.holding():
-            self.recovery.kept.setFocus()
+            (self.recovery.kept if self.recovery.isVisible() else self.btn_admin).setFocus()
             return
         super().reject()
 
