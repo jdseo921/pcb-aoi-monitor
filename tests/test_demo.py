@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import sqlite3
 import time
 from pathlib import Path
 from unittest import mock
@@ -182,3 +183,12 @@ def test_req_set_007_a_reset_stopped_by_a_held_file_finishes_the_next_time(bundl
     assert demo.is_demo(folder)  # still a demo workspace, so the next reset may finish
     demo.reset(bundle, folder, keys)
     assert not list((folder / "results").rglob("*.png"))
+
+
+def test_req_set_007_the_bundle_carries_no_alarm_of_the_machine_that_built_it(demo_bundle: Path) -> None:
+    """The bundle is built on a drive 96 % full (conftest), past the 95 % alarm: its database holds no alarm at all,
+    no AOI-LOG-006 or any other the build raised, which would show on Inspection's alarm log at every demo and come
+    back after every Reset Demo (dress rehearsal 2026-11-11)."""
+    with sqlite3.connect(demo_bundle / demo.WORKSPACE / "aoi.sqlite") as db:
+        codes = [code for (code,) in db.execute("SELECT code FROM alarms")]
+    assert codes == []

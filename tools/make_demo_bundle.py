@@ -60,7 +60,13 @@ def build(out: Path, epochs: int = EPOCHS, image_size: int = IMAGE_SIZE) -> dict
         raise SystemExit(f"{out} holds files and is not a demo bundle; choose another --out")
     shutil.rmtree(out, ignore_errors=True)
     started = time.monotonic()
-    with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, AOI_WORKSPACE=str(Path(tmp) / "settings")):
+    # the build machine's own drive is never the demo's: a full one would ship its AOI-LOG-005 alarm in the bundle's
+    # database, shown on Inspection's alarm log at every demo and after every Reset Demo (dress rehearsal 2026-11-11)
+    with (
+        tempfile.TemporaryDirectory() as tmp,
+        mock.patch.dict(os.environ, AOI_WORKSPACE=str(Path(tmp) / "settings")),
+        mock.patch.object(AppContext, "check_disk", return_value=None),
+    ):
         dataset = Path(tmp) / "dataset"
         write_dataset(dataset, OK, NG, SEED, MORE_HELD_OK)
         keys = credentials.MemoryCredentials()  # the store key goes to store-key.json, never to the station
