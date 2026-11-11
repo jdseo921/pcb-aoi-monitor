@@ -99,5 +99,5 @@ def test_req_trn_011_card_shown_on_training(qtbot: QtBot, trained_ctx: AppContex
     page.models.selectRow(0)
     page.show_card()
     text = page.card_view.toPlainText()
-    assert page.card_view.isVisible() and text.startswith(f"# Model card: {BOARD} ")
+    assert page.card_view.isVisible() and text.startswith(f"Model card: {BOARD} ")
     assert "Not yet tested on a locked validation set" in text

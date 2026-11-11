@@ -98,6 +98,7 @@ renamed to `<version>.md` and a new `unreleased.md` starts empty.
 - [#447] The Inspection page inspects through it. The alarms for no active AI model, a run stopped by a board model change
   and a run whose engine changed now show in the screen's language when read. / 검사 화면이 이를 통해 검사합니다. 활성
   AI 모델 없음, 보드 모델 변경으로 멈춘 실행, 엔진이 바뀐 실행의 알람은 이제 읽는 시점의 화면 언어로 표시됩니다.
+- [REQ-TRN-011] Training's AI Model Card now shows the card laid out, with its title, headings and tables, rather than its raw text with # and ** marks. The card's file and its text are unchanged. No verdict changes. / Training의 AI Model Card가 이제 # 와 ** 표시가 그대로 보이는 원문 대신, 제목과 소제목, 표를 갖춘 형태로 카드를 보여 줍니다. 카드 파일과 내용은 바뀌지 않습니다. 판정은 바뀌지 않습니다.
 
 ## Fixed / 수정 (draft)
 

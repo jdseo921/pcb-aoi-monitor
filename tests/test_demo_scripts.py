@@ -69,7 +69,7 @@ RESTART_BUDGET_S = 30  # docs/demo/README.md, "When something goes wrong": the d
 RUN_TIMEOUT_S = 180  # a start of the demo in a process of its own, run 4 boards in, as tests/test_start_user.py waits
 BOLD = re.compile(r"\*\*(.+?)\*\*")
 SOURCE = re.compile(r"<source>(.*?)</source>", re.S)
-NOT_YET_TESTED = "**Not yet tested on a locked validation set: nothing on this card is a measure of accuracy.**"
+NOT_YET_TESTED = "Not yet tested on a locked validation set: nothing on this card is a measure of accuracy."
 
 
 @pytest.fixture
@@ -488,7 +488,7 @@ def test_req_set_007_the_fifteen_minute_script_checks_trains_and_tries_a_thresho
         card = next(b for b in training.findChildren(QPushButton) if b.text() == "AI Model Card")
         qtbot.mouseClick(card, Qt.MouseButton.LeftButton)  # the script reads out its first line: no result claimed yet
         shown_card = training.card_view.toPlainText()  # type: ignore[attr-defined]
-        assert shown_card.startswith(f"# Model card: {bm} v1.1")
+        assert shown_card.startswith(f"Model card: {bm} v1.1")  # laid out, no "#"
         assert NOT_YET_TESTED in shown_card
         activate = next(b for b in training.findChildren(QPushButton) if b.text() == "Activate Selected")
         qtbot.mouseClick(activate, Qt.MouseButton.LeftButton)
@@ -623,7 +623,7 @@ def test_req_set_007_the_forty_five_minute_script_clicked_through(
         assert (win.ctx.active_model(bm) or {}).get("version") == "v1.0"
         click_row(qtbot, versions, 0)
         press(qtbot, win, named(training, "AI Model Card"))
-        assert training.card_view.toPlainText().startswith(f"# Model card: {bm} v1.1")
+        assert training.card_view.toPlainText().startswith(f"Model card: {bm} v1.1")  # laid out, no "#"
         press(qtbot, win, named(training, "Activate Selected"))
         assert (win.ctx.active_model(bm) or {}).get("version") == "v1.1"
         sidebar(qtbot, win, "AI Model Test")

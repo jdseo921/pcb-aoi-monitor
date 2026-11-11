@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QStackedWidget,
     QTabBar,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -331,9 +332,9 @@ class TrainingPage(Page):
         mrow2.addWidget(button(self.tr("AI Model Card"), slot=self.show_card))
         mrow2.addWidget(button(self.tr("Export AI Model…"), slot=self.export_model))
         rl.addLayout(mrow2)
-        self.card_view = (
-            QPlainTextEdit()
-        )  # the selected version's card, read-only, shown on AI Model Card (REQ-TRN-011)
+        # the selected version's card, read-only, shown on AI Model Card (REQ-TRN-011): its Markdown laid out, headings
+        # and tables, never shown as marks (dress rehearsal 2026-11-11, where "# Model card" and "**" were read out)
+        self.card_view = QTextEdit()
         self.card_view.setReadOnly(True)
         self.card_view.hide()
         rl.addWidget(self.card_view, 1)
@@ -1165,7 +1166,7 @@ class TrainingPage(Page):
             return
         text = self.ctx.card_text(int(cell_text(self.models, rows[0].row(), 0)))
         no_card = self.tr("AI model {version} has no AI model card: train again to make a version that has one.")
-        self.card_view.setPlainText(text or no_card.format(version=cell_text(self.models, rows[0].row(), 1)))
+        self.card_view.setMarkdown(text or no_card.format(version=cell_text(self.models, rows[0].row(), 1)))
         self.card_view.show()
 
     def export_model(self) -> None:
