@@ -776,7 +776,9 @@ refuses every page but Home and `closeEvent` is ignored, as the New board model 
 behind it (ADR 0021, decision 3). An idle end (`check_idle`) goes ahead meanwhile; while no Admin is signed in the guide
 then takes the key's text off the screen (`RecoveryKey.hide_text`) and hides its buttons and keys, the frame still held
 and the key kept, and Sign In as Admin… opens Switch User with the Admin who made it picked, to whom it shows again
-(senior review UI-1). A refusal, of Create or of the key's save or print, is said under the control that raised it, with
+(senior review UI-1). The key and code dialogs do the same as `HeldSecretDialog`s (`aoi/ui/held_secret.py`, #499):
+`check_idle` ends the session under one, and `set_user` hides its secret from anyone but an Admin (a code: its Admin,
+and another Admin may close it without the code). A refusal, of Create or of the key's save or print, is said under the control that raised it, with
 its code, and opens no dialog; a save or print that works, and a sign-in, take it away. F1 lists the key step's keys
 (`Page.key_actions`). Show All Steps › and Show the Guide › switch Home between the guide and what Home shows without
 it, its empty state with + New board model while there is no board model, for the board model shown, kept in `cards_for`

@@ -53,6 +53,7 @@ from .about import AboutDialog
 from .board_model_dialog import NewBoardModelDialog
 from .demo_workspace import boards
 from .errors import install_excepthook, open_workspace, phrase_text, show_already_open, show_error
+from .held_secret import HeldSecretDialog
 from .pages.base import (
     QT_TRANSLATE_NOOP,
     Page,
@@ -884,11 +885,11 @@ class MainWindow(QMainWindow):
         (`AppContext.end_idle`, REQ-USR-004), on Inspection, the run screen (`landing`, D25). A board being inspected
         does not wait: it is recorded under the user who started it, and a run under way stops after it, as at any
         sign-in, saying why (#177, `InspectionPage.idle_end`), so no run keeps a session open (senior review 2026-11-06,
-        SEC-4). Never in the demo, where the presenter talks. A dialog left open is closed first, as Cancel would; one
-        that will not close (a recovery key waiting to be kept) keeps the session. While the first-run guide holds the
-        frame on a new store's recovery key (`hold_frame`), the session ends as at any other time, on Home, and the
-        guide hides the key, still held, until an Admin signs in again (senior review 2026-11-06, UI-1). Returns
-        whether it ended one."""
+        SEC-4). Never in the demo, where the presenter talks. A dialog left open is closed first, as Cancel would; a
+        recovery key's or code's that will not close ends the session under it, hiding its secret (`HeldSecretDialog`,
+        #499); any other keeps the session. While the first-run guide holds the frame on a new store's recovery key
+        (`hold_frame`), the session ends as at any other time, on Home, and the guide hides the key, still held, until
+        an Admin signs in again (senior review 2026-11-06, UI-1). Returns whether it ended one."""
         idle = time.monotonic() - self.input.last >= self.ctx.settings.idle_minutes * 60
         if self.ctx.role == "Operator" or self.in_demo or not idle:
             return False
@@ -896,7 +897,8 @@ class MainWindow(QMainWindow):
             modal = QApplication.activeModalWidget()
             if isinstance(modal, QDialog):
                 modal.reject()
-        if QApplication.activeModalWidget() is not None:
+        modal = QApplication.activeModalWidget()
+        if modal is not None and not (isinstance(modal, HeldSecretDialog) and modal.holding()):
             return False
         before, operator = self.ctx.user, self.ctx.end_idle()
         if operator is None:
@@ -920,6 +922,9 @@ class MainWindow(QMainWindow):
         for page in self.pages.values():  # shown or not: what a page keeps for the role before goes now
             page.on_user_changed()
             page.limits_changed()  # an empty state names what the new role may not do
+        for dialog in self.findChildren(HeldSecretDialog):  # a secret left open hides, or shows again (#499)
+            if dialog.isVisible():
+                dialog.user_changed()
         cur = self.stack.currentWidget()
         if isinstance(cur, Page) and role not in cur.roles:
             self.navigate("Home")
