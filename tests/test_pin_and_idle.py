@@ -156,6 +156,29 @@ def test_req_usr_004_a_key_that_fires_a_shortcut_starts_the_idle_time_again(
     win.close()
 
 
+def test_req_usr_004_coming_back_from_a_native_dialog_starts_the_idle_time_again(qtbot: QtBot, ctx: AppContext) -> None:
+    """On Windows the operating system's own file and print dialogs take their presses and keys without passing them to
+    Qt, and the app is inactive while one shows: the app active again, as when the user closes one, is input, so an
+    Engineer who spent the idle time browsing for a folder is not signed out at the next check (#503). The app going
+    inactive is none, and the session then ends as ever."""
+    win = MainWindow(ctx)
+    qtbot.addWidget(win)
+    handed_over(ctx)
+    ctx.sign_in("engineer", password=PASSPHRASE)
+    win.set_user("engineer")
+    app = QApplication.instance()
+    assert isinstance(app, QApplication)
+    win.input.last = time.monotonic() - 15 * 60
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationInactive)  # a native dialog opens
+    assert time.monotonic() - win.input.last >= 15 * 60
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)  # and closes
+    assert time.monotonic() - win.input.last < 5 and not win.check_idle() and ctx.user == "engineer"
+    win.input.last = time.monotonic() - 15 * 60
+    app.applicationStateChanged.emit(Qt.ApplicationState.ApplicationInactive)
+    assert win.check_idle() and ctx.role == "Operator"
+    win.close()
+
+
 def test_req_usr_004_an_idle_end_signs_in_only_an_operator(ctx: AppContext) -> None:
     """The shift's operator, else the first Operator; with no Operator at all the session stays, never an Admin."""
     ctx.set_user("engineer")
