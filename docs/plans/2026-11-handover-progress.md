@@ -222,3 +222,22 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
 - 2026-11-10: E.2's train (#506 to #509) lands on `main` through #506, after the senior review's train. Both trains had
   taken ADR 0024 D26 and the codes AOI-INSP-020, AOI-INSP-021 and AOI-SET-025, none shipped in a build: E.2's are
   renumbered D30, AOI-INSP-025 to -029 and AOI-SET-026, and the 2026-11-06 lines above use the new numbers.
+- 2026-11-11: #460 and #461, with #453's guide line (Jay: "Try to look for and address shortcomings so that a client
+  can install and run the program properly with their own set of photoes. Make them happen step by step and do not
+  stop until finshed. When done, merge in order and push everything to main and see if it is ready for demonstration
+  recording.", and "Allow the user to train the program with their own board samples, view the state of training
+  itself, and manage/reset the metrics to default."). Recorded in `docs/tests/2026-11-11-own-photos-drawn-boards.md`:
+  a photo's lighting, frame, size and placement are brought to the Golden board's before either check reads it; the
+  Golden board's file carries a tolerance learned from the good boards; the AI model's pixel threshold is calibrated
+  on the good boards held out; Recipe Editor › Thresholds gains Reset to Defaults; the guide names the master samples
+  a failed shift check judged wrongly; the tester guide gains "Train it on your own boards". This can change verdicts:
+  the regression set is re-baselined (13 to 14 of 20 defective boards found, 20 of 20 good boards OK both times) and
+  17 screenshots re-approved. Measured on drawn boards only; #462 stays open. **Merge and push:** Jay's words above are
+  his sign-off for this change and for the five branches that waited (#499, #503, the AI model card, the demo bundle's
+  build alarms, the dress-rehearsal record), merged in that order under it; rule 6 otherwise stands. No pull request
+  carries this note, as the session that made the change could not reach GitHub's API: this entry and the record are
+  the change note. Checklist: ID in each commit subject, tests named `test_460_`/`test_461_` pass; the engine imports
+  no Qt; no schema change, and the one write that changes a verdict (the learned similarity threshold) is an audited
+  recipe revision; unit, regression and screenshot tests as stated in the record; strings through `self.tr()`, the
+  .ts file regenerated; manuals, release note with its customer notice, and tester guide updated; feature freeze: Reset
+  to Defaults is a feature, added on Jay's request above.

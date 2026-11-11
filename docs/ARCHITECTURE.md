@@ -500,17 +500,40 @@ Upload OK images (+ optional NG), label, freeze a version, lock its validation s
         │
         ▼
 0. Check the version from its rows: locked, ≥ 20 OK in its training set, one customer's store, an allowed use
-1. Register each training image onto one reference board (ORB features + RANSAC homography), one at a time
+1. Register each training image onto one reference board (ORB features + RANSAC homography, held to a turn,
+   shift and scale when those explain the matches as well), one at a time, and make it comparable with it
+   (`imaging.conform`: lit as the reference board, its pixels where the photo showed none; #460)
 2. Golden template  = per-pixel median of the aligned OK boards, a band of rows at a time → *_golden.png
+2a. Tolerance       = how far each pixel of the OK boards lies from the Golden template (`golden.Spread`: the larger
+                      of mean + 3σ and the second-highest difference seen), kept in a chunk of *_golden.png (#461)
 3. Autoencoder      = learns to reconstruct OK boards at the input size (lighting jitter augmentation)
 4. Normal variation = per-pixel mean/std of reconstruction error on OK boards (summed in float64)
 5. Calibration      = threshold from held-out OK scores (mean+3σ, ≥1.05×max OK);
-                      if labelled NG exist and separate cleanly → midpoint between OK and NG
+                      if labelled NG exist and separate cleanly → midpoint between OK and NG;
+                      pixel threshold above the level at which a held-out OK board shows a region, by the same
+                      rule on their region levels (`compare.region_level`, #460)
 6. Register version vX.Y in the model registry, inactive, with its card     → *.pt, *.card.md, *.card.json
    (a board model's first version is then made active: `_first_live`)
 ```
 
 Re-training after more uploads creates a new version; older versions stay selectable (model version control, GUI §6).
+
+**A photo made comparable (#460, #461).** Inspection and training bring every photo to the Golden board before a check
+reads it, in `imaging.align_to_reference`: a photo 1.5 times larger or smaller than the Golden board, or more, is
+matched at the Golden board's scale (ORB's pyramid spans 3.6 times) and averaged down before it is warped;
+`registration` keeps a turn, shift and scale in place of the full homography when they explain as many matches to
+2 px (`_simplest`: the other four numbers fit noise, and cost several pixels at the corners); and `conform` matches the
+photo's lighting (`match_light`: one gain plane and one offset fitted on the colours' mean, one gain per colour, the
+offset held towards 0 on a board with no contrast; a clipped value counts only against a Golden board on the side
+the clipping did not hide) and copies the Golden board's pixels where the photo showed no board (`frame_mask`). What
+it measured goes into the result's metrics (`light_gain`, `light_tilt`, `light_change`, `coverage_pct`); `Inspector.judge`
+adds a WARN check when the lighting is more than `LIGHT_WARN` off or less than `COVERAGE_WARN` of the frame was shown,
+and nothing is counted, by either check, where the photo showed no board or at that area's edge. `compare` passes over
+a pixel that differs no more than the Golden board's tolerance there and counts every other at its full difference, so
+the stored difference map keeps the recipe's scale and `re_grade` judges it as before. A Golden board without the
+chunk (set with Set Reference, or built before #461) is compared without a tolerance. `_learn_similarity` saves a
+recipe revision with the similarity threshold under the lowest the training OK boards scored, once, for a first AI
+model whose recipe is still the default, when that lies under the default.
 A frozen version holds each sample's label at its freeze (`labels`, since S32): the OK and NG images; an image labelled
 UNSURE is in neither, so it is left out of training and of the OK images held back for calibration in step 5, its
 validation part, and `AppContext.unsure_samples` lists it for the customer's quality engineer (REQ-TRN-002).

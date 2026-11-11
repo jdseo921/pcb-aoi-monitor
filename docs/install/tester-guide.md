@@ -1,7 +1,8 @@
 # Trying the app: a guide for testers
 
-For anyone asked to try AOI PoC Inspector on their own Windows PC, with no technical knowledge needed. It takes about
-20 minutes. Words in **bold** are what the app's own buttons and pages say.
+For anyone asked to try AOI PoC Inspector on their own Windows PC, with no technical knowledge needed. The demo
+takes about 20 minutes; training it on your own boards (section 7) about an hour. Words in **bold** are what the
+app's own buttons and pages say.
 
 This is an internal test build. Use it on your own PC only, never on a customer's PC or in front of a customer
 ([install.md](install.md)).
@@ -60,10 +61,9 @@ real defects.
 No board photos? The demo's own pictures are in the folder `AOI_Workspace-Demo\demo-boards` in your user folder
 (type `%USERPROFILE%\AOI_Workspace-Demo\demo-boards` in File Explorer's address bar).
 
-**What to expect with your own photos.** The demo's AI model learned only the drawn demo board, so a photo of any other
-board will be called NG or WARN almost every time. That is expected and is not a fault to report. On real board photos
-the app is known to flag good boards too often even after training on them; that is being worked on (issues #460 to
-#462 on GitHub).
+**What to expect with your own photos in the demo.** The demo's AI model learned only the drawn demo board, so a photo
+of any other board will be called NG or WARN almost every time. That is expected and is not a fault to report. To have
+your own boards judged, train the app on them: section 7.
 
 ### Start over
 
@@ -84,6 +84,55 @@ the demo's records, so if something went wrong, send them first (section 5).
 Windows **Settings → Apps → Installed apps**, find **AOI PoC Inspector**, click **…** and **Uninstall**. This removes
 the program only. To remove the demo's files too, delete the folders `AOI_Workspace` and `AOI_Workspace-Demo` from
 your user folder.
+
+## 7. Train it on your own boards
+
+The demo judges only its own drawn board. To try the app on your boards, give it photos of them and let it learn. It
+takes about an hour, most of it the computer's.
+
+**The photos.** What the app learns is what a good board looks like in your photos, so the photos matter more than
+anything you set afterwards.
+
+- **70 or more photos of good boards**, and **one or more photos of each defect** you want it to know. More good boards
+  give a steadier result: 20 of them teach the AI model and the rest test it.
+- One board type and one side of it, the **whole board in the picture**, taken by the **same camera from the same
+  place**, straight above the board, in **the same light**. PNG, JPG, BMP or TIFF, up to 50 megapixels each.
+- The app corrects a photo that is brighter, darker or tinted, a board that lies a little turned or shifted, and a
+  photo of another size. It cannot correct a blurred photo, a reflection that hides a part, or a photo taken from
+  another angle; and it says so, with WARN, when the light is more than a third off or more than a twentieth of the
+  board is out of the picture.
+- Put them in one folder with two folders in it: `ok`, with the good boards, and `ng`, with a folder for each defect
+  named after it, such as `ng\Missing Component` or `ng\Solder Bridge`. Photos put straight into `ng` are asked for
+  their defect when you pick the folder. Other files in the folders are passed over.
+
+**The steps.** Open the Start menu, type `AOI` and click **AOI PoC Inspector** (not the Demo one). **Home** opens on
+a guide of three steps.
+
+| # | Do this | You should see | Worked? |
+|---|---|---|---|
+| 11 | Press **Choose the Admin's Password…**, type a password twice, then save or print the recovery code it shows | The guide's line about the password goes | ☐ |
+| 12 | Type the board's name and your company's name, press **Create**, then **Save to File…** for the recovery key (on a USB drive, not this PC) and **I Have Saved the Key** | Step 1 is ticked and step 2, Images, opens | ☐ |
+| 13 | Press **Pick Folder…** and pick your folder | "OK images: … of 70" and "NG images: … of 1" are ticked; "Not taken" counts any file that is not a photo, and **Show Why** names each | ☐ |
+| 14 | Drag a box around the defect on each NG photo as it shows | After the last box, step 3, Train, opens | ☐ |
+| 15 | Press **Train** | A line says the part in hand and the time left: about 15 minutes on a laptop for 100 photos. Other pages can be used meanwhile | ☐ |
+| 16 | Read what the screen then says | "AI model v1.0 (Trial) judges … boards", and how the boards it kept apart came out: **Missed defects** and **False calls**, counted | ☐ |
+| 17 | Press **Inspect a Board…**, pick photos the app has not seen, then **Start** | Each gets OK, NG or WARN. Press **Compare with Golden board ›** on one to see what each check measured | ☐ |
+
+**What to expect.** "Trial" means one person labelled the photos and nobody checked them: it is a first look, not a
+validation. A good first result has few false calls and no missed defect on the boards kept apart; with fewer than
+about 100 good boards the counts are too small to say more than that.
+
+- **If step 16 says a master sample was judged wrongly,** the app will not inspect boards until that is put right,
+  on purpose: it found that it cannot tell one of your known-defective boards from a good one (or the other way
+  round), and says which. Look at that photo first. Is it in the right folder? Can you see the defect in the photo at
+  its full size? A defect a few pixels across is below what a photo of this size can show; photograph that area closer
+  or with a higher-resolution camera. Otherwise it is a finding to send (section 5): an Engineer looks at the board on
+  **Compare** and sets the recipe.
+- **If many good boards come out WARN or NG,** press **Compare with Golden board ›** on one. The table under the
+  pictures says which check failed. "Lighting change" or "Board in frame" means the photo, not the board. Send the
+  rest as findings: say how the photos were taken.
+- What these steps do is unchanged by the size of your trial, but what they prove is not: how well the app finds real
+  defects is measured on the factory's own boards, at the factory's station, before any board is judged by it alone.
 
 ## Getting the setup file yourself
 

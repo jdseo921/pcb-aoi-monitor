@@ -626,8 +626,21 @@ Locking keeps at least 50 OK images for validation, so a board model and view ne
 image changed since the freeze stops the run with AOI-TRN-045 naming the file. The new AI model names the version it was
 trained from. Freeze a version and lock its validation set on the Datasets tab (section 3).
 
+**What a run learns about the boards themselves.** Beside the AI model, a run measures how far each pixel of its good
+boards lies from the Golden board it built ("Measuring how good boards differ: image 14 of 31"), and keeps that map in
+the Golden board's file. The comparison then passes over a difference good boards also showed at that place, such as a
+date code, a serial-number label or a joint's shine, and counts every other difference in full. One good board with a
+stray mark does not blind the place: a difference counts as the boards' own once two good boards showed it, or when it
+lies within three deviations of their mean. The run also sets the AI model's pixel threshold above the level at which
+any good board it held out showed a region, so a good board is not sent to a person for an AI region alone; and for a
+board model's first AI model, while nobody has saved its recipe, it sets the recipe's similarity threshold 0.05 under
+the lowest its good boards scored, when that is under the default of 0.80, as a recipe revision with its reason.
+More good boards make all three steadier; a board labelled OK that carries a defect makes them worse, so check the
+labels first. A Golden board set with Set Reference carries no such map and is compared without one.
+
 **While a run goes on**, the line under the bar names what it does now, with its percent and the time left: "Aligning
-image 12 of 53", "Building the Golden board: step 3 of 16", "Training the AI model: round 23 of 60", "Setting the
+image 12 of 53", "Building the Golden board: step 3 of 16", "Measuring how good boards differ: image 14 of 31",
+"Training the AI model: round 23 of 60", "Setting the
 threshold: image 4 of 16", then "Saving AI model v1.3". The time left reads "estimating…" for the run's first image
 only, then "about 6 min left", or "less than a minute left"; the line and the bar change at least every 10 s. The run
 goes on whichever page you open: the header shows "Training 38 % · about 6 min left" on every page, and Home's Train AI
@@ -842,6 +855,13 @@ board comparison** is ticked and the board model has a Golden board. While it ru
 the board is WARN, as the other checks may be off. A board is NG when any check is NG, else WARN when any check is WARN
 or a defect above Minor severity is on it, else OK.
 
+**Reset to Defaults** (Ctrl+Shift+D), at the foot of the Thresholds tab, sets every threshold on the tab to the value
+a new board model starts with (Pixel difference 45, Minimum defect area 40 px, Similarity minimum 0.80, Maximum changed
+area 0.50 %, Allowed difference regions 0, WARN band 0.80, both checks on, fine alignment and copper names off) and the
+AI score threshold to the AI model's own. The ROIs and the scale stay. Nothing is saved until **Save Recipe**, which
+keeps the values as a new revision with its reason; the revisions before stay in History, and **Restore as New
+Revision** brings any of them back.
+
 ## 6. AI model test and reports
 
 **Source.** Pick what to test in **Source**: a frozen dataset version's locked validation set, listed first and picked
@@ -912,6 +932,17 @@ workspace is stored relative to it, so a moved workspace still finds the run's f
 stored as its full path.
 
 ## 7. Compare
+
+**How a photo is brought to the Golden board.** Before either check reads a photo, the app places the board on the
+Golden board (a turn, a shift and a scale; a photo taken from another angle keeps the fuller fit), brings a photo of
+another size to the Golden board's, matches its lighting (brightness, colour cast, black level, and light from one
+side), and holds the Golden board's own pixels where the photo showed no board, counting nothing there or at that
+edge. A station whose light is steady, within 2 %, is judged on exactly the pixels it photographed. Two rows join the
+table only when someone has to act: **Lighting change %**, WARN when the light is more than 35 % from the Golden
+board's (check the lamp and the camera's settings, then inspect the board again), and **Board in frame %**, WARN when
+the photo shows less than 95 % of the Golden board's frame (the rest was not inspected: place the board fully in view).
+What the app cannot correct, it does not: a blurred photo, a reflection that hides a part, or a defect smaller than
+the recipe's minimum defect area at the photo's size.
 
 Opened from Inspection, or with Use Last Inspected, Compare shows the stored result as it was decided: the table's
 thresholds are the ones that applied then, and the line under the verdict names the AI model version active when the
