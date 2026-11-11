@@ -29,8 +29,8 @@ run of 10 boards, the NG board, **Compare**, and the run finished. Keep the repo
 > boards we cannot promise more than that, so on your boards we ask for enough samples to make it small. These boards
 > are drawn, so these counts say nothing about your boards; they show what you will get on yours."
 
-3. Select a red row in the table, marked ▲ WARN: a good board it stopped, for a person to look at. Its picture shows
-   beside the table. The button now reads **Run Test Again**.
+3. Select a red row in the table, a good board it stopped for a person to look at (its **Verdict** column, off to
+   the right, reads ▲ WARN). Its picture shows beside the table, with ▲ WARN on its banner. The button now reads **Run Test Again**.
 
 Speak about missed defects and false calls; do not lead with **Accuracy**.
 
@@ -40,17 +40,19 @@ Speak about missed defects and false calls; do not lead with **Accuracy**.
    "Validation set locked ✓ 50 OK / 11 NG · training set 40 OK, 3 NG". Leave **Epochs** at 60 and **Network input
    size** at 256.
 2. Press **Start Training**. The bar moves and the line under it reads, for example, "Training the AI model: round 7
-   of 60 · 15 % · about 1 min left". On our 4-core test PC it took 98 s.
+   of 60 · 15 % · about 1 min left". On our 4-core test PC it took 98 s; on a slower PC in rehearsal it took over
+   10 minutes, so time it on the demo laptop when you rehearse.
 
-> "It learns what a good board looks like from 40 photos of good boards: 30 to learn from and 10 held back to check
-> itself. The 3 NG photos only set where the threshold sits. Training runs in the background: the line keeps
+> "It learns what a good board looks like from 40 photos of good boards: 30 to learn from and 10 held back to set
+> where the threshold sits. The 3 NG photos only set where the threshold sits. Training runs in the background: the line keeps
 > inspecting meanwhile."
 
 If the line says more than 2 minutes are left, press **Cancel** and say "here is one trained on the same boards
 earlier": AI model v1.0 is already there, and nothing is lost.
 
-3. When it ends, the status bar, or the log beside the bar, reads "AI model v1.1 trained: select it and press Activate Selected to judge boards
-   with it". Under **AI model versions**, v1.1 is listed over v1.0, and v1.0 still has the dot in **Active**.
+3. When it ends, the status bar, or the log under the bar, reads "AI model v1.1 trained: select it and press
+   Activate Selected to judge boards with it". Under **AI model versions**, v1.1 is listed over v1.0, and v1.0
+   still has the dot in **Active** (scroll the table to the right to show it).
 
 > "A board model's first AI model goes live when its training ends, so the line has the AI check from day one, and
 > that is recorded. Every new version after it never takes over by itself: an engineer checks it on the locked boards
@@ -60,7 +62,8 @@ earlier": AI model v1.0 is already there, and nothing is lost.
    trained on and its thresholds. Its title names v1.1, and the line under it reads "Not yet tested on a locked
    validation set: nothing on this card is a measure of accuracy." Scroll it rather than read its field names out.
 5. Press **Activate Selected**: the dot moves to v1.1. Then press **Roll Back** (it reads "Roll Back to v1.0"): the
-   dot moves back. The button then offers "Roll Back to v1.1": leave it.
+   dot moves back, and the status bar reads "Rolled back to AI model v1.0". The button then offers "Roll Back to
+   v1.1": leave it.
 
 > "Switching on and going back are one click each, and both are recorded with who did it."
 

@@ -31,9 +31,10 @@ board on **Compare**, the check on the locked boards, training live, and a thres
 3. **ROIs** tab: a region of the board with its own threshold, for a part that needs a closer look. Show
    **Draw ROI** if they ask, then leave without saving.
 4. **AOI checks** tab: the 10 checks of the defect classification table, and which this recipe's ROIs cover. Four
-   need Stage 2's 3D or side camera. "Not covered", as for Missing Component, means no ROI of this recipe is set to
-   that check yet: every board is still compared with the Golden board and judged by the AI model, which is how
-   board_04's missing part was found. Say so before they read it.
+   need Stage 2's 3D or side camera. Say before they read it that "Not covered", as for Missing Component, means
+   the station does not yet check for that defect by name: on their boards an engineer draws a **Presence** ROI over
+   each part that must be there. board_04 was stopped here as a difference from the Golden board, not as a missing
+   part.
 5. **Revisions** tab: every saved recipe, who saved it, when and why. The demo has one revision, so **Restore as New
    Revision** is greyed: say that with two or more it brings an old one back without deleting anything.
 
@@ -46,9 +47,10 @@ board on **Compare**, the check on the locked boards, training live, and a thres
 2. Select v1.1 and press **AI Model Card**: what it was trained on, the dataset version and its thresholds. Its first
    line says it is not yet tested on a locked validation set, so the card claims no result.
 3. Press **Activate Selected** to make v1.1 active. Click **AI Model Test** and press **Run Test Again**: the tiles show
-   v1.1's counts on the same 61 locked boards. Expect them to differ from v1.0's, and to be worse: v1.1 was trained in
-   two minutes on a laptop, and in rehearsal it stopped 20 of 50 good boards where v1.0 stopped 3. Use it: "this is
-   why a new version is tested on the locked boards before it judges yours, and why going back is one click."
+   v1.1's counts on the same 61 locked boards. They will differ from v1.0's and may be worse, and they change from
+   one training to the next: in rehearsal one v1.1 stopped 20 of 50 good boards and another 5, where v1.0 stopped 3.
+   Use it: "here we switch it on to test it; on your line a new version is tested on the locked boards before any
+   board runs, and going back is one click."
 4. Open the **History** tab: both runs are there, newest first. Select a row and press **Open** to see it again.
 
 > "Before a new AI model judges your boards, it is tested on the same locked boards as the one before, and you compare

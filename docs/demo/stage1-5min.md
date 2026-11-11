@@ -38,7 +38,8 @@ Point at the line "Stage 1 workflow: upload → train → validate → inspect" 
    decided the verdict: **Difference regions** (2, where 0 are allowed) and **AI score** (about 8, where under 5 is
    OK). Quote these two from the table. The picture may show fewer boxes than regions, and **Inspection** gave the same
    AI score as a multiple of its threshold ("1.62× threshold"), with a score of its own beside each box: if asked,
-   "the table is the measure; the others are the same check shown another way".
+   "the table is the measure; 1.62× is the same AI score divided by its threshold, and the number by a box is how
+   far that spot is over its own threshold".
 4. Point at the box beside the boards, under the verdict, "Why this board is NG:", which says the same in plain
    words. On a 1366 × 768 projector the box is narrower: scroll it to the last line.
 
