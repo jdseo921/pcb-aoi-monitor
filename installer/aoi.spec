@@ -55,6 +55,7 @@ a = Analysis(
     pathex=[str(ROOT)],
     datas=[
         (str(ROOT / "aoi" / "data" / "migrations" / "*.sql"), "aoi/data/migrations"),  # applied at start-up
+        (str(ROOT / "aoi" / "i18n" / "*.qm"), "aoi/i18n"),  # the UI languages (aoi/ui/language.py)
         (str(SELFTEST / "*"), "selftest"),  # two synthetic boards and selftest.json, never a photograph
         (str(DEMO), "demo-bundle"),  # where aoi/core/demo.py bundle_dir() finds it in a build
         (str(Path(workpath) / "BUILD"), "."),  # beside the app's own files, where build_number() reads it

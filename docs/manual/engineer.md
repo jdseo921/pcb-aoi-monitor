@@ -209,6 +209,12 @@ on. Each check is in the audit trail as `inspection.shift_check`; a failed one a
 Setting 0 asks for no check: it skips a MUST of the Engineering standard, so use it only for a board model still
 gathering samples, with Jay's approval. The demo workspace is loaded with 0.
 
+**Language.** Settings › Language offers English and 한국어. Save, then restart the app: every screen reads its
+texts as it is built, so the language changes from the next start, and Save says so. What records and exports store
+stays as written in either language: OK, NG and WARN, the defect type names and severities, the views, Trial and
+Validated. The Korean strings are in `aoi/i18n/aoi_ko.ts`; after changing one, `python tools/update_translations.py`
+writes the `aoi_ko.qm` the app loads. The translation is a draft that no native speaker has reviewed yet.
+
 ## 2. Board models and scale
 
 **Names.** A new board model's name must differ from every existing one in more than upper and lower case: `tbox-a1`

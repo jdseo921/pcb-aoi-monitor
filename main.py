@@ -7,13 +7,22 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from aoi import selftest
-from aoi.config import APP_NAME
+from aoi.config import APP_NAME, Settings
 from aoi.core import support
+from aoi.ui import language
 from aoi.ui.demo_workspace import open_demo
 from aoi.ui.errors import open_workspace
 from aoi.ui.main_window import MainWindow, build_window
 from aoi.ui.theme import QSS
 from aoi.ui.workers import collect_on_ui_thread
+
+
+def start_language() -> str:
+    """The language settings.json names, English when the file cannot be read: the start then says why, in English."""
+    try:
+        return Settings.load().language
+    except Exception:  # noqa: BLE001 - AOI-SET-008 or -010, shown by open_workspace() just after
+        return language.SOURCE_LANGUAGE
 
 
 def main() -> int:
@@ -24,6 +33,7 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setStyleSheet(QSS)
+    language.install(app, start_language())  # before any window or dialog: each reads its texts as it is built
     collect_on_ui_thread()  # no pool thread runs Python's cycle collector, which could delete a Qt object there
     # A refused workspace (ADR 0004): its coded message, then a picker for another (REQ-SET-016). --demo: the demo
     # workspace beside it, loaded first if it is not there, so a presenter is back in the demo in seconds (S53).

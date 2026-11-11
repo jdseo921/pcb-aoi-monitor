@@ -241,3 +241,11 @@ Production plan PRs 3.1 (cycle) and 3.9 (sign-in) moved into G1 as E.1 and D.1 t
   recipe revision; unit, regression and screenshot tests as stated in the record; strings through `self.tr()`, the
   .ts file regenerated; manuals, release note with its customer notice, and tester guide updated; feature freeze: Reset
   to Defaults is a feature, added on Jay's request above.
+- 2026-11-11: REQ-SET-006 and REQ-SET-028 (Jay: "Catch up with korean UI translations and make sure that they dont
+  get clipped or clog text boxes"). `feat/REQ-SET-005-korean-ui`: the 1,661 unfinished strings of `aoi/i18n/aoi_ko.ts`
+  translated (2,166 finished), compiled to `aoi_ko.qm`, loaded at start by `aoi/ui/language.py` when Settings'
+  language is 한국어, and shipped in the build. Every text was measured against its widget in both languages at
+  1920 × 1080 and 1366 × 768, production and presenter theme, on the demo workspace's pages, its dialogs and an empty
+  workspace's guide: Korean cuts nothing English does not; the one real cut, the Switch User hint, is fixed for both.
+  Both rows move from No to Partial: no native speaker has reviewed a string, and no Korean font is bundled. No
+  verdict can change; the regression set is unchanged.

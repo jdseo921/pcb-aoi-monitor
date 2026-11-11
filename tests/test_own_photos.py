@@ -33,7 +33,7 @@ from aoi.core.imaging import (
     save_image,
 )
 from aoi.core.inspector import Inspector
-from aoi.core.recipe import Recipe
+from aoi.core.recipe import ROI, Recipe
 from aoi.core.services import SSIM_MARGIN, AppContext
 from aoi.data import credentials
 from tests.conftest import engineer
@@ -473,3 +473,19 @@ def test_461_a_golden_board_without_a_tolerance_is_compared_as_before(varied: Ap
     assert golden.extract(cv2.imencode(".png", image)[1].tobytes(), image.shape[:2]) is None
     bare = Inspector(Recipe(board_model=BM), varied.inspector(BM).model, image)
     assert bare.tolerance is None and bare.inspect(image).compare.metrics["tolerance"] is False  # type: ignore[union-attr]
+
+
+def test_460_an_roi_mostly_out_of_the_frame_warns_and_a_sliver_does_not(tiny_model: Any) -> None:
+    ref = tiny_model.reference
+    h, w = ref.shape[:2]
+    whole = ROI("ALL", "Presence", 0, 0, w, h)
+    edge = ROI("EDGE", "Presence", w - w // 12, 0, w // 12, h)  # at the edge a board shifted to the right leaves unseen
+    insp = Inspector(Recipe(board_model="TINY", rois=[whole, edge]), tiny_model.model, ref)
+    sliver = cv2.warpAffine(ref, np.array([[1, 0, 0.012 * w], [0, 1, 0]], np.float32), (w, h))
+    result = Inspector(Recipe(board_model="TINY", rois=[whole]), tiny_model.model, ref).inspect(sliver)
+    assert result.compare is not None and "rois_out_of_frame" not in result.compare.metrics  # 1.2 % of the ROI
+    assert "Board in frame %" not in checks(result)
+    shifted = cv2.warpAffine(ref, np.array([[1, 0, 0.045 * w], [0, 1, 0]], np.float32), (w, h))  # 95.5 % in frame
+    result = insp.inspect(shifted)
+    assert result.compare is not None and result.compare.metrics["rois_out_of_frame"] == ["EDGE"]
+    assert checks(result)["Board in frame %"].verdict == "WARN" and result.verdict != "OK"

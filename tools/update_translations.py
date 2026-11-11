@@ -1,11 +1,12 @@
 """Regenerate aoi/i18n/aoi_ko.ts from the sources with pyside6-lupdate (REQ-SET-005).
 
-    python tools/update_translations.py            # rewrite aoi/i18n/aoi_ko.ts
+    python tools/update_translations.py            # rewrite aoi/i18n/aoi_ko.ts, and aoi_ko.qm from it
     python tools/update_translations.py out.ts     # write elsewhere (the test compares that with the committed file)
 
 The .ts file is generated: change the strings in the sources, run this, and commit both; a test fails when the
 committed file is stale. Translators fill the <translation> elements in Qt Linguist (pyside6-linguist), and
-pyside6-lrelease turns the file into the .qm the app loads.
+pyside6-lrelease turns the file into aoi_ko.qm, which the app loads when Settings' language is 한국어
+(aoi/ui/language.py); it is generated and committed too, and a test fails when it is stale.
 """
 
 from __future__ import annotations
@@ -39,5 +40,17 @@ def update(out: Path = TS_FILE) -> Path:
     return out
 
 
+def release(ts: Path = TS_FILE, out: Path | None = None) -> Path:
+    """Compile `ts` into the .qm the app loads (aoi/ui/language.py), beside it unless `out` is given. Only finished
+    translations go in: a string left unfinished shows in English."""
+    out = out or ts.with_suffix(".qm")
+    subprocess.run([qt_tool("pyside6-lrelease"), "-silent", str(ts), "-qm", str(out)], check=True)
+    return out
+
+
 if __name__ == "__main__":
-    print(update(Path(sys.argv[1]) if len(sys.argv) > 1 else TS_FILE))
+    if len(sys.argv) > 1:
+        print(update(Path(sys.argv[1])))
+    else:
+        print(update())
+        print(release())

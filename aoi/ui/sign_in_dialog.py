@@ -132,6 +132,18 @@ class SignInDialog(QDialog):
                 self.hint.setText(self.tr("The two PINs differ.") if pin else self.tr("The two passwords differ."))
         ready = not held and (not needs or (bool(typed) and (not setup or (typed == again and not short))))
         self.btn_sign_in.setEnabled(ready and (not self.recovering or bool(self.code.text().strip())))
+        self._fit()
+
+    def _fit(self) -> None:
+        """The dialog grown to hold the hint whole: another user's hint, a larger font or another language can need a
+        line more than the one it opened with, and a wrapped label cut at its foot hides what to type (REQ-SET-006)."""
+        lay = self.layout()
+        if lay is None or not self.isVisible():
+            return
+        lay.activate()
+        need = lay.totalHeightForWidth(self.width()) if lay.hasHeightForWidth() else lay.sizeHint().height()
+        if need > self.height():
+            self.resize(self.width(), need)
 
     def done(self, result: int) -> None:
         self.code.clear()
