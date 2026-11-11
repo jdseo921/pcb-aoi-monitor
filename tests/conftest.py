@@ -133,12 +133,12 @@ def synthetic_dataset(tmp_path_factory: pytest.TempPathFactory) -> Path:
 @pytest.fixture(scope="session")
 def demo_bundle(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The demo bundle as the build makes it (tools/make_demo_bundle.py, REQ-SET-007), built once per session, on a
-    drive 92 % full as a build machine's may be, which the bundle must not carry to the demo (test_demo.py).
+    drive 96 % full as a build machine's may be, which the bundle must not carry to the demo (test_demo.py).
     Read-only by convention: a test loads it into a folder of its own."""
     from tools.make_demo_bundle import build
 
     out = tmp_path_factory.mktemp("demo") / "demo-bundle"
-    with mock.patch.object(disk, "usage", lambda folder: disk.Usage(100 * 2**30, 92 * 2**30, 8 * 2**30)):
+    with mock.patch.object(disk, "usage", lambda folder: disk.Usage(100 * 2**30, 96 * 2**30, 4 * 2**30)):
         build(out)
     return out
 
